@@ -91,12 +91,14 @@
 								href="https://takeout.google.com/settings/takeout/custom/photos"
 								target="_blank"
 								rel="noopener noreferrer">Google Takeout</a
-							> y elige los álbumes que quieras.</span
+							>, pulsa <b>"Todos los álbumes de fotos incluidos"</b> y marca solo los que quieras.</span
 						>
 					</li>
 					<li>
 						<span class="num mono">2</span>
-						<span>Exporta en archivos .zip y descárgalos.</span>
+						<span
+							>Pulsa <b>Siguiente paso</b>, elige .zip y descárgalos cuando te llegue el correo.</span
+						>
 					</li>
 					<li>
 						<span class="num mono">3</span>
@@ -209,6 +211,11 @@
 		font-size: 11px;
 		background: var(--acc-soft);
 		color: var(--acc-text);
+	}
+
+	.steps b {
+		font-weight: 500;
+		color: var(--t1);
 	}
 
 	.steps a {
