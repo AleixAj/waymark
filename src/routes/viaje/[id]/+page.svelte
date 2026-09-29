@@ -5,6 +5,7 @@
 	import Breadcrumb from '$lib/components/Breadcrumb.svelte';
 	import MapControls from '$lib/components/MapControls.svelte';
 	import Thumb from '$lib/components/photos/Thumb.svelte';
+	import { growingLimit } from '$lib/components/photos/growing.svelte';
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import { sheet } from '$lib/components/ui/sheet';
 	import { library } from '$lib/state/library.svelte';
@@ -25,6 +26,18 @@
 		const moved = library.trips.find((t) => time >= t.start && time <= t.end);
 		if (moved) goto(`/viaje/${moved.id}`, { replaceState: true });
 	});
+	// The photos of a long trip appear in steps (see growing.svelte.ts)
+	const shown = growingLimit(() => trip?.photoIds.length ?? 0);
+	// Photos before each stop, to know how many of its photos fit in the limit
+	const before = $derived.by(() => {
+		let count = 0;
+		return (trip?.stops ?? []).map((stop) => {
+			const start = count;
+			count += stop.photoIds.length;
+			return start;
+		});
+	});
+
 	let cover = $state<string | null>(null);
 	let playing = $state(false);
 	let scroller = $state<HTMLDivElement>();
@@ -230,7 +243,7 @@
 							<span class="mono t3">{stop.photoIds.length}</span>
 						</div>
 						<div class="pgrid">
-							{#each stop.photoIds as id (id)}
+							{#each stop.photoIds.slice(0, Math.max(0, shown.value - before[i])) as id (id)}
 								<Thumb
 									{id}
 									favorite={byId.get(id)?.favorite}

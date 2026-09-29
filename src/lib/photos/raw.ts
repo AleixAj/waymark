@@ -1,13 +1,6 @@
 import exifr from 'exifr';
 
-// Camera RAW formats. The browser can't show them, but almost all of them carry a
-// ready-made JPEG preview (the one the camera shows on its screen) inside.
-const RAW_EXTENSIONS =
-	/\.(dng|cr2|cr3|crw|nef|nrw|arw|srf|sr2|raf|orf|rw2|rwl|pef|srw|x3f|3fr|iiq|erf|mrw|kdc|dcr|mos)$/i;
-
-export function isRaw(file: { name: string }) {
-	return RAW_EXTENSIONS.test(file.name);
-}
+export { isRaw } from './formats';
 
 export interface EmbeddedJpeg {
 	bytes: Uint8Array;

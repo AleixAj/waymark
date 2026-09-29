@@ -9,7 +9,7 @@
 	import { library } from '$lib/state/library.svelte';
 	import { ui } from '$lib/state/ui.svelte';
 	import { readMapColors } from './colors';
-	import { buildStyle, countryPaint, sky } from './style';
+	import { buildStyle, countryPaint, sky, vectorOpacity, visitedFilter } from './style';
 	import { mapView, zoomForGlobe } from './view.svelte';
 	import GlobeShade from './GlobeShade.svelte';
 
@@ -148,10 +148,15 @@
 			map.setPaintProperty(
 				'country-fill',
 				'fill-opacity',
-				mapView.focus ? paint.opacity : ['interpolate', ['linear'], ['zoom'], 5.5, 1, 7.5, 0]
+				mapView.focus ? paint.opacity : vectorOpacity('sobrio')
 			);
 		}
 		map.setFilter('country-focus', ['==', ['get', 'iso3'], mapView.focus ?? '']);
+		// In the country view only the focused country keeps its outline
+		map.setFilter(
+			'country-visited',
+			visitedFilter(showVisited && !mapView.focus ? library.visited : [])
+		);
 		map.setSky(sky(colors));
 	});
 

@@ -34,15 +34,6 @@ interface Sidecar {
 
 const YEAR_FOLDER = /^(photos from|fotos de|fotos del año|fotos del) \d{4}$/i;
 
-/** True when the dropped files look like a Takeout export (zip files or its folder) */
-export function looksLikeTakeout(files: File[]) {
-	return files.some(
-		(f) =>
-			f.name.toLowerCase().endsWith('.zip') ||
-			(f.name.toLowerCase().endsWith('.json') && /(^|\/)takeout\//i.test(pathOf(f)))
-	);
-}
-
 /** Albums of a Takeout export, or null if the files are not one */
 export async function readTakeout(files: File[]): Promise<TakeoutAlbum[] | null> {
 	const entries = await listEntries(files);

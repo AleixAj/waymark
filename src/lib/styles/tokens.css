@@ -44,6 +44,13 @@
 	--acc-glow: oklch(0.8 0.145 68 / 0.5);
 	--on-acc: oklch(0.21 0.04 60);
 
+	/* Photo markers on the map: coral red, so they stand out on amber countries */
+	--pin: oklch(0.66 0.2 28);
+	--pin-soft: oklch(0.66 0.2 28 / 0.22);
+	--pin-glow: oklch(0.66 0.2 28 / 0.55);
+	--pin-border: oklch(0.98 0.01 60);
+	--on-pin: oklch(0.99 0.005 60);
+
 	/* Status */
 	--ok: oklch(0.76 0.12 160);
 	--warn: oklch(0.85 0.12 95);
@@ -98,6 +105,12 @@
 	--acc-soft: oklch(0.72 0.155 60 / 0.16);
 	--acc-glow: oklch(0.72 0.155 60 / 0.45);
 	--on-acc: oklch(0.2 0.04 55);
+
+	--pin: oklch(0.6 0.21 28);
+	--pin-soft: oklch(0.6 0.21 28 / 0.2);
+	--pin-glow: oklch(0.6 0.21 28 / 0.45);
+	--pin-border: oklch(1 0 0);
+	--on-pin: oklch(0.99 0.005 60);
 
 	--ok: oklch(0.55 0.12 160);
 	--warn: oklch(0.6 0.12 85);

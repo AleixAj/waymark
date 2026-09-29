@@ -36,6 +36,10 @@
 	// Below this zoom photos are amber circles; above it they become thumbnails
 	const PHOTO_ZOOM = 11;
 	const LABEL_ZOOM = 3.5;
+	// Seen from far away a place is just a dot: the number of photos appears closer
+	const COUNT_ZOOM = 4;
+	// Extra area around the view where markers are already created (share of the view)
+	const MARGIN = 0.15;
 
 	const map = mapView.map!;
 
@@ -103,18 +107,59 @@
 		return Math.round(24 + Math.sqrt(count) * 0.72);
 	}
 
-	function render() {
+	/** Dot for a place seen from far away: a bit bigger with more photos */
+	function dotSize(count: number) {
+		return Math.round(Math.min(26, 11 + Math.sqrt(count) * 0.9));
+	}
+
+	// Where the clusters were last asked for. While the camera stays close to it,
+	// the same markers are still right (MapLibre moves them by itself), so the
+	// clusters are only asked again for a new zoom level or after a long pan.
+	let lastQuery: { zoom: number; center: [number, number]; mode: string } | null = null;
+	// Measuring the canvas forces the browser to lay out the page: done on resize only
+	let size = { width: map.getCanvas().clientWidth, height: map.getCanvas().clientHeight };
+
+	function needsQuery(zoom: number, mode: string) {
+		if (!lastQuery || lastQuery.zoom !== Math.floor(zoom) || lastQuery.mode !== mode) return true;
+		// At low zoom every cluster of the world is asked at once
+		if (zoom < 4) return false;
+		const then = map.project(lastQuery.center);
+		return (
+			Math.abs(then.x - size.width / 2) > size.width * MARGIN * 0.66 ||
+			Math.abs(then.y - size.height / 2) > size.height * MARGIN * 0.66
+		);
+	}
+
+	function render(force = false) {
 		const zoom = map.getZoom();
+		const photoMode = zoom >= PHOTO_ZOOM;
+		const showLabels = labels && zoom >= LABEL_ZOOM && !photoMode;
+		const showCount = zoom >= COUNT_ZOOM;
+		const mode = `${photoMode}${showLabels}${showCount}`;
+		if (!force && !needsQuery(zoom, mode)) {
+			tick++;
+			return;
+		}
+		const center = map.getCenter();
+		lastQuery = { zoom: Math.floor(zoom), center: [center.lng, center.lat], mode };
+
 		const bounds = map.getBounds();
-		// On the globe the visible area can wrap around, so at low zoom we ask for everything
+		// On the globe the visible area can wrap around, so at low zoom we ask for everything.
+		// Closer, a small margin around the view, so a short pan finds markers ready
+		// (a bigger one means many more markers for MapLibre to move every frame).
+		const w = bounds.getEast() - bounds.getWest();
+		const h = bounds.getNorth() - bounds.getSouth();
 		const bbox: [number, number, number, number] =
 			zoom < 4
 				? [-180, -85, 180, 85]
-				: [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()];
+				: [
+						bounds.getWest() - w * MARGIN,
+						Math.max(-85, bounds.getSouth() - h * MARGIN),
+						bounds.getEast() + w * MARGIN,
+						Math.min(85, bounds.getNorth() + h * MARGIN)
+					];
 		const items = index.getClusters(bbox, Math.floor(zoom)) as Item[];
 		const seen = new Set<string>();
-		const photoMode = zoom >= PHOTO_ZOOM;
-		const showLabels = labels && zoom >= LABEL_ZOOM && !photoMode;
 
 		for (const item of items) {
 			const key = keyOf(item);
@@ -123,7 +168,7 @@
 			const [lng, lat] = item.geometry.coordinates;
 			const firstId = photoMode ? (leaves(item, 1)[0]?.id ?? '') : '';
 			const label = showLabels ? labelOf(item, key) : '';
-			const html = markerHtml(count, photoMode, label, firstId);
+			const html = markerHtml(count, photoMode, label, firstId, showCount);
 
 			const existing = markers.get(key);
 			if (existing) {
@@ -174,13 +219,23 @@
 		tick++;
 	}
 
-	function markerHtml(count: number, photoMode: boolean, label: string, firstId: string) {
+	function markerHtml(
+		count: number,
+		photoMode: boolean,
+		label: string,
+		firstId: string,
+		showCount: boolean
+	) {
 		const labelHtml = label ? `<span class="mk-label">${escapeHtml(label)}</span>` : '';
 		if (photoMode) {
 			const badge = count > 1 ? `<span class="badge">${formatNumber(count)}</span>` : '';
 			return `<span class="pm" data-thumb="${escapeHtml(firstId)}"><img alt="" /></span>${badge}`;
 		}
 		if (count === 1) return `<span class="dot"></span>${labelHtml}`;
+		if (!showCount) {
+			const size = dotSize(count);
+			return `<span class="place" style="width:${size}px;height:${size}px"></span>${labelHtml}`;
+		}
 		const size = clusterSize(count);
 		const small = count > 999 ? ' big-number' : '';
 		return `<span class="cluster${small}" style="width:${size}px;height:${size}px">${formatNumber(count)}</span>${labelHtml}`;
@@ -245,7 +300,7 @@
 		void labels;
 		labelCache = new Map();
 		// render() also writes state (tick), so it must not become a dependency
-		untrack(render);
+		untrack(() => render(true));
 	});
 
 	// Highlight the marker of the photo hovered in a list
@@ -258,11 +313,17 @@
 		let frame = 0;
 		const schedule = () => {
 			cancelAnimationFrame(frame);
-			frame = requestAnimationFrame(render);
+			frame = requestAnimationFrame(() => render());
+		};
+		const resize = () => {
+			size = { width: map.getCanvas().clientWidth, height: map.getCanvas().clientHeight };
+			render(true);
 		};
 		map.on('move', schedule);
+		map.on('resize', resize);
 		return () => {
 			map.off('move', schedule);
+			map.off('resize', resize);
 			cancelAnimationFrame(frame);
 			for (const { marker } of markers.values()) marker.remove();
 			markers.clear();
@@ -311,16 +372,45 @@
 		display: grid;
 		place-items: center;
 		border-radius: 50%;
-		background: var(--acc);
-		color: var(--on-acc);
+		background: var(--pin);
+		color: var(--on-pin);
+		border: 2px solid var(--pin-border);
 		font:
 			600 12px/1 'Geist Mono',
 			monospace;
 		letter-spacing: -0.02em;
 		box-shadow:
-			0 0 0 5px var(--acc-soft),
-			0 6px 18px -6px var(--acc-glow);
+			0 0 0 4px var(--pin-soft),
+			0 6px 18px -6px var(--pin-glow);
 		transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+	}
+
+	/* A single photo: same look as the groups, just small */
+	:global(.wm-marker .dot) {
+		width: 12px;
+		height: 12px;
+		background: var(--pin);
+		border: 2px solid var(--pin-border);
+		box-shadow:
+			0 0 0 3px var(--pin-soft),
+			0 2px 8px var(--pin-glow);
+	}
+
+	/* A place seen from the whole world: amber dot with a soft ring, no number */
+	:global(.wm-marker .place) {
+		display: block;
+		border-radius: 50%;
+		background: var(--pin);
+		border: 2px solid var(--pin-border);
+		box-shadow:
+			0 0 0 3px var(--pin-soft),
+			0 2px 10px var(--pin-glow);
+		transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+	}
+
+	:global(.wm-marker:hover .place),
+	:global(.wm-marker:focus-visible .place) {
+		transform: scale(1.25);
 	}
 
 	:global(.wm-marker .cluster.big-number) {
@@ -331,9 +421,9 @@
 	:global(.wm-marker:focus-visible .cluster) {
 		transform: scale(1.12);
 		box-shadow:
-			0 0 0 5px var(--acc-soft),
-			0 0 0 10px oklch(0.8 0.145 68 / 0.08),
-			0 0 28px var(--acc-glow);
+			0 0 0 5px var(--pin-soft),
+			0 0 0 10px color-mix(in oklab, var(--pin) 8%, transparent),
+			0 0 28px var(--pin-glow);
 	}
 
 	:global(.wm-marker .mk-label) {
@@ -380,7 +470,7 @@
 	:global(.wm-marker:hover .pm),
 	:global(.wm-marker .pm.is-hover) {
 		transform: scale(1.08);
-		border-color: var(--acc);
+		border-color: var(--pin);
 	}
 
 	.preview {

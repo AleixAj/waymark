@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Thumb from './Thumb.svelte';
+	import { growingLimit } from './growing.svelte';
 	import type { PhotoPoint } from '$lib/photos/types';
 	import { dayKey, formatDay, formatNumber } from '$lib/library/format';
 	import { groupBy, ranked } from '$lib/library/trips';
@@ -24,9 +25,22 @@
 		}))
 	);
 	const ids = $derived(photos.map((p) => p.id));
+
+	// Long lists appear in steps (see growing.svelte.ts): whole days, until the limit
+	const shown = growingLimit(() => photos.length);
+	const shownDays = $derived.by(() => {
+		let count = 0;
+		const result = [];
+		for (const day of days) {
+			if (count >= shown.value) break;
+			result.push(day);
+			count += day.items.length;
+		}
+		return result;
+	});
 </script>
 
-{#each days as day (day.key)}
+{#each shownDays as day (day.key)}
 	<section
 		class="day"
 		style:contain-intrinsic-size="auto {Math.ceil(day.items.length / columns) * 96 + 48}px"

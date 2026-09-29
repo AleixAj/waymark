@@ -1,6 +1,6 @@
 import { askForPersistentStorage, fillAlbums, findExistingIds, savePhotos } from './db';
 import { findPlace } from './placeFinder';
-import { isRaw } from './raw';
+import { isRaw } from './formats';
 import { toPoint, type Photo, type PhotoPoint } from './types';
 import type { ImportHint, ProcessedPhoto, WorkerRequest, WorkerResponse } from './import.worker';
 

@@ -1,3 +1,4 @@
+import { SvelteSet } from 'svelte/reactivity';
 import type { TakeoutAlbum } from '$lib/photos/takeout';
 
 /** Small bits of UI state shared between the layout, the pages and the map */
@@ -23,8 +24,25 @@ class Ui {
 	sheetHeight = $state(0);
 	/** Phones: the timeline is hidden behind a button */
 	timelineOpen = $state(false);
-	/** Photo hovered in a list: its marker lights up on the map (and the other way round) */
-	hoveredPhoto = $state<string | null>(null);
+	// Photo hovered in a list: its marker lights up on the map (and the other way round).
+	// Kept in a set so a tile asks "is it me?" and only the two tiles that change update,
+	// not every tile of a list of hundreds on each mouse move.
+	private hovered = new SvelteSet<string>();
+
+	get hoveredPhoto(): string | null {
+		for (const id of this.hovered) return id;
+		return null;
+	}
+
+	set hoveredPhoto(id: string | null) {
+		if (id !== null && this.hovered.has(id)) return;
+		this.hovered.clear();
+		if (id !== null) this.hovered.add(id);
+	}
+
+	isHovered(id: string) {
+		return this.hovered.has(id);
+	}
 
 	/** Photo viewer: the list it navigates and the current position */
 	viewer = $state<{ ids: string[]; index: number; context: string } | null>(null);

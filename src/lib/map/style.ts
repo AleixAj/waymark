@@ -28,32 +28,36 @@ export interface StyleOptions {
 	flat?: boolean;
 }
 
-/** Land color by biome; `amount` tints it with the accent (0 = plain land) */
-function landColor(c: MapColors, amount: number): ExpressionSpecification {
+/** A color for each biome, made from the biome's own land color */
+function byBiome(c: MapColors, color: (land: string) => string): ExpressionSpecification {
 	return [
 		'match',
 		['get', 'biome'],
 		'trop',
-		mix(c.trop, c.acc, amount),
+		color(c.trop),
 		'arid',
-		mix(c.arid, c.acc, amount),
+		color(c.arid),
 		'boreal',
-		mix(c.boreal, c.acc, amount),
+		color(c.boreal),
 		'polar',
-		mix(c.polar, c.acc, amount),
-		mix(c.land, c.acc, amount)
+		color(c.polar),
+		color(c.land)
 	];
 }
 
 /**
- * Country fill: visited countries get an amber tint. When a country is focused
- * (country view) it stays bright and the rest of the world fades out.
+ * Country fill. Visited countries are clearly amber (a hint of their biome
+ * keeps the relief); the rest keep their biome but muted towards the ocean,
+ * so a desert you visited never looks like one you didn't.
+ * When a country is focused (country view) the rest of the world fades out.
  */
 export function countryPaint(c: MapColors, visited: string[], focus: string | null) {
 	const isVisited: ExpressionSpecification = ['in', ['get', 'iso3'], ['literal', visited]];
+	const visitedColor = byBiome(c, (land) => mix(c.acc, land, 0.2));
+	const otherColor = byBiome(c, (land) => mix(land, c.ocean, 0.3));
 	if (!focus) {
 		return {
-			color: ['case', isVisited, landColor(c, 0.58), landColor(c, 0)] as ExpressionSpecification,
+			color: ['case', isVisited, visitedColor, otherColor] as ExpressionSpecification,
 			opacity: 1 as number | ExpressionSpecification
 		};
 	}
@@ -62,25 +66,34 @@ export function countryPaint(c: MapColors, visited: string[], focus: string | nu
 		color: [
 			'case',
 			isFocus,
-			landColor(c, 0.14),
+			byBiome(c, (land) => mix(land, c.acc, 0.14)),
 			isVisited,
-			landColor(c, 0.3),
-			landColor(c, 0)
+			visitedColor,
+			otherColor
 		] as ExpressionSpecification,
 		opacity: ['case', isFocus, 1, 0.42] as ExpressionSpecification
 	};
 }
 
+/** Only visited countries get the amber outline */
+export function visitedFilter(visited: string[]): ExpressionSpecification {
+	return ['in', ['get', 'iso3'], ['literal', visited]];
+}
+
+// "Sobrio" style: the colored countries and the street map cross-fade between these zooms
+const FADE_START = 5.5;
+const FADE_END = 7.5;
+
 /** How strong the street-level raster is at each zoom, per map style */
 function rasterOpacity(mapStyle: MapStyle): number | ExpressionSpecification {
 	if (mapStyle !== 'sobrio') return 1;
-	return ['interpolate', ['linear'], ['zoom'], 5, 0, 7, 1];
+	return ['interpolate', ['linear'], ['zoom'], FADE_START, 0, FADE_END, 1];
 }
 
 /** The flat colored countries fade out when the street map takes over */
-function vectorOpacity(mapStyle: MapStyle): number | ExpressionSpecification {
+export function vectorOpacity(mapStyle: MapStyle): number | ExpressionSpecification {
 	if (mapStyle !== 'sobrio') return 0;
-	return ['interpolate', ['linear'], ['zoom'], 5.5, 1, 7.5, 0];
+	return ['interpolate', ['linear'], ['zoom'], FADE_START, 1, FADE_END, 0];
 }
 
 export function sky(c: MapColors): SkySpecification {
@@ -132,8 +145,9 @@ export function buildStyle({
 			id: 'street-map',
 			type: 'raster',
 			source: mapStyle === 'satelite' ? 'satellite' : 'topo',
-			// Don't download street tiles while they are invisible
-			minzoom: mapStyle === 'sobrio' ? 4.8 : 0,
+			// Street tiles are not downloaded nor drawn while they are invisible:
+			// drawing them at opacity 0 made the country view much slower
+			minzoom: mapStyle === 'sobrio' ? FADE_START - 0.1 : 0,
 			paint: {
 				'raster-opacity': rasterOpacity(mapStyle),
 				'raster-fade-duration': 150,
@@ -149,6 +163,19 @@ export function buildStyle({
 				'line-color': c.border,
 				'line-width': ['interpolate', ['linear'], ['zoom'], 1, 0.6, 6, 1.2],
 				'line-opacity': ['interpolate', ['linear'], ['zoom'], 6, 1, 8, 0]
+			}
+		},
+		{
+			// Amber outline of the visited countries, seen from far away
+			id: 'country-visited',
+			type: 'line',
+			source: COUNTRY_SOURCE,
+			filter: visitedFilter([]),
+			layout: { 'line-join': 'round' },
+			paint: {
+				'line-color': c.acc,
+				'line-width': ['interpolate', ['linear'], ['zoom'], 1, 0.8, 6, 1.6],
+				'line-opacity': ['interpolate', ['linear'], ['zoom'], 5, 0.85, 7, 0]
 			}
 		},
 		{

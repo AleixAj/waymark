@@ -11,29 +11,43 @@
 	//
 	// The layer must sit between the canvas and the photo markers, inside MapLibre's
 	// own container, so it is created here with plain DOM instead of the template.
+	//
+	// Performance: the circles are drawn once at a fixed size and only moved and
+	// scaled with `transform`. The graphics card does that without painting the
+	// gradients again, so dragging the globe doesn't cost a repaint every frame.
 	const map = mapView.map!;
+	const BASE_RADIUS = 500;
 	const layer = document.createElement('div');
 	layer.className = 'globe-shade';
-	layer.innerHTML =
+	const disc = document.createElement('div');
+	disc.className = 'disc';
+	disc.innerHTML =
 		'<div class="halo"></div><div class="light"></div><div class="shadow"></div><div class="rim"></div>';
+	layer.append(disc);
+
+	// Reading the canvas size forces the browser to measure the page: done on resize only
+	let canvasHeight = 0;
 
 	function update() {
 		const center = map.project(map.getCenter());
 		const sphere = sphereRadius(map.getZoom(), map.getCenter().lat);
-		const radius = outlineRadius(sphere, map.getCanvas().clientHeight);
-		layer.style.setProperty('--x', `${center.x}px`);
-		layer.style.setProperty('--y', `${center.y}px`);
-		layer.style.setProperty('--r', `${radius}px`);
+		const radius = outlineRadius(sphere, canvasHeight);
+		disc.style.transform = `translate3d(${center.x}px, ${center.y}px, 0) scale(${radius / BASE_RADIUS})`;
+	}
+
+	function resize() {
+		canvasHeight = map.getCanvas().clientHeight;
+		update();
 	}
 
 	onMount(() => {
 		map.getCanvasContainer().insertBefore(layer, map.getCanvas().nextSibling);
-		update();
+		resize();
 		map.on('move', update);
-		map.on('resize', update);
+		map.on('resize', resize);
 		return () => {
 			map.off('move', update);
-			map.off('resize', update);
+			map.off('resize', resize);
 			layer.remove();
 		};
 	});
@@ -56,22 +70,37 @@
 
 	:global(.globe-shade.hidden) {
 		opacity: 0;
+		visibility: hidden;
+		transition:
+			opacity 0.3s,
+			visibility 0s 0.3s;
 	}
 
-	:global(.globe-shade > div) {
+	/* A 1000 px globe at the top left corner, moved and scaled into place */
+	:global(.globe-shade .disc) {
 		position: absolute;
-		left: var(--x);
-		top: var(--y);
+		left: 0;
+		top: 0;
+		width: 0;
+		height: 0;
+		will-change: transform;
+	}
+
+	:global(.globe-shade .disc > div) {
+		position: absolute;
+		left: -500px;
+		top: -500px;
+		width: 1000px;
+		height: 1000px;
 		border-radius: 50%;
-		transform: translate(-50%, -50%);
-		width: calc(var(--r) * 2);
-		height: calc(var(--r) * 2);
 	}
 
 	/* Glow around the planet: strong at the edge, gone at 1.16 × radius */
-	:global(.globe-shade .halo) {
-		width: calc(var(--r) * 2.32);
-		height: calc(var(--r) * 2.32);
+	:global(.globe-shade .disc > .halo) {
+		left: -580px;
+		top: -580px;
+		width: 1160px;
+		height: 1160px;
 		background: radial-gradient(
 			circle closest-side,
 			transparent 0 calc(100% / 1.16 - 0.5px),
@@ -82,15 +111,15 @@
 		);
 	}
 
-	/* Brighter ocean towards the top left, like light hitting the globe */
+	/* Brighter ocean towards the top left, like light hitting the globe.
+	   Plain transparency instead of a blend mode: blending with the map canvas
+	   would be recomputed on every frame. */
 	:global(.globe-shade .light) {
 		background: radial-gradient(
 			circle at 38% 32%,
-			color-mix(in oklab, var(--ocean-hi) 35%, transparent),
+			color-mix(in oklab, var(--ocean-hi) 22%, transparent),
 			transparent 70%
 		);
-		mix-blend-mode: screen;
-		opacity: 0.7;
 	}
 
 	/* Darker edges make it look round */
@@ -99,7 +128,7 @@
 	}
 
 	:global(.globe-shade .rim) {
-		box-shadow: inset 0 0 0 1px var(--rim);
+		box-shadow: inset 0 0 0 1.5px var(--rim);
 	}
 
 	/* Battery saver: no halo and no shading */

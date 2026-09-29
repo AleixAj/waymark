@@ -9,8 +9,10 @@
 	}
 
 	let { visited, dots }: Props = $props();
-	let width = $state(700);
-	let height = $state(220);
+	// 0 until the box is measured: drawing 241 countries at a guessed size and
+	// again at the real one would do the work twice
+	let width = $state(0);
+	let height = $state(0);
 	let shapes = $state.raw<CountryFeature[]>([]);
 
 	loadCountriesLight().then((topology) => (shapes = toCountryFeatures(topology)));
@@ -26,19 +28,25 @@
 	);
 	const path = $derived(geoPath(projection));
 	const visitedSet = $derived(new Set(visited));
+	// The shapes only change with the size; marking visited countries doesn't redraw them
+	const outlines = $derived(
+		width ? shapes.map((shape) => ({ iso3: shape.properties.iso3, d: path(shape) ?? '' })) : []
+	);
 </script>
 
 <div class="world" bind:clientWidth={width} bind:clientHeight={height}>
-	<svg {width} {height} role="img" aria-label="Mapa con {visited.length} países visitados">
-		<path class="sphere" d={path({ type: 'Sphere' })} />
-		{#each shapes as shape (shape.properties.iso3)}
-			<path class="country" class:visited={visitedSet.has(shape.properties.iso3)} d={path(shape)} />
-		{/each}
-		{#each dots as dot, i (i)}
-			{@const p = projection([dot.lng, dot.lat])}
-			{#if p}<circle class="dot-mark" cx={p[0]} cy={p[1]} r="3.5" />{/if}
-		{/each}
-	</svg>
+	{#if width && height}
+		<svg {width} {height} role="img" aria-label="Mapa con {visited.length} países visitados">
+			<path class="sphere" d={path({ type: 'Sphere' })} />
+			{#each outlines as outline (outline.iso3)}
+				<path class="country" class:visited={visitedSet.has(outline.iso3)} d={outline.d} />
+			{/each}
+			{#each dots as dot, i (i)}
+				{@const p = projection([dot.lng, dot.lat])}
+				{#if p}<circle class="dot-mark" cx={p[0]} cy={p[1]} r="3.5" />{/if}
+			{/each}
+		</svg>
+	{/if}
 </div>
 
 <style>
@@ -70,9 +78,8 @@
 	}
 
 	.dot-mark {
-		fill: var(--acc);
-		stroke: var(--bg);
+		fill: var(--pin);
+		stroke: var(--pin-border);
 		stroke-width: 1.5;
-		filter: drop-shadow(0 0 4px var(--acc-glow));
 	}
 </style>

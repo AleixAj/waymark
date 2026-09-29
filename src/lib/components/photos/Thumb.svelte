@@ -31,14 +31,14 @@
 
 	// The hover highlight on the map must not stay if the tile disappears under the mouse
 	$effect(() => () => {
-		if (ui.hoveredPhoto === id) ui.hoveredPhoto = null;
+		if (ui.isHovered(id)) ui.hoveredPhoto = null;
 	});
 </script>
 
 <button
 	class="ph"
 	class:is-sel={selected}
-	class:is-hover={ui.hoveredPhoto === id}
+	class:is-hover={ui.isHovered(id)}
 	use:whenVisible={() => (visible = true)}
 	draggable={!!ondragstart}
 	{ondragstart}

@@ -3,7 +3,8 @@ import { downloadFile } from '$lib/google/drive';
 import { pickFromDrive } from '$lib/google/picker';
 import { fileItem, type ImportItem } from '$lib/photos/importer';
 import { pathOf, pickFiles } from '$lib/photos/pick';
-import { looksLikeTakeout, readTakeout, type TakeoutAlbum } from '$lib/photos/takeout';
+import { looksLikeTakeout } from '$lib/photos/formats';
+import type { TakeoutAlbum } from '$lib/photos/takeout';
 import { library } from './library.svelte';
 import { ui } from './ui.svelte';
 
@@ -20,6 +21,8 @@ export async function importFiles(files: File[]) {
 	if (looksLikeTakeout(files)) {
 		ui.importNote = 'Leyendo tu exportación de Google Fotos…';
 		try {
+			// The zip reader is only downloaded when a Takeout export arrives
+			const { readTakeout } = await import('$lib/photos/takeout');
 			const albums = await readTakeout(files);
 			if (albums?.length) {
 				ui.takeout = albums;
