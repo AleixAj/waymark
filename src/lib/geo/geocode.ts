@@ -1,4 +1,5 @@
 import { loadCities } from './data';
+import { distanceKm } from './distance';
 
 export interface FoundPlace {
 	name: string;
@@ -19,8 +20,17 @@ interface NominatimResult {
 	display_name: string;
 	lat: string;
 	lon: string;
-	address?: { country_code?: string };
+	/** "place", "boundary", "landuse"... */
+	category: string;
+	address?: Record<string, string | undefined>;
 }
+
+// OpenStreetMap often has a town twice: as a point ("place") and as its border
+// ("boundary"), sometimes with a translated name. Close results of different kinds
+// are the same place; close results of the same kind (ski resort sectors) are not.
+const SAME_PLACE_KM = 3;
+const SAME_SPOT_KM = 0.5;
+const MAX_RESULTS = 6;
 
 /**
  * Places that match a text: ski resorts, beaches, streets... from OpenStreetMap.
@@ -33,28 +43,55 @@ export async function searchPlaces(text: string, signal?: AbortSignal): Promise<
 		const params = new URLSearchParams({
 			q: query,
 			format: 'jsonv2',
-			limit: '6',
+			// More than we show: repeated ones are removed below
+			limit: '12',
 			'accept-language': 'es',
 			addressdetails: '1'
 		});
 		const response = await fetch(`${NOMINATIM}?${params}`, { signal });
 		if (!response.ok) throw new Error(String(response.status));
 		const results = (await response.json()) as NominatimResult[];
-		return results.map((r) => {
-			const parts = r.display_name.split(', ');
-			return {
-				name: r.name || parts[0],
-				// "Canillo, Andorra" instead of the full address
-				detail: [parts[parts.length - 3], parts[parts.length - 1]].filter(Boolean).join(', '),
-				lat: Number(r.lat),
-				lng: Number(r.lon),
-				country: r.address?.country_code?.toUpperCase()
-			};
-		});
+		const kept: { raw: NominatimResult; place: FoundPlace }[] = [];
+		for (const raw of results) {
+			const place = toPlace(raw);
+			const repeated = kept.some((k) => {
+				// Same text in the list ("Lisboa, Portugal" as city and as district)
+				if (sameText(k.place, place)) return true;
+				const km = distanceKm(k.place.lat, k.place.lng, place.lat, place.lng);
+				return km < SAME_SPOT_KM || (km < SAME_PLACE_KM && k.raw.category !== raw.category);
+			});
+			if (!repeated) kept.push({ raw, place });
+		}
+		return kept.slice(0, MAX_RESULTS).map((k) => k.place);
 	} catch (error) {
 		if (signal?.aborted) throw error;
 		return searchCities(query);
 	}
+}
+
+function sameText(a: FoundPlace, b: FoundPlace) {
+	return (
+		a.name.toLowerCase() === b.name.toLowerCase() &&
+		a.detail.toLowerCase() === b.detail.toLowerCase()
+	);
+}
+
+function toPlace(r: NominatimResult): FoundPlace {
+	const name = r.name || r.display_name.split(', ')[0];
+	const a = r.address ?? {};
+	// "Encamp, Andorra": town and country, without repeating the name
+	const town = a.city ?? a.town ?? a.village ?? a.municipality;
+	const region = a.state ?? a.province ?? a.county;
+	const detail = [...new Set([town, region, a.country])]
+		.filter((part): part is string => !!part && part !== name)
+		.join(', ');
+	return {
+		name,
+		detail,
+		lat: Number(r.lat),
+		lng: Number(r.lon),
+		country: a.country_code?.toUpperCase()
+	};
 }
 
 /** Offline search in the bundled cities, biggest first */
