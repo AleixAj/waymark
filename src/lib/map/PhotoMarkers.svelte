@@ -29,6 +29,8 @@
 		marker: Marker;
 		el: HTMLElement;
 		html: string;
+		/** Photo shown as thumbnail (photo mode), to keep the image when only the count changes */
+		thumb: string;
 		/** Latest data of this marker: event handlers read it here, never a stale copy */
 		item: Item;
 	}
@@ -72,8 +74,14 @@
 	} | null>(null);
 	let tick = $state(0);
 
-	function keyOf(item: Item) {
-		return isCluster(item) ? `c${item.properties.cluster_id}` : `p${item.properties.id}`;
+	/**
+	 * A marker is named after its first photo, not after the cluster number: cluster
+	 * numbers change on every zoom level, and the marker would be destroyed and made
+	 * again (its thumbnail flickering). This way the marker of a photo stays while
+	 * the groups around it split or join.
+	 */
+	function keyOf(firstId: string) {
+		return `m${firstId}`;
 	}
 
 	function isCluster(item: Item): item is ClusterItem {
@@ -85,11 +93,13 @@
 		return index.getLeaves(item.properties.cluster_id, limit).map((l) => l.properties);
 	}
 
-	function labelOf(item: Item, key: string) {
-		let label = labelCache.get(key);
+	function labelOf(item: Item, key: string, zoom: number) {
+		// The same marker groups other photos on another zoom level
+		const cacheKey = `${key}@${zoom}`;
+		let label = labelCache.get(cacheKey);
 		if (label === undefined) {
 			label = placeLabel(leaves(item));
-			labelCache.set(key, label);
+			labelCache.set(cacheKey, label);
 		}
 		return label;
 	}
@@ -162,23 +172,32 @@
 		const seen = new Set<string>();
 
 		for (const item of items) {
-			const key = keyOf(item);
+			const leaf = leaves(item, 1)[0]?.id ?? '';
+			const key = keyOf(leaf);
 			seen.add(key);
 			const count = isCluster(item) ? item.properties.point_count : 1;
 			const [lng, lat] = item.geometry.coordinates;
-			const firstId = photoMode ? (leaves(item, 1)[0]?.id ?? '') : '';
-			const label = showLabels ? labelOf(item, key) : '';
+			const firstId = photoMode ? leaf : '';
+			const label = showLabels ? labelOf(item, key, Math.floor(zoom)) : '';
 			const html = markerHtml(count, photoMode, label, firstId, showCount);
+			const ariaLabel = label ? `${label}, ${count} fotos` : `${count} fotos`;
 
 			const existing = markers.get(key);
 			if (existing) {
 				existing.item = item;
 				existing.marker.setLngLat([lng, lat]);
 				if (existing.html !== html) {
-					existing.el.innerHTML = html;
+					if (photoMode && existing.thumb === firstId) {
+						// Same photo, other count: only the number changes, the image stays
+						setBadge(existing.el, count);
+					} else {
+						existing.el.innerHTML = html;
+						// The new HTML has an empty image: fill it again
+						if (photoMode) showThumb(existing.el, firstId);
+					}
 					existing.html = html;
-					// The new HTML has an empty image: fill it again
-					if (photoMode) showThumb(existing.el, firstId);
+					existing.thumb = firstId;
+					existing.el.setAttribute('aria-label', ariaLabel);
 				}
 				continue;
 			}
@@ -186,10 +205,11 @@
 			const el = document.createElement('button');
 			el.className = 'wm-marker';
 			el.innerHTML = html;
-			el.setAttribute('aria-label', label ? `${label}, ${count} fotos` : `${count} fotos`);
+			el.setAttribute('aria-label', ariaLabel);
 			const entry: Entry = {
 				el,
 				html,
+				thumb: firstId,
 				item,
 				marker: new Marker({ element: el, opacityWhenCovered: 0, subpixelPositioning: true })
 					.setLngLat([lng, lat])
@@ -229,7 +249,7 @@
 		const labelHtml = label ? `<span class="mk-label">${escapeHtml(label)}</span>` : '';
 		if (photoMode) {
 			const badge = count > 1 ? `<span class="badge">${formatNumber(count)}</span>` : '';
-			return `<span class="pm" data-thumb="${escapeHtml(firstId)}"><img alt="" /></span>${badge}`;
+			return `<span class="pm" data-thumb="${escapeHtml(firstId)}"><img alt="" decoding="async" /></span>${badge}`;
 		}
 		if (count === 1) return `<span class="dot"></span>${labelHtml}`;
 		if (!showCount) {
@@ -239,6 +259,21 @@
 		const size = clusterSize(count);
 		const small = count > 999 ? ' big-number' : '';
 		return `<span class="cluster${small}" style="width:${size}px;height:${size}px">${formatNumber(count)}</span>${labelHtml}`;
+	}
+
+	/** Number of photos on a thumbnail marker, without touching its image */
+	function setBadge(el: HTMLElement, count: number) {
+		let badge = el.querySelector<HTMLElement>(':scope > .badge');
+		if (count <= 1) {
+			badge?.remove();
+			return;
+		}
+		if (!badge) {
+			badge = document.createElement('span');
+			badge.className = 'badge';
+			el.append(badge);
+		}
+		badge.textContent = formatNumber(count);
 	}
 
 	/** Puts the thumbnail in the marker, using the shared cache (no URL is created twice) */
@@ -359,6 +394,23 @@
 <style>
 	/* Markers are created by hand (not by Svelte), so their styles are global */
 	/* No `position` here: MapLibre positions the marker element itself */
+	/* New markers fade in instead of popping up (the root is moved by MapLibre,
+	   so the animation is on its content; the city label keeps its own transform) */
+	:global(.wm-marker > :is(.pm, .dot, .place, .cluster)) {
+		animation: mk-in 0.2s ease-out;
+	}
+
+	:global([data-motion='reduced'] .wm-marker > *) {
+		animation: none;
+	}
+
+	@keyframes -global-mk-in {
+		from {
+			opacity: 0;
+			transform: scale(0.85);
+		}
+	}
+
 	:global(.wm-marker) {
 		display: grid;
 		place-items: center;

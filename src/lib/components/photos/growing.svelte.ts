@@ -16,13 +16,17 @@ export function growingLimit(total: () => number) {
 	let limit = $state(FIRST);
 	$effect(() => {
 		const count = total();
-		limit = FIRST;
+		// A local counter: reading `limit` here would make the effect run again
+		// every time the list grows, starting over from the first photos forever
+		let shown = FIRST;
+		limit = shown;
 		let handle = 0;
 		const grow = () => {
-			limit += STEP;
-			if (limit < count) handle = whenIdle(grow);
+			shown += STEP;
+			limit = shown;
+			if (shown < count) handle = whenIdle(grow);
 		};
-		if (limit < count) handle = whenIdle(grow);
+		if (shown < count) handle = whenIdle(grow);
 		return () => cancelIdle(handle);
 	});
 	return {
