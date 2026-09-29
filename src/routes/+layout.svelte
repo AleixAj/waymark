@@ -43,6 +43,9 @@
 
 	let { children } = $props();
 
+	// The street map covers the countries from about this zoom (see map/style.ts)
+	const COUNTRY_CLICK_MAX_ZOOM = 7;
+
 	settings.init();
 
 	const onStats = $derived(page.url.pathname.startsWith('/estadisticas'));
@@ -102,8 +105,10 @@
 		// "Asignar ubicación" mode: the "Sin ubicación" page places the photos instead
 		if (ui.placing) return;
 		void lngLat;
-		// Only at country level: when zoomed in you are exploring streets, not countries
-		if (mapView.zoom < 5) goto(`/pais/${iso3}`);
+		// While the colored countries are on the map they can be opened (small ones like
+		// Vietnam need a closer zoom). Once the street map takes over, you are exploring
+		// streets and a click must not jump to the country page.
+		if (mapView.zoom < COUNTRY_CLICK_MAX_ZOOM) goto(`/pais/${iso3}`);
 	}
 
 	function onKeydown(event: KeyboardEvent) {
