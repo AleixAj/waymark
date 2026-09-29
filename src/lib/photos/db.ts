@@ -1,5 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie';
 import { toPoint, type Photo, type PhotoPoint } from './types';
+import type { Place } from './places';
 
 /** Things the user changed on a detected trip */
 export interface TripEdit {
@@ -61,11 +62,13 @@ export async function setFavorite(id: string, favorite: boolean) {
 	await db.photos.update(id, { favorite });
 }
 
-export async function setLocation(
-	ids: string[],
-	place: { lat: number; lng: number; country: string | null; city: string | null }
-) {
+export async function setLocation(ids: string[], place: { lat: number; lng: number } & Place) {
 	await db.photos.where('id').anyOf(ids).modify(place);
+}
+
+/** New country, city and area for photos whose place was looked up again */
+export async function updatePlaces(changes: { id: string; place: Place }[]) {
+	await db.photos.bulkUpdate(changes.map(({ id, place }) => ({ key: id, changes: place })));
 }
 
 /** Returns which of these ids are already saved */
@@ -97,14 +100,18 @@ export async function measureLibrary() {
 		thumbs += photo.thumb.size;
 		// Sample photos reuse the thumbnail as file
 		if (photo.file !== photo.thumb) originals += photo.file.size;
+		// Viewable copy of RAW photos
+		originals += photo.display?.size ?? 0;
 	});
 	return { thumbs, originals };
 }
 
 /** Everything except the images: used by "Export library" */
 export async function exportMetadata() {
-	const photos: Omit<Photo, 'thumb' | 'file'>[] = [];
-	await db.photos.each(({ thumb: _thumb, file: _file, ...rest }) => photos.push(rest));
+	const photos: Omit<Photo, 'thumb' | 'file' | 'display'>[] = [];
+	await db.photos.each(({ thumb: _thumb, file: _file, display: _display, ...rest }) =>
+		photos.push(rest)
+	);
 	return { photos, trips: await db.trips.toArray() };
 }
 

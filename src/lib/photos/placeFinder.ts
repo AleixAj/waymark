@@ -1,5 +1,5 @@
 import { loadCities, loadCountries } from '$lib/geo/data';
-import { PlaceFinder, type Place } from './places';
+import { NO_PLACE, PlaceFinder, type Place } from './places';
 
 // Country and city lookups run on the main thread with a single copy of the geo
 // data (the workers only read the files). The lookup itself takes microseconds.
@@ -18,15 +18,15 @@ function getPlaceFinder() {
 
 /** Country and city for a position. Without the geo data (offline) they stay empty. */
 export async function findPlace(lat: number | null, lng: number | null): Promise<Place> {
-	if (lat === null || lng === null) return { country: null, city: null };
+	if (lat === null || lng === null) return NO_PLACE;
 	try {
 		return (await getPlaceFinder()).find(lat, lng);
 	} catch {
-		return { country: null, city: null };
+		return NO_PLACE;
 	}
 }
 
-/** Country and city for a position picked on the map */
+/** Country, city and area for a position picked on the map */
 export async function placeAt(lat: number, lng: number) {
 	return { lat, lng, ...(await findPlace(lat, lng)) };
 }

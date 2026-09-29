@@ -1,9 +1,13 @@
 /// <reference lib="webworker" />
-import { readPhotoMeta, type ExifResult } from './exif';
-import { createThumbnail } from './thumbnail';
+import { readPhotoMeta, type ExifResult, type RawFile } from './exif';
+import { createThumbnail, rawDisplayImage } from './thumbnail';
 import { fileFingerprint } from './fingerprint';
+import { findJpegs, isRaw } from './raw';
 
-export interface ProcessedPhoto extends Omit<ExifResult, 'width' | 'height' | 'hasExif'> {
+export interface ProcessedPhoto extends Omit<
+	ExifResult,
+	'width' | 'height' | 'hasExif' | 'orientation'
+> {
 	id: string;
 	name: string;
 	size: number;
@@ -11,6 +15,8 @@ export interface ProcessedPhoto extends Omit<ExifResult, 'width' | 'height' | 'h
 	height: number;
 	thumb: Blob;
 	previewable: boolean;
+	/** Image to show for RAW files (the JPEG preview stored inside them) */
+	display?: Blob;
 }
 
 export type WorkerRequest = { file: File };
@@ -22,8 +28,13 @@ export type WorkerResponse =
 self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
 	const { file } = event.data;
 	try {
-		const [id, meta] = await Promise.all([fileFingerprint(file), readPhotoMeta(file)]);
-		const preview = await createThumbnail(file, meta);
+		const raw = isRaw(file) ? await readRaw(file) : undefined;
+		const [id, meta] = await Promise.all([
+			fileFingerprint(file),
+			readPhotoMeta(file, Date.now(), raw)
+		]);
+		const display = raw ? await rawDisplayImage(raw.jpegs, meta.orientation) : null;
+		const preview = await createThumbnail(display ?? file, meta);
 		// Neither an image the browser can decode nor any camera data: not a photo
 		if (!preview.decoded && !meta.hasExif) {
 			self.postMessage({
@@ -33,7 +44,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
 			} satisfies WorkerResponse);
 			return;
 		}
-		const { hasExif: _hasExif, ...fields } = meta;
+		const { hasExif: _hasExif, orientation: _orientation, ...fields } = meta;
 		const photo: ProcessedPhoto = {
 			...fields,
 			id,
@@ -42,7 +53,8 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
 			width: preview.width,
 			height: preview.height,
 			thumb: preview.thumb,
-			previewable: preview.decoded
+			previewable: preview.decoded,
+			...(display && { display })
 		};
 		self.postMessage({ ok: true, photo } satisfies WorkerResponse);
 	} catch {
@@ -53,3 +65,8 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
 		} satisfies WorkerResponse);
 	}
 };
+
+async function readRaw(file: File): Promise<RawFile> {
+	const bytes = new Uint8Array(await file.arrayBuffer());
+	return { bytes, jpegs: findJpegs(bytes) };
+}

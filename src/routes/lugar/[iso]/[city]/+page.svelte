@@ -11,6 +11,7 @@
 	import { countries } from '$lib/state/countries.svelte';
 	import { mapView } from '$lib/map/view.svelte';
 	import { centroid } from '$lib/library/trips';
+	import { circle, cityAreas } from '$lib/library/areas';
 	import { formatNumber } from '$lib/library/format';
 	import type { LngLatBounds } from 'maplibre-gl';
 
@@ -20,6 +21,13 @@
 	const countryName = $derived(countries.name(iso));
 	const cityPhotos = $derived(library.located.filter((p) => p.country === iso && p.city === city));
 	const center = $derived(cityPhotos.length ? centroid(cityPhotos) : null);
+	// Neighbourhoods are shown only when the photos are in more than one
+	const areas = $derived(cityAreas(cityPhotos, city));
+	const hasAreas = $derived(areas.length > 1);
+	const active = $derived(hasAreas ? mapView.activeArea : null);
+	const areaPhotos = $derived(
+		active ? cityPhotos.filter((p) => (p.area ?? city) === active) : null
+	);
 
 	// Photos inside the visible part of the map, updated when the map stops moving.
 	// Until the camera arrives (or without a map at all) the city's photos are shown.
@@ -28,11 +36,31 @@
 		bounds ? library.located.filter((p) => bounds!.contains([p.lng, p.lat])) : cityPhotos
 	);
 
-	// Another city: start again from its own photos
+	// Another city: start again from its own photos (or the area in the link)
 	$effect(() => {
 		void city;
 		bounds = null;
+		mapView.activeArea = untrack(() => page.url.searchParams.get('zona'));
 	});
+
+	$effect(() => {
+		mapView.areas = hasAreas ? areas : null;
+	});
+
+	// Old links to a neighbourhood (".../Kópavogur") open its city with the area selected
+	$effect(() => {
+		if (!library.loaded || cityPhotos.length) return;
+		const inArea = library.located.find((p) => p.country === iso && p.area === city);
+		if (inArea?.city) {
+			goto(`/lugar/${iso}/${encodeURIComponent(inArea.city)}?zona=${encodeURIComponent(city)}`, {
+				replaceState: true
+			});
+		}
+	});
+
+	function chooseArea(name: string | null) {
+		mapView.activeArea = mapView.activeArea === name ? null : name;
+	}
 
 	function updateInView() {
 		const map = mapView.map;
@@ -45,15 +73,26 @@
 		mapView.points = null;
 		mapView.labels = true;
 		mapView.padding = { top: 140, bottom: 40, left: 40, right: 470 };
+		return () => {
+			mapView.areas = null;
+			mapView.activeArea = null;
+		};
 	});
 
 	$effect(() => {
-		const photos = cityPhotos;
+		// The whole circle of the selected neighbourhood, or all the city's photos
+		const area = active ? areas.find((a) => a.name === active) : null;
+		const photos = area
+			? circle(area.lat, area.lng, area.radiusKm, 16).map(([lng, lat]) => ({ lat, lng }))
+			: cityPhotos;
 		// Re-frame when the panel size changes (bottom sheet on phones)
 		void mapView.cameraPadding;
 		if (!mapView.map || !photos.length) return;
-		untrack(() => mapView.fitPoints(photos, 14.5));
+		untrack(() => mapView.fitPoints(photos, 15.5));
 	});
+
+	// A selected neighbourhood shows its photos; otherwise, what the map shows
+	const shown = $derived(areaPhotos ?? inView);
 
 	// The map may not exist yet when the page opens from a link, so we wait for it
 	$effect(() => {
@@ -93,16 +132,35 @@
 		</div>
 		<h1 class="t-h1 title">{city}</h1>
 		{#if center}<p class="mono t2 sub">{coords(center.lat, center.lng)}</p>{/if}
+		{#if hasAreas}
+			<div class="areas" role="group" aria-label="Zonas de {city}">
+				<button class="chip" class:is-on={!active} onclick={() => chooseArea(null)}>
+					Toda la ciudad <span class="mono">{formatNumber(cityPhotos.length)}</span>
+				</button>
+				{#each areas as area (area.name)}
+					<button
+						class="chip"
+						class:is-on={active === area.name}
+						aria-pressed={active === area.name}
+						onclick={() => chooseArea(area.name)}
+					>
+						{area.name} <span class="mono">{formatNumber(area.photoIds.length)}</span>
+					</button>
+				{/each}
+			</div>
+		{/if}
 		<div class="row zone">
 			<span class="row t-small t2 zone-label"
-				><span class="dot sm"></span>Mostrando fotos en esta zona</span
+				><span class="dot sm"></span>{active
+					? `Fotos en ${active}`
+					: 'Mostrando fotos en esta zona'}</span
 			>
-			<span class="mono count">{formatNumber(inView.length)}</span>
+			<span class="mono count">{formatNumber(shown.length)}</span>
 		</div>
 	</div>
 	<div class="scroll">
-		{#if inView.length}
-			<PhotoDays photos={inView} context={city} />
+		{#if shown.length}
+			<PhotoDays photos={shown} context={active ?? city} />
 		{:else}
 			<div class="empty nothing">
 				<h3>No hay fotos en esta zona</h3>
@@ -133,6 +191,13 @@
 
 	.sub {
 		margin-top: 6px;
+	}
+
+	.areas {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+		margin-top: 16px;
 	}
 
 	.zone {

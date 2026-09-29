@@ -3,6 +3,7 @@ import { settings } from '$lib/state/settings.svelte';
 import { ui } from '$lib/state/ui.svelte';
 import { countries } from '$lib/state/countries.svelte';
 import type { Stop } from '$lib/library/trips';
+import type { Area } from '$lib/library/areas';
 import type { LocatedPoint } from '$lib/photos/types';
 import { zoomForOutline } from './globe';
 import { pointsBounds } from './bounds';
@@ -33,6 +34,9 @@ class MapView {
 	/** Trip route drawn on the map */
 	route = $state.raw<Stop[] | null>(null);
 	activeStop = $state<number | null>(null);
+	/** Neighbourhoods drawn in the city view, and the one selected */
+	areas = $state.raw<Area[] | null>(null);
+	activeArea = $state<string | null>(null);
 	/** Space covered by floating panels, so the camera centers in what's visible */
 	padding = $state<PaddingOptions>({ top: 90, bottom: 110, left: 350, right: 90 });
 	zoom = $state(2);

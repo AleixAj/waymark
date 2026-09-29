@@ -51,7 +51,7 @@
 	// Index photo -> trip: no need to search every trip for every photo
 	const trips = $derived(library.tripByPhoto.get(id) ? [library.tripByPhoto.get(id)!] : []);
 	const title = $derived(
-		[point?.city, point?.country ? countries.name(point.country) : null]
+		[point?.area, point?.city, point?.country ? countries.name(point.country) : null]
 			.filter(Boolean)
 			.join(', ') ||
 			photo?.name ||
@@ -196,8 +196,8 @@
 				<div class="cannot-show empty">
 					<h3>Este navegador no puede mostrar esta foto</h3>
 					<p>
-						Es un formato que solo abren algunos navegadores (por ejemplo HEIC). Su ubicación y sus
-						datos sí están guardados, y puedes descargarla.
+						Es un formato que solo abren algunos navegadores (HEIC, o un RAW sin vista previa). Su
+						ubicación y sus datos sí están guardados, y puedes descargarla.
 					</p>
 				</div>
 			{:else if image}
@@ -349,8 +349,12 @@
 							<div class="kv">
 								<Icon name="pin" size={16} />
 								<div class="col">
-									<span class="v">{point.city ?? 'Lugar sin nombre'}</span>
-									<span class="t-small t3">{countries.name(point.country)}</span>
+									<span class="v">{point.area ?? point.city ?? 'Lugar sin nombre'}</span>
+									<span class="t-small t3"
+										>{point.area && point.city
+											? `${point.city}, ${countries.name(point.country)}`
+											: countries.name(point.country)}</span
+									>
 								</div>
 							</div>
 							<div class="row coords">

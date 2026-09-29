@@ -36,7 +36,7 @@ async function createUrl(id: string) {
 	if (!photo) return null;
 	const blob = photo.demo
 		? await paintDemoImage(photo.demo.scene, photo.demo.label, photo.height > photo.width)
-		: photo.file;
+		: (photo.display ?? photo.file);
 	return blob ? URL.createObjectURL(blob) : null;
 }
 

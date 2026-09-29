@@ -1,5 +1,6 @@
 import exifr from 'exifr';
 import type { PhotoMeta } from './types';
+import { readRawTags, type EmbeddedJpeg } from './raw';
 
 // Only these tags are parsed, which keeps reading fast
 const TAGS = [
@@ -20,10 +21,14 @@ const TAGS = [
 	'ISO',
 	'FocalLength',
 	'ExifImageWidth',
-	'ExifImageHeight'
+	'ExifImageHeight',
+	'Orientation'
 ];
 
 // Dates before this come from a camera with its clock never set
+// Orientation stays a number (1-8) instead of a text like "Rotate 90 CW"
+const OPTIONS = { pick: TAGS, translateValues: false };
+
 const OLDEST_PHOTO = Date.UTC(1990, 0, 1);
 const DAY = 86_400_000;
 
@@ -33,18 +38,32 @@ export interface ExifResult extends PhotoMeta {
 	height: number | null;
 	/** The file had readable EXIF data (a real photo, even if the browser can't show it) */
 	hasExif: boolean;
+	/** EXIF rotation (1 = upright, 6 = turn 90° right...) */
+	orientation: number;
+}
+
+/** A RAW file already read by the importer: its bytes and the JPEG previews inside */
+export interface RawFile {
+	bytes: Uint8Array;
+	jpegs: EmbeddedJpeg[];
 }
 
 /** Reads GPS position, capture date and camera settings from the photo */
-export async function readPhotoMeta(file: File, now = Date.now()): Promise<ExifResult> {
+export async function readPhotoMeta(
+	file: File,
+	now = Date.now(),
+	raw?: RawFile
+): Promise<ExifResult> {
 	let data: Record<string, unknown> | undefined;
 	try {
 		// exifr adds decimal latitude/longitude when the raw GPS tags are picked
-		data = await exifr.parse(file, { pick: TAGS });
+		data = await exifr.parse(raw?.bytes ?? file, OPTIONS);
 	} catch {
 		// Files without EXIF (screenshots, PNGs...) are still valid photos
 		data = undefined;
 	}
+	// RAW formats exifr doesn't know (CR3, RAF, ORF, RW2...) are read by hand
+	if (raw && !hasData(data)) data = await readRawTags(raw.bytes, raw.jpegs, OPTIONS);
 
 	const offset = toOffset(data?.OffsetTimeOriginal);
 	// Each date is checked on its own: a broken DateTimeOriginal falls back to CreateDate
@@ -53,6 +72,12 @@ export async function readPhotoMeta(file: File, now = Date.now()): Promise<ExifR
 		toTime(data?.CreateDate, offset, now) ??
 		toTime(data?.ModifyDate, offset, now) ??
 		file.lastModified;
+
+	const orientation = toOrientation(data?.Orientation);
+	// EXIF sizes are before rotation: a portrait photo says 6000 x 4000
+	const turned = orientation >= 5;
+	const width = toNumber(turned ? data?.ExifImageHeight : data?.ExifImageWidth);
+	const height = toNumber(turned ? data?.ExifImageWidth : data?.ExifImageHeight);
 
 	return {
 		...toPosition(data?.latitude, data?.longitude),
@@ -65,10 +90,21 @@ export async function readPhotoMeta(file: File, now = Date.now()): Promise<ExifR
 		exposure: toNumber(data?.ExposureTime),
 		iso: toNumber(data?.ISO),
 		focal: toNumber(data?.FocalLength),
-		width: toNumber(data?.ExifImageWidth),
-		height: toNumber(data?.ExifImageHeight),
-		hasExif: !!data && Object.keys(data).length > 0
+		width,
+		height,
+		hasExif: hasData(data),
+		orientation
 	};
+}
+
+function hasData(data: Record<string, unknown> | undefined): data is Record<string, unknown> {
+	return !!data && Object.keys(data).length > 0;
+}
+
+export function toOrientation(value: unknown) {
+	return typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 8
+		? value
+		: 1;
 }
 
 export function toCoordinate(value: unknown, limit: number): number | null {

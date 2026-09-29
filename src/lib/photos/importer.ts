@@ -1,5 +1,6 @@
 import { askForPersistentStorage, findExistingIds, savePhotos } from './db';
 import { findPlace } from './placeFinder';
+import { isRaw } from './raw';
 import { toPoint, type Photo, type PhotoPoint } from './types';
 import type { ProcessedPhoto, WorkerRequest, WorkerResponse } from './import.worker';
 
@@ -32,10 +33,10 @@ interface ImportOptions {
 const BATCH_SIZE = 48;
 // A photo that takes longer than this is skipped (and its worker replaced)
 const FILE_TIMEOUT_MS = 30_000;
-const IMAGE_EXTENSIONS = /\.(jpe?g|png|webp|heic|heif|avif|gif|tiff?|dng)$/i;
+const IMAGE_EXTENSIONS = /\.(jpe?g|png|webp|heic|heif|avif|gif|tiff?)$/i;
 
 export function isImage(file: File) {
-	return file.type.startsWith('image/') || IMAGE_EXTENSIONS.test(file.name);
+	return file.type.startsWith('image/') || IMAGE_EXTENSIONS.test(file.name) || isRaw(file);
 }
 
 export async function importPhotos(files: File[], { onProgress, onBatch, signal }: ImportOptions) {

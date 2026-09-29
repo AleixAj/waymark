@@ -37,7 +37,7 @@
 		<div class="icon"><Icon name="upload" /></div>
 		<p class="t-h3 title">Arrastra aquí tus fotos o carpetas</p>
 		<p class="t-small t3">
-			JPG, HEIC, PNG y más. Leemos la ubicación GPS de cada foto para colocarla en el globo.
+			JPG, HEIC, RAW y más. Leemos la ubicación GPS de cada foto para colocarla en el globo.
 		</p>
 		<div class="row buttons">
 			<button class="btn btn-primary btn-lg" onclick={() => choose(false)}

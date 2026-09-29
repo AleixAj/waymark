@@ -5,8 +5,11 @@ import {
 	saveTripEdit,
 	setFavorite,
 	setLocation,
+	updatePlaces,
 	type TripEdit
 } from '$lib/photos/db';
+import { findPlace } from '$lib/photos/placeFinder';
+import type { Place } from '$lib/photos/places';
 import { importPhotos, type ImportError, type ImportProgress } from '$lib/photos/importer';
 import { forgetFullImages } from '$lib/photos/image';
 import { isLocated, type PhotoPoint } from '$lib/photos/types';
@@ -71,6 +74,26 @@ class Library {
 		this.points = points;
 		this.tripEdits = edits;
 		this.loaded = true;
+		void this.addMissingAreas();
+	}
+
+	/**
+	 * Photos saved before neighbourhoods existed have no area: their place is
+	 * looked up again once (Kópavogur becomes an area of Reikiavik).
+	 */
+	private async addMissingAreas() {
+		// Sample photos keep the names of the demo
+		const old = this.located.filter((p) => p.area === undefined && !p.id.startsWith('demo-'));
+		if (!old.length) return;
+		const changes = await Promise.all(
+			old.map(async (p) => ({ id: p.id, place: await findPlace(p.lat, p.lng) }))
+		);
+		// Offline the lookup finds nothing: try again another day instead of losing the city
+		const found = changes.filter((c) => c.place.city || c.place.country);
+		if (!found.length) return;
+		await updatePlaces(found);
+		const byId = new Map(found.map((c) => [c.id, c.place]));
+		this.points = this.points.map((p) => (byId.has(p.id) ? { ...p, ...byId.get(p.id) } : p));
 	}
 
 	/** Imports photos. Called while another import runs, the files are queued. */
@@ -172,10 +195,7 @@ class Library {
 		await setFavorite(id, favorite);
 	}
 
-	async assignLocation(
-		ids: string[],
-		place: { lat: number; lng: number; country: string | null; city: string | null }
-	) {
+	async assignLocation(ids: string[], place: { lat: number; lng: number } & Place) {
 		await setLocation(ids, place);
 		this.replace(ids, place);
 	}

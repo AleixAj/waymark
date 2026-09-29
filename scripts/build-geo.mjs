@@ -225,7 +225,9 @@ function buildCities() {
 			lat: cols[4],
 			lng: cols[5],
 			iso2: cols[8],
-			population: Number(cols[14])
+			population: Number(cols[14]),
+			// PPLX: a district of a bigger city (Shinjuku, Gràcia...)
+			district: cols[7] === 'PPLX'
 		}));
 
 	// Only the biggest city with each name gets the Spanish name:
@@ -239,9 +241,11 @@ function buildCities() {
 	}
 
 	const cities = rows.map((row) => {
-		const name = biggest.get(row.name) === row ? CITY_ES[row.name] : row.name;
-		// [name, lat, lng, iso2, population] keeps the file small
-		return [name, round(row.lat), round(row.lng), row.iso2, row.population];
+		let name = biggest.get(row.name) === row ? CITY_ES[row.name] : row.name;
+		// Japanese cities come as "Nara-shi": the "-shi" (city) is not part of the name
+		if (row.iso2 === 'JP') name = name.replace(/-shi$/, '');
+		// [name, lat, lng, iso2, population, district] keeps the file small
+		return [name, round(row.lat), round(row.lng), row.iso2, row.population, row.district ? 1 : 0];
 	});
 	writeFileSync(`${OUT}/cities.json`, JSON.stringify(cities));
 	console.log(`cities.json: ${cities.length} cities`);

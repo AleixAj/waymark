@@ -19,6 +19,7 @@
 	import GlobeMap from '$lib/map/GlobeMap.svelte';
 	import PhotoMarkers from '$lib/map/PhotoMarkers.svelte';
 	import RouteLayer from '$lib/map/RouteLayer.svelte';
+	import AreaLayer from '$lib/map/AreaLayer.svelte';
 	import { mapView } from '$lib/map/view.svelte';
 	import TopBar from '$lib/components/TopBar.svelte';
 	import NoWebGL from '$lib/components/NoWebGL.svelte';
@@ -141,6 +142,7 @@
 						{#if !welcome}
 							<PhotoMarkers points={mapView.points ?? library.visible} labels={mapView.labels} />
 							<RouteLayer />
+							<AreaLayer />
 						{/if}
 					</GlobeMap>
 				{/key}

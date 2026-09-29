@@ -1,3 +1,6 @@
+// RAW files often have no image type, so the picker would hide them
+const RAW_TYPES = '.dng,.cr2,.cr3,.nef,.arw,.raf,.orf,.rw2,.pef,.srw';
+
 /**
  * Opens the system file picker. With `folder` the user picks a whole folder.
  * Resolves with an empty list if the user cancels.
@@ -9,7 +12,7 @@ export function pickFiles(folder = false): Promise<File[]> {
 		input.multiple = true;
 		input.hidden = true;
 		if (folder) input.webkitdirectory = true;
-		else input.accept = 'image/*,.heic,.heif';
+		else input.accept = `image/*,.heic,.heif,${RAW_TYPES}`;
 
 		const finish = (files: File[]) => {
 			input.remove();
