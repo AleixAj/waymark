@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { Tween } from 'svelte/motion';
+	import { cubicOut } from 'svelte/easing';
 	import FlatWorld from '$lib/components/stats/FlatWorld.svelte';
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import { library } from '$lib/state/library.svelte';
@@ -87,6 +89,17 @@
 	const unit = $derived(settings.units);
 	const dist = (km: number) => formatNumber(settings.distance(km));
 
+	// The big numbers count up when the page opens and when the year changes
+	function countUp(value: () => number) {
+		const tween = new Tween(0, { duration: settings.reducedMotion ? 0 : 900, easing: cubicOut });
+		$effect(() => {
+			tween.target = value();
+		});
+		return tween;
+	}
+	const shownCountries = countUp(() => countryList.length);
+	const shownKm = countUp(() => totalKm);
+
 	function lat(value: number) {
 		return `${Math.abs(value).toFixed(4)}° ${value >= 0 ? 'N' : 'S'}`;
 	}
@@ -128,13 +141,13 @@
 			</div>
 		</div>
 
-		<div class="grid">
+		<div class="grid stagger">
 			<div class="card span8 tall">
 				<div class="row between top">
 					<div>
 						<span class="t-label">Países visitados</span>
 						<div class="row big-row">
-							<span class="big acc">{countryList.length}</span>
+							<span class="big acc">{Math.round(shownCountries.current)}</span>
 							<span class="mono t3 of"
 								>de {TOTAL_COUNTRIES} · {Math.round((countryList.length / TOTAL_COUNTRIES) * 100)} %</span
 							>
@@ -155,7 +168,7 @@
 			<div class="card span4 tall">
 				<span class="t-label">Distancia recorrida</span>
 				<div class="row big-row">
-					<span class="big acc">{dist(totalKm)}</span><span class="mono t3 of">{unit}</span>
+					<span class="big acc">{dist(shownKm.current)}</span><span class="mono t3 of">{unit}</span>
 				</div>
 				<p class="t2 note">
 					{#if laps >= 1}Equivale a {formatDecimal(laps)} vueltas al ecuador.{:else}El {Math.round(
@@ -164,7 +177,9 @@
 				</p>
 				<div class="laps">
 					{#each Array.from({ length: Math.min(3, Math.ceil(laps) || 1) }, (_, i) => i) as i (i)}
-						<div class="lap"><i style:width="{Math.min(1, Math.max(0, laps - i)) * 100}%"></i></div>
+						<div class="lap">
+							<i style:--i={i} style:width="{Math.min(1, Math.max(0, laps - i)) * 100}%"></i>
+						</div>
 					{/each}
 				</div>
 				<div class="row between mono t3 small lap-legend">
@@ -203,7 +218,7 @@
 					<span class="mono t3 small">máx. {maxYear.year} · {formatNumber(maxYear.count)}</span>
 				</div>
 				<div class="row years">
-					{#each perYear as y (y.year)}
+					{#each perYear as y, i (y.year)}
 						{@const best = y.year === maxYear.year}
 						{@const share = y.count / maxYear.count}
 						<button
@@ -217,6 +232,7 @@
 							>
 							<div
 								class="bar"
+								style:--i={i}
 								style:height="{share * 82}%"
 								style:background={best
 									? 'linear-gradient(180deg, var(--acc-hover), var(--acc))'
@@ -244,6 +260,7 @@
 							</div>
 							<div class="track">
 								<div
+									style:--i={i}
 									style:width="{(c.count / cities[0].count) * 100}%"
 									style:background="color-mix(in oklab, var(--acc) {100 - i * 12}%, var(--s2))"
 								></div>
@@ -365,6 +382,7 @@
 
 	.of {
 		font-size: 14px;
+		white-space: nowrap;
 	}
 
 	.right {
@@ -401,6 +419,24 @@
 		height: 100%;
 		background: var(--acc);
 		opacity: 0.9;
+		transform-origin: left;
+		animation: grow-x 0.9s var(--ease-out) both;
+		animation-delay: calc(0.25s + var(--i) * 0.18s);
+		transition: width var(--dur-slow) var(--ease-out);
+	}
+
+	/* Bars grow from zero when the page opens, and slide to the new value
+	   when another year is chosen */
+	@keyframes grow-x {
+		from {
+			transform: scaleX(0);
+		}
+	}
+
+	@keyframes grow-y {
+		from {
+			transform: scaleY(0);
+		}
 	}
 
 	.lap-legend {
@@ -454,6 +490,14 @@
 		width: 100%;
 		border-radius: 4px 4px 1px 1px;
 		min-height: 2px;
+		transform-origin: bottom;
+		animation: grow-y 0.7s var(--ease-out) both;
+		animation-delay: calc(0.2s + var(--i) * 0.05s);
+		transition: height var(--dur-slow) var(--ease-out);
+	}
+
+	.bar-col:hover .bar {
+		filter: brightness(1.12);
 	}
 
 	.labels {
@@ -497,6 +541,10 @@
 	.track div {
 		height: 100%;
 		border-radius: 2px;
+		transform-origin: left;
+		animation: grow-x 0.7s var(--ease-out) both;
+		animation-delay: calc(0.25s + var(--i) * 0.06s);
+		transition: width var(--dur-slow) var(--ease-out);
 	}
 
 	.extremes {
@@ -550,6 +598,17 @@
 		.card.tall {
 			height: auto;
 			min-height: 300px;
+		}
+
+		/* Countries and continents one under the other, not squeezed side by side */
+		.top {
+			flex-direction: column;
+			gap: 10px;
+		}
+
+		.right {
+			align-items: flex-start;
+			text-align: left;
 		}
 	}
 

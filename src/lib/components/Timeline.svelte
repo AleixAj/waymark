@@ -67,7 +67,8 @@
 </script>
 
 {#if bars.length}
-	<div
+	<section
+		aria-label="Línea de tiempo"
 		class="timeline panel"
 		class:open={ui.timelineOpen}
 		{style}
@@ -147,7 +148,7 @@
 				{/each}
 			</div>
 		</div>
-	</div>
+	</section>
 {/if}
 
 <style>

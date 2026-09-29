@@ -32,7 +32,11 @@
 			hint: 'Máxima nitidez en pantallas de alta densidad. Consume más batería.'
 		},
 		{ id: 'equilibrada', label: 'Equilibrada', hint: '60 fps en la mayoría de equipos.' },
-		{ id: 'ahorro', label: 'Ahorro de batería', hint: 'Menos píxeles, sin halo ni sombreado.' }
+		{
+			id: 'ahorro',
+			label: 'Ahorro de batería',
+			hint: 'Menos píxeles, sin halo, sombreado ni paneles translúcidos.'
+		}
 	];
 
 	async function measure() {
@@ -382,6 +386,14 @@
 		display: flex;
 		flex-direction: column;
 		background: var(--glass-strong);
+		animation: dialog-in var(--dur) var(--ease-out);
+	}
+
+	@keyframes dialog-in {
+		from {
+			opacity: 0;
+			transform: translate(-50%, calc(-50% + 12px)) scale(0.97);
+		}
 	}
 
 	.head {

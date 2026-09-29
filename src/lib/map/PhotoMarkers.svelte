@@ -178,9 +178,11 @@
 			const count = isCluster(item) ? item.properties.point_count : 1;
 			const [lng, lat] = item.geometry.coordinates;
 			const firstId = photoMode ? leaf : '';
-			const label = showLabels ? labelOf(item, key, Math.floor(zoom)) : '';
+			// Screen readers always hear the place, even when its name is not drawn
+			const place = labelOf(item, key, Math.floor(zoom));
+			const label = showLabels ? place : '';
 			const html = markerHtml(count, photoMode, label, firstId, showCount);
-			const ariaLabel = label ? `${label}, ${count} fotos` : `${count} fotos`;
+			const ariaLabel = place ? `${place}, ${count} fotos` : `${count} fotos`;
 
 			const existing = markers.get(key);
 			if (existing) {
@@ -478,20 +480,24 @@
 			0 0 28px var(--pin-glow);
 	}
 
+	/* City name under the marker: a small pill, readable on land, sea or streets */
 	:global(.wm-marker .mk-label) {
 		position: absolute;
 		left: 50%;
 		top: 100%;
-		margin-top: 8px;
+		margin-top: 7px;
 		transform: translateX(-50%);
-		font-size: 12px;
-		font-weight: 500;
+		padding: 1px 7px 2px;
+		border-radius: 999px;
+		background: var(--glass-strong);
+		border: 1px solid var(--line);
+		box-shadow: 0 2px 8px -2px oklch(0 0 0 / 0.35);
+		font-size: 11.5px;
+		line-height: 16px;
+		font-weight: 550;
 		color: var(--t1);
 		white-space: nowrap;
 		pointer-events: none;
-		text-shadow:
-			0 1px 3px var(--bg),
-			0 0 8px var(--bg);
 	}
 
 	:global(.wm-marker .pm) {

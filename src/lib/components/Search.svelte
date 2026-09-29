@@ -239,6 +239,14 @@
 		border-radius: 14px;
 		overflow: hidden;
 		background: var(--glass-strong);
+		animation: palette-in var(--dur) var(--ease-out);
+	}
+
+	@keyframes palette-in {
+		from {
+			opacity: 0;
+			transform: translate(-50%, -8px) scale(0.98);
+		}
 	}
 
 	.field {

@@ -59,12 +59,19 @@
 			><Logo /><span class="name">Waymark</span></a
 		>
 		<nav class="tabs" aria-label="Secciones">
-			<a class="btn btn-ghost btn-sm" class:is-on={tab === 'globo'} href="/" title="Globo">
+			<a
+				class="btn btn-ghost btn-sm"
+				class:is-on={tab === 'globo'}
+				aria-current={tab === 'globo' ? 'page' : undefined}
+				href="/"
+				title="Globo"
+			>
 				<Icon name="globe" /><span class="label">Globo</span>
 			</a>
 			<a
 				class="btn btn-ghost btn-sm"
 				class:is-on={tab === 'sin'}
+				aria-current={tab === 'sin' ? 'page' : undefined}
 				href="/sin-ubicacion"
 				title="Sin ubicación"
 			>
@@ -74,6 +81,7 @@
 			<a
 				class="btn btn-ghost btn-sm"
 				class:is-on={tab === 'stats'}
+				aria-current={tab === 'stats' ? 'page' : undefined}
 				href="/estadisticas"
 				title="Estadísticas"
 			>

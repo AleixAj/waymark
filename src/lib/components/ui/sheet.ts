@@ -73,11 +73,18 @@ export function sheet(node: HTMLElement, initial: Snap = 'half') {
 		snapTo(closest);
 	}
 
+	// Keyboard users press the handle like a button: it cycles through the sizes too
+	function onClick(event: MouseEvent) {
+		if (event.detail === 0 && media.matches)
+			snapTo(snap === 'peek' ? 'half' : snap === 'half' ? 'full' : 'peek');
+	}
+
 	const onResize = () => snapTo(snap);
 
 	handle.addEventListener('pointerdown', onDown);
 	handle.addEventListener('pointermove', onMove);
 	handle.addEventListener('pointerup', onUp);
+	handle.addEventListener('click', onClick);
 	media.addEventListener('change', onResize);
 	window.addEventListener('resize', onResize);
 	snapTo(snap);

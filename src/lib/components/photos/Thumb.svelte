@@ -74,7 +74,15 @@
 		height: 100%;
 		object-fit: cover;
 		display: block;
-		animation: fade 0.2s ease-out;
+		animation: fade 0.3s ease-out;
+		transition: transform var(--dur-slow) var(--ease-out);
+	}
+
+	/* A soft zoom inside the tile, like a photo on a contact sheet */
+	@media (hover: hover) {
+		.ph:hover img {
+			transform: scale(1.05);
+		}
 	}
 
 	@keyframes fade {

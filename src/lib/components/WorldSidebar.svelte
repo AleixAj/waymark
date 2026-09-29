@@ -72,7 +72,7 @@
 					Aún no hay viajes. Aparecen solos cuando tienes varias fotos seguidas lejos de casa.
 				</p>
 			{/if}
-			<div class="col list trips">
+			<div class="col list trips stagger">
 				{#each library.trips as trip (trip.id)}
 					<a class="place" href="/viaje/{trip.id}">
 						<span
@@ -165,6 +165,12 @@
 		flex: none;
 		border-radius: 8px;
 		background: var(--s3) center / cover;
+		box-shadow: 0 0 0 1px var(--line);
+		transition: transform var(--dur) var(--ease-spring);
+	}
+
+	.place:hover .cover {
+		transform: scale(1.06) rotate(-2deg);
 	}
 
 	.grow {

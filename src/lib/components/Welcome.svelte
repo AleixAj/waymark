@@ -37,7 +37,7 @@
 
 <div class="shade" aria-hidden="true"></div>
 
-<div class="row top">
+<header class="row top">
 	<div class="logo"><Logo />Waymark</div>
 	<div class="row actions">
 		<button
@@ -47,10 +47,9 @@
 		>
 			<Icon name={settings.resolvedTheme === 'dark' ? 'sun' : 'moon'} />
 		</button>
-		<span class="btn btn-ghost lang">Español</span>
 		<AccountButton />
 	</div>
-</div>
+</header>
 
 <main class="col welcome">
 	<h1 class="wordmark">Waymark</h1>
@@ -96,17 +95,19 @@
 			Tus fotos no salen de tu dispositivo. Todo se procesa en este navegador.
 		{/if}
 	</p>
-	<button class="demo" onclick={enterDemo}>Probar con fotos de ejemplo</button>
+	<button class="demo" onclick={enterDemo}
+		><Icon name="play" size={14} />Probar con fotos de ejemplo</button
+	>
 </main>
 
-<div class="row mono t3 bottom">
+<footer class="row mono t3 bottom">
 	<span>v1.0 · funciona sin conexión</span>
 	<span class="row hint">
 		<span class="kbds"
 			><span class="kbd">{isMac ? '⌘' : 'Ctrl'}</span><span class="kbd">O</span></span
 		> abrir fotos
 	</span>
-</div>
+</footer>
 
 <style>
 	/* Darkens the middle of the globe so the text stays readable */
@@ -151,10 +152,6 @@
 
 	.actions {
 		gap: 6px;
-	}
-
-	.lang {
-		cursor: default;
 	}
 
 	.welcome {
@@ -257,16 +254,55 @@
 		font-size: 13px;
 	}
 
+	/* The quickest way to see the app: a pill that stands out without competing
+	   with the import buttons */
 	.demo {
-		margin-top: 14px;
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		margin-top: 16px;
+		height: 36px;
+		padding: 0 16px 0 12px;
+		border-radius: 999px;
+		border: 1px solid color-mix(in oklab, var(--acc) 40%, transparent);
+		background: var(--acc-soft);
 		font-size: 13px;
-		font-weight: 500;
+		font-weight: 550;
 		color: var(--acc-text);
+		transition:
+			background-color var(--dur-fast),
+			transform var(--dur) var(--ease-spring);
 	}
 
 	.demo:hover {
-		text-decoration: underline;
-		text-underline-offset: 3px;
+		background: color-mix(in oklab, var(--acc) 24%, transparent);
+		transform: translateY(-1px);
+	}
+
+	.demo:active {
+		transform: scale(0.97);
+	}
+
+	/* Everything arrives in order: name, tagline, import card, then the rest */
+	.welcome > * {
+		animation: item-in 0.6s var(--ease-out) both;
+	}
+
+	.welcome > :nth-child(2) {
+		animation-delay: 0.08s;
+	}
+
+	.welcome > :nth-child(3) {
+		animation-delay: 0.16s;
+	}
+
+	.welcome > :nth-child(n + 4) {
+		animation-delay: 0.26s;
+	}
+
+	.top,
+	.bottom {
+		animation: fade-in 0.8s 0.3s ease-out both;
 	}
 
 	.bottom {

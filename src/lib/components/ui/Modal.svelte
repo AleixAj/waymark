@@ -66,7 +66,7 @@
 		inset: 0;
 		z-index: 70;
 		background: oklch(0.12 0.02 258 / 0.45);
-		animation: fade 0.15s ease-out;
+		animation: fade var(--dur) var(--ease-out);
 	}
 
 	@keyframes fade {
@@ -84,6 +84,14 @@
 		display: flex;
 		flex-direction: column;
 		background: var(--glass-strong);
+		animation: dialog-in var(--dur) var(--ease-out);
+	}
+
+	@keyframes dialog-in {
+		from {
+			opacity: 0;
+			transform: translate(-50%, calc(-50% + 12px)) scale(0.97);
+		}
 	}
 
 	.head {

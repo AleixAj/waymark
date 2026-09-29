@@ -161,6 +161,12 @@
 
 <div class="app">
 	{#if library.loaded}
+		<!-- Keyboard and screen reader order: top bar, then the page panels, then the map -->
+		{#if !welcome}
+			<TopBar />
+		{/if}
+		{@render children()}
+
 		<div class="globe" class:hidden={onStats}>
 			{#if !hasWebGL}
 				<NoWebGL />
@@ -177,11 +183,6 @@
 				{/key}
 			{/if}
 		</div>
-
-		{#if !welcome}
-			<TopBar />
-		{/if}
-		{@render children()}
 
 		{#if library.demoStatus}
 			<DemoLoading status={library.demoStatus} />
@@ -225,9 +226,11 @@
 		background: var(--bg);
 	}
 
+	/* The map comes last in the page but is painted under every panel */
 	.globe {
 		position: absolute;
 		inset: 0;
+		z-index: -1;
 	}
 
 	.note {

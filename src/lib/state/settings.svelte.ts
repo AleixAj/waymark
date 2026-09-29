@@ -97,6 +97,7 @@ class Settings {
 			$effect(() => {
 				document.documentElement.dataset.theme = this.resolvedTheme;
 				document.documentElement.dataset.motion = this.reducedMotion ? 'reduced' : 'full';
+				document.documentElement.dataset.quality = this.quality;
 			});
 			$effect(() => {
 				const data: SavedSettings = {

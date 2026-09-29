@@ -215,7 +215,7 @@
 					</p>
 				</div>
 			{:else if image}
-				<img src={image} alt={title} />
+				<img src={image} alt={title} class="sharp" />
 			{:else if thumbUrl(id)}
 				<img src={thumbUrl(id)} alt="" class="loading" />
 			{/if}
@@ -555,6 +555,11 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
+	}
+
+	/* The full photo fades in over its blurred thumbnail */
+	.picture img.sharp {
+		animation: fade-in var(--dur-slow) var(--ease-out);
 	}
 
 	.picture img {
