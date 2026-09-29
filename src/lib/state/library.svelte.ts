@@ -1,3 +1,4 @@
+import type { DemoStatus } from '$lib/demo/load';
 import {
 	clearLibrary,
 	loadPhotoPoints,
@@ -43,6 +44,8 @@ class Library {
 	loaded = $state(false);
 	progress = $state<ImportProgress | null>(null);
 	importMinimized = $state(false);
+	/** Loading the sample library: the loading window shows this */
+	demoStatus = $state.raw<DemoStatus | null>(null);
 	/** Files that failed in the last import */
 	errors = $state.raw<ImportError[]>([]);
 	/** Months selected in the timeline; null means everything */
@@ -168,14 +171,20 @@ class Library {
 	async loadDemo() {
 		if (this.abort) return;
 		// The sample photo list is only downloaded when someone asks for it
-		const { loadDemo } = await import('$lib/demo/load');
-		await this.run((signal) =>
-			loadDemo({
-				signal,
-				onProgress: (progress) => (this.progress = progress),
-				onBatch: (points, thumbs) => this.receive(points, thumbs)
-			})
-		);
+		this.demoStatus = { step: 'download', progress: 0, loaded: 0, total: 0 };
+		try {
+			const { loadDemo } = await import('$lib/demo/load');
+			await this.run((signal) =>
+				loadDemo({
+					signal,
+					onProgress: (progress) => (this.progress = progress),
+					onBatch: (points, thumbs) => this.receive(points, thumbs),
+					onStatus: (status) => (this.demoStatus = status)
+				})
+			);
+		} finally {
+			this.demoStatus = null;
+		}
 		this.tripEdits = await loadTripEdits();
 	}
 

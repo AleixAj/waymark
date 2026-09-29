@@ -102,7 +102,7 @@ sync (optional) ── Google Drive: light copies + library.json
 
 **Sync.** Sign-in uses Google Identity Services in the browser with the `drive.file` permission: Waymark only sees the files it creates or the ones the user picks. Drive keeps a copy of each photo at 2048 px (about 20 times lighter than the original) and a `library.json` with the data. Each device uploads what is new and downloads what the others added; when a photo changed in two places, the most recent change wins. Photos picked from Drive are not copied: Waymark keeps a link to the file.
 
-**Sample library.** A script (`scripts/build-demo.mjs`) searches Wikimedia Commons for freely licensed photos near every stop of the sample trips, prefers the ones Commons marks as quality images and drops maps, portraits and automatic street captures. The app only downloads the thumbnails when the demo loads; the big image is requested when a photo is opened. Every photo shows its author and license in the viewer.
+**Sample library.** A script (`scripts/build-demo.mjs`) searches Wikimedia Commons for freely licensed photos near every stop of the sample trips, prefers the ones Commons marks as quality images and drops maps, portraits and automatic street captures. The 605 thumbnails are packed as WebP in a single 6 MB file served by the site itself: the demo loads with one download and a progress window, and the globe fills up at once at the end. The big image is requested from Commons when a photo is opened. Every photo shows its author and license in the viewer.
 
 **Privacy.** No server and no analytics: photos never leave the browser, except to the user's own Drive folder if they sign in.
 

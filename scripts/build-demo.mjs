@@ -1,11 +1,15 @@
 // Builds the photo list of the sample library from Wikimedia Commons:
 //   src/lib/demo/photos.json  -> real photos near every stop of the demo trips
 //   docs/demo-credits.md      -> author and license of each photo
+//   static/demo/thumbs.bin    -> every thumbnail as WebP in one file, so the demo
+//                                loads with one download instead of 600
 //
 // Only freely licensed photos (CC0, public domain, CC BY, CC BY-SA) are used,
 // and the viewer shows the author and license of each one.
-// Run with: node scripts/build-demo.mjs  (needs internet, takes a minute)
-import { writeFileSync } from 'node:fs';
+// Run with: node scripts/build-demo.mjs  (needs internet, takes a few minutes)
+// With --pack it keeps the chosen photos and only rebuilds the thumbnails file.
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import sharp from 'sharp';
 import { TRIPS } from '../src/lib/demo/data.ts';
 
 const API = 'https://commons.wikimedia.org/w/api.php';
@@ -174,43 +178,89 @@ async function forStop(stop, used) {
 	return found;
 }
 
-const used = new Set();
-const trips = [];
-for (const [t, trip] of TRIPS.entries()) {
-	const stops = [];
-	for (const [s, stop] of trip.stops.entries()) {
-		const photos = await forStop(stop, used);
-		console.log(`${t}.${s} ${stop.city}: ${photos.length}`);
-		stops.push(photos);
+/** Searches Commons for the photos of every stop, of home and without location */
+async function choosePhotos() {
+	const used = new Set();
+	const trips = [];
+	for (const [t, trip] of TRIPS.entries()) {
+		const stops = [];
+		for (const [s, stop] of trip.stops.entries()) {
+			const photos = await forStop(stop, used);
+			console.log(`${t}.${s} ${stop.city}: ${photos.length}`);
+			stops.push(photos);
+		}
+		trips.push(stops);
 	}
-	trips.push(stops);
+
+	const home = [];
+	for (const [lat, lng] of HOME_SPOTS) {
+		const want = Math.ceil(HOME_PHOTOS / HOME_SPOTS.length);
+		home.push(...(await forStop({ lat, lng, photos: want / SHARE, spread: 1.2 }, used)));
+		await sleep(300);
+	}
+	console.log(`home: ${home.length}`);
+
+	// Photos "received by chat": real photos from other cities, with no location
+	const unlocated = [];
+	for (const [lat, lng] of [
+		[40.4168, -3.7038],
+		[41.3874, 2.1686],
+		[37.3891, -5.9845],
+		[39.4699, -0.3763]
+	]) {
+		const found = await forStop(
+			{ lat, lng, photos: UNLOCATED_PHOTOS / 4 / SHARE, spread: 4 },
+			used
+		);
+		unlocated.push(...found);
+		await sleep(300);
+	}
+	console.log(`unlocated: ${unlocated.length}`);
+	return { trips, home, unlocated };
 }
 
-const home = [];
-for (const [lat, lng] of HOME_SPOTS) {
-	const want = Math.ceil(HOME_PHOTOS / HOME_SPOTS.length);
-	home.push(...(await forStop({ lat, lng, photos: want / SHARE, spread: 1.2 }, used)));
-	await sleep(300);
+// Size of the packed thumbnails: enough for the grids, the markers and the trip covers
+const THUMB_SIZE = 256;
+
+/**
+ * Downloads every thumbnail, turns it into a small WebP and packs them all in
+ * one file. Each photo keeps where its thumbnail starts and how long it is.
+ */
+async function packThumbnails(all) {
+	const parts = [];
+	let offset = 0;
+	for (const [i, photo] of all.entries()) {
+		const url = photo.thumb.replace(/\/\d+px-/, '/330px-');
+		let image;
+		for (let attempt = 0; attempt < 4 && !image; attempt++) {
+			const response = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
+			if (response.ok) image = Buffer.from(await response.arrayBuffer());
+			else await sleep(1500 * (attempt + 1));
+		}
+		if (!image) throw new Error(`Thumbnail not available: ${url}`);
+		const webp = await sharp(image)
+			.rotate()
+			.resize(THUMB_SIZE, THUMB_SIZE, { fit: 'inside' })
+			.webp({ quality: 72 })
+			.toBuffer();
+		photo.pack = [offset, webp.length];
+		parts.push(webp);
+		offset += webp.length;
+		if (i % 50 === 0) console.log(`thumbnails ${i}/${all.length}`);
+		await sleep(60);
+	}
+	mkdirSync('static/demo', { recursive: true });
+	writeFileSync('static/demo/thumbs.bin', Buffer.concat(parts));
+	console.log(`thumbs.bin: ${(offset / 1024 / 1024).toFixed(1)} MB`);
 }
-console.log(`home: ${home.length}`);
 
-// Photos "received by chat": real photos from other cities, with no location
-const unlocated = [];
-for (const [lat, lng] of [
-	[40.4168, -3.7038],
-	[41.3874, 2.1686],
-	[37.3891, -5.9845],
-	[39.4699, -0.3763]
-]) {
-	const found = await forStop({ lat, lng, photos: UNLOCATED_PHOTOS / 4 / SHARE, spread: 4 }, used);
-	unlocated.push(...found);
-	await sleep(300);
-}
-console.log(`unlocated: ${unlocated.length}`);
+const library = process.argv.includes('--pack')
+	? JSON.parse(readFileSync('src/lib/demo/photos.json', 'utf8'))
+	: await choosePhotos();
+const all = [...library.trips.flat(2), ...library.home, ...library.unlocated];
+await packThumbnails(all);
+writeFileSync('src/lib/demo/photos.json', JSON.stringify(library));
 
-writeFileSync('src/lib/demo/photos.json', JSON.stringify({ trips, home, unlocated }));
-
-const all = [...trips.flat(2), ...home, ...unlocated];
 const credits = [
 	'# Sample photos',
 	'',

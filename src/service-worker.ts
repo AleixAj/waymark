@@ -8,8 +8,13 @@ import { build, files, version } from '$service-worker';
 // opens and imports photos without internet. Street map tiles still need a connection.
 const sw = self as unknown as ServiceWorkerGlobalScope;
 const CACHE = `waymark-${version}`;
-// The app shell: code, styles, fonts, geo data, and the page itself (a single-page app)
-const ASSETS = [...build, ...files.filter((file) => !file.endsWith('_headers')), '/'];
+// The app shell: code, styles, fonts, geo data, and the page itself (a single-page app).
+// The sample library (static/demo, 6 MB) is only downloaded by who opens the demo.
+const ASSETS = [
+	...build,
+	...files.filter((file) => !file.endsWith('_headers') && !file.startsWith('/demo/')),
+	'/'
+];
 
 sw.addEventListener('install', (event) => {
 	event.waitUntil(

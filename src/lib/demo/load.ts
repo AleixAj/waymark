@@ -4,26 +4,35 @@ import { toPoint, type Photo, type PhotoPoint } from '$lib/photos/types';
 import type { ImportProgress } from '$lib/photos/importer';
 import { generateDemo, type DemoPhoto } from './generate';
 
+/** What the loading window shows */
+export interface DemoStatus {
+	step: 'download' | 'place';
+	/** 0 to 1 */
+	progress: number;
+	/** Megabytes downloaded, and of how many */
+	loaded: number;
+	total: number;
+}
+
 interface DemoOptions {
 	onProgress: (progress: ImportProgress) => void;
 	onBatch: (points: PhotoPoint[], thumbs: Blob[]) => void;
+	onStatus: (status: DemoStatus) => void;
 	signal?: AbortSignal;
 }
 
-const BATCH_SIZE = 40;
-// Thumbnails are downloaded a few at a time, not to flood Wikimedia
-const PARALLEL = 6;
-const FETCH_TIMEOUT_MS = 15_000;
+// All the thumbnails in one file (made by scripts/build-demo.mjs)
+const THUMBS_URL = '/demo/thumbs.bin';
+// Downloading is most of the wait; placing the photos is the rest
+const DOWNLOAD_SHARE = 0.85;
 
 /**
- * Creates the sample library: downloads the thumbnail of each photo from
- * Wikimedia Commons and saves it like a real import. The big image is
- * loaded from Commons when a photo is opened.
+ * Creates the sample library. The thumbnails come in one file from this site;
+ * the big images are loaded from Wikimedia Commons when a photo is opened.
+ * The globe gets all the photos at once at the end, not bit by bit.
  */
-export async function loadDemo({ onProgress, onBatch, signal }: DemoOptions) {
+export async function loadDemo({ onProgress, onBatch, onStatus, signal }: DemoOptions) {
 	const { photos, titles } = generateDemo();
-	for (const edit of titles) await saveTripEdit(edit);
-
 	const progress: ImportProgress = {
 		total: photos.length,
 		done: 0,
@@ -35,69 +44,71 @@ export async function loadDemo({ onProgress, onBatch, signal }: DemoOptions) {
 	};
 	onProgress({ ...progress });
 
-	const queue = [...photos];
-	let batch: Photo[] = [];
-	let failed = 0;
-	const flush = async () => {
-		if (!batch.length || signal?.aborted) return;
-		const saved = batch;
-		batch = [];
-		await savePhotos(saved);
-		if (signal?.aborted) return;
-		onBatch(
-			saved.map(toPoint),
-			saved.map((p) => p.thumb)
-		);
-	};
-
-	await Promise.all(
-		Array.from({ length: PARALLEL }, async () => {
-			let next = queue.shift();
-			while (next && !signal?.aborted) {
-				const thumb = await download(next.thumbUrl, signal);
-				if (thumb) {
-					batch.push(await toRecord(next, thumb));
-					if (next.lat === null) progress.withoutLocation++;
-					else progress.withLocation++;
-				} else {
-					failed++;
-				}
-				progress.done++;
-				onProgress({ ...progress });
-				if (batch.length >= BATCH_SIZE) await flush();
-				next = queue.shift();
-			}
-		})
+	const thumbs = await downloadThumbs(signal, (loaded, total) =>
+		onStatus({ step: 'download', progress: (loaded / total) * DOWNLOAD_SHARE, loaded, total })
 	);
-	await flush();
-	if (failed === photos.length && !signal?.aborted) {
-		const error = new Error('Hace falta conexión a internet para descargar las fotos de ejemplo');
-		error.name = 'UserError';
-		throw error;
+	const size = thumbs.size / 1e6;
+
+	const records: Photo[] = [];
+	for (const [i, photo] of photos.entries()) {
+		if (signal?.aborted) return progress;
+		const [start, length] = photo.pack;
+		records.push(await toRecord(photo, thumbs.slice(start, start + length, 'image/webp')));
+		if (photo.lat === null) progress.withoutLocation++;
+		else progress.withLocation++;
+		progress.done++;
+		if (i % 40 === 0) {
+			const placed = DOWNLOAD_SHARE + (i / photos.length) * (1 - DOWNLOAD_SHARE);
+			onStatus({ step: 'place', progress: placed, loaded: size, total: size });
+			// Let the browser paint the progress bar before going on
+			await new Promise((resolve) => setTimeout(resolve, 0));
+		}
 	}
+	await savePhotos(records);
+	for (const edit of titles) await saveTripEdit(edit);
+	if (signal?.aborted) return progress;
+	onStatus({ step: 'place', progress: 1, loaded: size, total: size });
+	onBatch(
+		records.map(toPoint),
+		records.map((p) => p.thumb)
+	);
+	onProgress({ ...progress });
 	return progress;
 }
 
-async function toRecord({ thumbUrl: _url, ...photo }: DemoPhoto, thumb: Blob): Promise<Photo> {
+/** The thumbnails file, reporting the megabytes received as they arrive */
+async function downloadThumbs(
+	signal: AbortSignal | undefined,
+	onBytes: (loaded: number, total: number) => void
+): Promise<Blob> {
+	let response: Response;
+	try {
+		response = await fetch(THUMBS_URL, { signal });
+		if (!response.ok || !response.body) throw new Error(String(response.status));
+	} catch (error) {
+		if (signal?.aborted) throw error;
+		const offline = new Error('Hace falta conexión a internet para descargar las fotos de ejemplo');
+		offline.name = 'UserError';
+		throw offline;
+	}
+	const total = Number(response.headers.get('Content-Length')) || 6e6;
+	const reader = response.body.getReader();
+	const chunks: BlobPart[] = [];
+	let loaded = 0;
+	for (;;) {
+		const { done, value } = await reader.read();
+		if (done) break;
+		chunks.push(value);
+		loaded += value.length;
+		onBytes(loaded / 1e6, Math.max(total, loaded) / 1e6);
+	}
+	return new Blob(chunks);
+}
+
+async function toRecord({ pack: _pack, ...photo }: DemoPhoto, thumb: Blob): Promise<Photo> {
 	// Neighbourhoods come from the real position (Shinjuku inside Tokio)
 	const place = await findPlace(photo.lat, photo.lng);
 	const area = place.city === photo.city ? place.area : null;
 	// The thumbnail doubles as "file": the viewer loads the big image from Commons
 	return { ...photo, area, thumb, file: thumb, previewable: true };
-}
-
-async function download(url: string, signal?: AbortSignal): Promise<Blob | null> {
-	const controller = new AbortController();
-	const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-	const stop = () => controller.abort();
-	signal?.addEventListener('abort', stop);
-	try {
-		const response = await fetch(url, { signal: controller.signal });
-		return response.ok ? await response.blob() : null;
-	} catch {
-		return null;
-	} finally {
-		clearTimeout(timer);
-		signal?.removeEventListener('abort', stop);
-	}
 }

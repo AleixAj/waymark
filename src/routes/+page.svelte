@@ -7,6 +7,7 @@
 	import { library } from '$lib/state/library.svelte';
 	import { ui } from '$lib/state/ui.svelte';
 	import { mapView } from '$lib/map/view.svelte';
+	import { demoMode } from '$lib/state/mode';
 
 	// World view: every photo, no labels, camera centered next to the sidebar
 	$effect(() => {
@@ -30,7 +31,8 @@
 <svelte:head><title>Waymark</title></svelte:head>
 
 {#if library.isEmpty}
-	<Welcome />
+	<!-- In demo mode only the globe shows while the sample library loads -->
+	{#if !demoMode}<Welcome />{/if}
 {:else}
 	<WorldSidebar />
 	{#if !ui.sidebarOpen}

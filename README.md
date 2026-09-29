@@ -100,7 +100,7 @@ sync (opcional) ── Google Drive: copias ligeras + library.json
 
 **Sincronización.** El login usa Google Identity Services en el navegador con el permiso `drive.file`: Waymark solo ve los archivos que crea o los que el usuario elige. Drive guarda una copia de cada foto a 2048 px (unas 20 veces más ligera que el original) y un `library.json` con los datos. Cada dispositivo sube lo nuevo y baja lo que añadieron los demás; si una foto cambió en dos sitios, gana el cambio más reciente. Las fotos elegidas desde Drive no se copian: se guarda el enlace al archivo.
 
-**Biblioteca de ejemplo.** Un script (`scripts/build-demo.mjs`) busca en Wikimedia Commons fotos con licencia libre cerca de cada parada de los viajes de ejemplo, prioriza las que Commons marca como fotos de calidad y descarta mapas, retratos y capturas automáticas. La app solo descarga las miniaturas al cargar la demo; la foto grande se pide al abrirla. Cada foto muestra su autor y su licencia en el visor.
+**Biblioteca de ejemplo.** Un script (`scripts/build-demo.mjs`) busca en Wikimedia Commons fotos con licencia libre cerca de cada parada de los viajes de ejemplo, prioriza las que Commons marca como fotos de calidad y descarta mapas, retratos y capturas automáticas. Las 605 miniaturas se empaquetan en WebP en un único archivo de 6 MB servido por la propia web: la demo carga con una sola descarga y una ventana con barra de progreso, y el globo se llena de golpe al terminar. La foto grande se pide a Commons al abrirla. Cada foto muestra su autor y su licencia en el visor.
 
 **Privacidad.** No hay servidor ni analítica: las fotos no salen del navegador salvo a la carpeta de Drive del propio usuario, si inicia sesión.
 

@@ -34,6 +34,7 @@
 	import { ui } from '$lib/state/ui.svelte';
 	import { droppedFiles, pickFiles } from '$lib/photos/pick';
 	import ImportChooser from '$lib/components/ImportChooser.svelte';
+	import DemoLoading from '$lib/components/DemoLoading.svelte';
 	import TakeoutAlbums from '$lib/components/TakeoutAlbums.svelte';
 	import { importFiles } from '$lib/state/importing';
 	import { auth } from '$lib/google/auth.svelte';
@@ -177,7 +178,9 @@
 		{/if}
 		{@render children()}
 
-		{#if library.progress}
+		{#if library.demoStatus}
+			<DemoLoading status={library.demoStatus} />
+		{:else if library.progress}
 			<ImportPanel />
 		{:else if library.errors.length}
 			<ImportErrors />

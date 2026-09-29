@@ -19,16 +19,19 @@ interface CommonsPhoto {
 	exposure: number | null;
 	iso: number | null;
 	focal: number | null;
+	/** Where its thumbnail is in static/demo/thumbs.bin: [start, length] */
+	pack: [number, number];
 }
 
-const PHOTOS = library as {
+// Data made by scripts/build-demo.mjs: its shape is known, TypeScript only sees a big JSON
+const PHOTOS = library as unknown as {
 	trips: CommonsPhoto[][][];
 	home: CommonsPhoto[];
 	unlocated: CommonsPhoto[];
 };
 
-/** Photo data without the images: the thumbnails are downloaded when the demo loads */
-export type DemoPhoto = Omit<Photo, 'thumb' | 'file'> & { thumbUrl: string };
+/** Photo data without the images: the thumbnails come from static/demo/thumbs.bin */
+export type DemoPhoto = Omit<Photo, 'thumb' | 'file'> & { pack: [number, number] };
 
 const DAY = 24 * 3600 * 1000;
 
@@ -83,8 +86,7 @@ function fromCommons(photo: CommonsPhoto, rnd: () => number, counter: { n: numbe
 		height: photo.height,
 		// Size of a typical JPEG with that many pixels
 		size: Math.round(photo.width * photo.height * 0.35),
-		// 250 px (a standard Wikimedia size) is enough for the grids and loads faster
-		thumbUrl: photo.thumb.replace(/\/\d+px-/, '/250px-'),
+		pack: photo.pack,
 		demo: { url: largeUrl(photo), credit },
 		favorite: rnd() < 0.05,
 		offset: null,
