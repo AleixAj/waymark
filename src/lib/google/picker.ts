@@ -22,6 +22,7 @@ interface PickerBuilder {
 	setAppId(id: string): PickerBuilder;
 	setLocale(locale: string): PickerBuilder;
 	setTitle(title: string): PickerBuilder;
+	setSize(width: number, height: number): PickerBuilder;
 	setCallback(callback: (result: PickerResult) => void): PickerBuilder;
 	build(): { setVisible(visible: boolean): void };
 }
@@ -30,13 +31,17 @@ interface DocsView {
 	setIncludeFolders(include: boolean): DocsView;
 	setMimeTypes(types: string): DocsView;
 	setMode(mode: string): DocsView;
+	setLabel(label: string): DocsView;
+	setOwnedByMe(mine: boolean): DocsView;
+	setStarred(starred: boolean): DocsView;
+	setEnableDrives(enabled: boolean): DocsView;
 }
 interface PickerApi {
-	DocsViewMode: { LIST: string };
+	DocsViewMode: { GRID: string };
 	PickerBuilder: new () => PickerBuilder;
 	DocsView: new (viewId: string) => DocsView;
 	ViewId: { DOCS: string };
-	Feature: { MULTISELECT_ENABLED: string };
+	Feature: { MULTISELECT_ENABLED: string; SUPPORT_DRIVES: string };
 	Action: { PICKED: string; CANCEL: string };
 }
 // Photo types shown in the picker (other files are hidden, folders are always shown)
@@ -77,14 +82,18 @@ async function loadPicker(): Promise<PickerApi> {
 export async function pickFromDrive(token: string): Promise<PickedFile[]> {
 	const picker = await loadPicker();
 	return new Promise((resolve) => {
-		// "Mi unidad" as a normal tree: it starts at the top and you open each folder
-		const view = new picker.DocsView(picker.ViewId.DOCS)
-			.setParent('root')
-			.setIncludeFolders(true)
-			.setMimeTypes(PHOTO_TYPES)
-			.setMode(picker.DocsViewMode.LIST);
+		// Every tab shows photos as thumbnails; folders are opened one level at a time
+		const photos = (label: string) =>
+			new picker.DocsView(picker.ViewId.DOCS)
+				.setMimeTypes(PHOTO_TYPES)
+				.setMode(picker.DocsViewMode.GRID)
+				.setLabel(label);
 		new picker.PickerBuilder()
-			.addView(view)
+			.addView(photos('Mi unidad').setParent('root').setIncludeFolders(true))
+			.addView(photos('Compartido conmigo').setOwnedByMe(false).setIncludeFolders(true))
+			.addView(photos('Destacados').setStarred(true))
+			.addView(photos('Unidades compartidas').setEnableDrives(true).setIncludeFolders(true))
+			.enableFeature(picker.Feature.SUPPORT_DRIVES)
 			.enableFeature(picker.Feature.MULTISELECT_ENABLED)
 			.setOAuthToken(token)
 			.setDeveloperKey(GOOGLE_API_KEY)
@@ -92,6 +101,8 @@ export async function pickFromDrive(token: string): Promise<PickedFile[]> {
 			.setAppId(GOOGLE_APP_ID)
 			.setLocale('es')
 			.setTitle('Elige las fotos que quieres ver en el globo')
+			// As big as Google allows, but never wider than the window
+			.setSize(Math.min(1051, window.innerWidth - 32), Math.min(650, window.innerHeight - 32))
 			.setCallback((result) => {
 				if (result.action === picker.Action.PICKED) resolve(result.docs ?? []);
 				else if (result.action === picker.Action.CANCEL) resolve([]);
