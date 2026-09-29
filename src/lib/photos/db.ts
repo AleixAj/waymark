@@ -71,12 +71,35 @@ export async function setLocation(ids: string[], place: { lat: number; lng: numb
 	await db.photos
 		.where('id')
 		.anyOf(ids)
-		.modify({ ...place, updatedAt: Date.now() });
+		.modify({ ...place, estimated: false, updatedAt: Date.now() });
 }
 
 /** New country, city and area for photos whose place was looked up again */
 export async function updatePlaces(changes: { id: string; place: Place }[]) {
 	await db.photos.bulkUpdate(changes.map(({ id, place }) => ({ key: id, changes: place })));
+}
+
+/** Locations guessed from nearby photos (see library/estimate.ts) */
+export async function setEstimated(changes: { id: string; place: Partial<Photo> }[]) {
+	const updatedAt = Date.now();
+	await db.photos.bulkUpdate(
+		changes.map(({ id, place }) => ({
+			key: id,
+			changes: { ...place, estimated: true, updatedAt }
+		}))
+	);
+}
+
+/** Sets the album of photos that don't have one yet (the photos were imported again) */
+export async function fillAlbums(changes: { id: string; album: string }[]) {
+	if (!changes.length) return;
+	const photos = await db.photos.bulkGet(changes.map((c) => c.id));
+	const missing = changes.filter((_, i) => photos[i] && !photos[i]!.album);
+	if (!missing.length) return;
+	const updatedAt = Date.now();
+	await db.photos.bulkUpdate(
+		missing.map(({ id, album }) => ({ key: id, changes: { album, updatedAt } }))
+	);
 }
 
 /** Returns which of these ids are already saved */

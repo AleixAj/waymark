@@ -17,16 +17,20 @@ function getPlaceFinder() {
 }
 
 /** Country and city for a position. Without the geo data (offline) they stay empty. */
-export async function findPlace(lat: number | null, lng: number | null): Promise<Place> {
+export async function findPlace(
+	lat: number | null,
+	lng: number | null,
+	iso2?: string
+): Promise<Place> {
 	if (lat === null || lng === null) return NO_PLACE;
 	try {
-		return (await getPlaceFinder()).find(lat, lng);
+		return (await getPlaceFinder()).find(lat, lng, iso2);
 	} catch {
 		return NO_PLACE;
 	}
 }
 
 /** Country, city and area for a position picked on the map */
-export async function placeAt(lat: number, lng: number) {
-	return { lat, lng, ...(await findPlace(lat, lng)) };
+export async function placeAt(lat: number, lng: number, iso2?: string) {
+	return { lat, lng, ...(await findPlace(lat, lng, iso2)) };
 }

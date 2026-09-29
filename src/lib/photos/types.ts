@@ -37,6 +37,10 @@ export interface Photo extends PhotoMeta {
 	 */
 	area?: string | null;
 	favorite: boolean;
+	/** Album or folder the photo came from ("Lisboa 2022") */
+	album?: string | null;
+	/** The location was guessed from photos taken around the same time */
+	estimated?: boolean;
 	/** Small WebP preview used in the map and the grids */
 	thumb: Blob;
 	/** The original file, kept only in this browser */
@@ -58,7 +62,16 @@ export interface Photo extends PhotoMeta {
 /** Light version of a photo used by the map, lists and stats (no blobs) */
 export type PhotoPoint = Pick<
 	Photo,
-	'id' | 'lat' | 'lng' | 'takenAt' | 'country' | 'city' | 'area' | 'favorite'
+	| 'id'
+	| 'lat'
+	| 'lng'
+	| 'takenAt'
+	| 'country'
+	| 'city'
+	| 'area'
+	| 'favorite'
+	| 'album'
+	| 'estimated'
 >;
 
 /** A photo that has GPS */
@@ -69,6 +82,6 @@ export function isLocated(point: PhotoPoint): point is LocatedPoint {
 }
 
 export function toPoint(photo: Photo): PhotoPoint {
-	const { id, lat, lng, takenAt, country, city, area, favorite } = photo;
-	return { id, lat, lng, takenAt, country, city, area, favorite };
+	const { id, lat, lng, takenAt, country, city, area, favorite, album, estimated } = photo;
+	return { id, lat, lng, takenAt, country, city, area, favorite, album, estimated };
 }

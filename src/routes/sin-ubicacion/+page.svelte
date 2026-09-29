@@ -2,6 +2,9 @@
 	import Thumb from '$lib/components/photos/Thumb.svelte';
 	import MapControls from '$lib/components/MapControls.svelte';
 	import Icon from '$lib/components/ui/Icon.svelte';
+	import PlaceSearch from '$lib/components/PlaceSearch.svelte';
+	import type { FoundPlace } from '$lib/geo/geocode';
+	import { untrack } from 'svelte';
 	import { sheet } from '$lib/components/ui/sheet';
 	import { library } from '$lib/state/library.svelte';
 	import { countries } from '$lib/state/countries.svelte';
@@ -13,8 +16,20 @@
 	import { groupBy } from '$lib/library/trips';
 	import { formatMonthLong, formatNumber, monthKey } from '$lib/library/format';
 
-	let groupMode = $state<'fecha' | 'camara'>('fecha');
+	// Photos from Google Takeout or folders are grouped by album first
+	let groupMode = $state<'album' | 'fecha' | 'camara'>(
+		untrack(() => (library.unlocated.some((p) => p.album) ? 'album' : 'fecha'))
+	);
 	let selected = $state<string[]>([]);
+	// Albums start closed: a click opens one to see its photos
+	let openAlbums = $state<string[]>([]);
+	const collapsible = $derived(groupMode === 'album');
+
+	function toggleAlbum(key: string) {
+		openAlbums = openAlbums.includes(key)
+			? openAlbums.filter((k) => k !== key)
+			: [...openAlbums, key];
+	}
 	let cameras = $state<Map<string, string>>(new Map());
 	let dropLabel = $state<{ x: number; y: number; text: string } | null>(null);
 	let toast = $state<{ text: string; href: string } | null>(null);
@@ -41,6 +56,11 @@
 
 	const groups = $derived.by(() => {
 		const newestFirst = [...photos].reverse();
+		if (groupMode === 'album') {
+			return [...groupBy(newestFirst, (p) => p.album ?? '').entries()]
+				.map(([name, items]) => ({ key: name, title: name || 'Sin álbum', items }))
+				.sort((a, b) => (a.key ? 0 : 1) - (b.key ? 0 : 1));
+		}
 		if (groupMode === 'camara') {
 			return [
 				...groupBy(newestFirst, (p) => cameras.get(p.id) ?? 'Cámara desconocida').entries()
@@ -65,8 +85,8 @@
 		selected = selected.includes(id) ? selected.filter((s) => s !== id) : [...selected, id];
 	}
 
-	async function place(ids: string[], lat: number, lng: number) {
-		const spot = await placeAt(lat, lng);
+	async function place(ids: string[], lat: number, lng: number, iso2?: string) {
+		const spot = await placeAt(lat, lng, iso2);
 		await library.assignLocation(ids, spot);
 		selected = selected.filter((id) => !ids.includes(id));
 		const where = [spot.city, countries.name(spot.country)].filter(Boolean).join(', ') || 'el mapa';
@@ -165,6 +185,18 @@
 		mapView.focus = null;
 	}
 
+	/** A place chosen in the search: the camera goes there and the photos are placed */
+	function placeFound(found: FoundPlace) {
+		if (!ui.placing) return;
+		place(ui.placing, found.lat, found.lng, found.country);
+		ui.placing = null;
+		mapView.flyTo([found.lng, found.lat], 9);
+	}
+
+	function photoCount(n: number) {
+		return n === 1 ? '1 foto' : `${formatNumber(n)} fotos`;
+	}
+
 	function onKey(event: KeyboardEvent) {
 		if (event.key === 'Escape' && ui.placing) ui.placing = null;
 	}
@@ -180,9 +212,15 @@
 		<div class="row between top">
 			<div>
 				<h1 class="t-h2">Fotos sin ubicación</h1>
-				<p class="mono t3 sub">{formatNumber(photos.length)} fotos{years ? ` · ${years}` : ''}</p>
+				<p class="mono t3 sub">{photoCount(photos.length)}{years ? ` · ${years}` : ''}</p>
 			</div>
 			<div class="seg" role="radiogroup" aria-label="Agrupar">
+				<button
+					class:is-on={groupMode === 'album'}
+					role="radio"
+					aria-checked={groupMode === 'album'}
+					onclick={() => (groupMode = 'album')}>Por álbum</button
+				>
 				<button
 					class:is-on={groupMode === 'fecha'}
 					role="radio"
@@ -200,9 +238,9 @@
 		<div class="row note">
 			<span class="t2 note-icon"><Icon name="info" /></span>
 			<p class="t2">
-				Estas fotos no guardan datos GPS. Es normal en capturas de pantalla, fotos recibidas por
-				mensajería o cámaras sin GPS. Selecciónalas y arrástralas al globo para ubicarlas, o usa
-				<b>Asignar ubicación</b>.
+				Estas fotos no guardan datos GPS, y tampoco hay fotos con GPS de la misma hora para
+				estimarlo. Es normal en fotos de WhatsApp o de cámaras con la ubicación desactivada. Usa
+				<b>Ubicar todas</b> en un álbum, o arrastra las fotos al globo.
 			</p>
 		</div>
 	</div>
@@ -221,22 +259,54 @@
 
 	<div class="scroll list">
 		{#each groups as group (group.key)}
-			<section class="group">
+			{@const open = !collapsible || openAlbums.includes(group.key)}
+			<section class="group" class:closed={!open}>
 				<div class="day-h">
-					<b>{group.title}</b><span class="mono">{group.items.length} fotos</span>
+					{#if collapsible}
+						<button
+							class="row album-toggle"
+							aria-expanded={open}
+							onclick={() => toggleAlbum(group.key)}
+						>
+							<span class="chev" class:open><Icon name="chevR" size={16} /></span>
+							<b>{group.title}</b>
+							<span class="mono count-label">{photoCount(group.items.length)}</span>
+							{#if !open}
+								<span class="row peek" aria-hidden="true">
+									{#each group.items.slice(0, 3) as photo (photo.id)}
+										<span
+											class="peek-thumb"
+											style:background-image={thumbUrl(photo.id)
+												? `url(${thumbUrl(photo.id)})`
+												: undefined}
+										></span>
+									{/each}
+								</span>
+							{/if}
+						</button>
+					{:else}
+						<b>{group.title}</b><span class="mono">{photoCount(group.items.length)}</span>
+					{/if}
+					<button
+						class="btn btn-ghost btn-sm place-all"
+						onclick={() => (ui.placing = group.items.map((p) => p.id))}
+						><Icon name="pin" />Ubicar todas</button
+					>
 				</div>
-				<div class="pgrid">
-					{#each group.items as photo (photo.id)}
-						<Thumb
-							id={photo.id}
-							checkable
-							selected={selected.includes(photo.id)}
-							label="Seleccionar foto"
-							onclick={() => toggle(photo.id)}
-							ondragstart={(e) => onDragStart(e, photo.id)}
-						/>
-					{/each}
-				</div>
+				{#if open}
+					<div class="pgrid">
+						{#each group.items as photo (photo.id)}
+							<Thumb
+								id={photo.id}
+								checkable
+								selected={selected.includes(photo.id)}
+								label="Seleccionar foto"
+								onclick={() => toggle(photo.id)}
+								ondragstart={(e) => onDragStart(e, photo.id)}
+							/>
+						{/each}
+					</div>
+				{/if}
 			</section>
 		{:else}
 			<div class="empty done">
@@ -253,14 +323,19 @@
 <MapControls style="bottom: 16px" />
 
 {#if ui.placing}
-	<div class="placing panel row" role="status">
-		<span class="dot sm ringed"></span>
-		Haz clic en el globo para colocar {ui.placing.length === 1
-			? 'la foto'
-			: `${ui.placing.length} fotos`}
-		<button class="btn btn-ghost btn-sm" onclick={() => (ui.placing = null)}
-			>Cancelar <span class="kbd">Esc</span></button
-		>
+	<div class="placing panel col" role="status">
+		<div class="row placing-head">
+			<span class="dot sm ringed"></span>
+			<span class="placing-text"
+				>Busca dónde se hicieron {ui.placing.length === 1
+					? 'la foto'
+					: `las ${ui.placing.length} fotos`}, o haz clic en el globo</span
+			>
+			<button class="btn btn-ghost btn-sm" onclick={() => (ui.placing = null)}
+				>Cancelar <span class="kbd">Esc</span></button
+			>
+		</div>
+		<PlaceSearch onchoose={placeFound} />
 	</div>
 {/if}
 
@@ -370,9 +445,82 @@
 		transform: translateX(-50%);
 		z-index: 20;
 		gap: 10px;
-		padding: 6px 6px 6px 14px;
+		width: min(460px, calc(100% - 32px));
+		padding: 8px 8px 10px 14px;
 		font-size: 13px;
 		border-radius: 12px;
+	}
+
+	.placing-head {
+		gap: 10px;
+	}
+
+	.placing-text {
+		flex: 1;
+	}
+
+	/* Title and count together, the button on the right */
+	.group .day-h {
+		justify-content: flex-start;
+		align-items: center;
+		gap: 10px;
+	}
+
+	.album-toggle {
+		flex: 1;
+		min-width: 0;
+		gap: 10px;
+		padding: 0;
+		text-align: left;
+		color: var(--t1);
+	}
+
+	.album-toggle b {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.count-label {
+		flex: none;
+		color: var(--acc-text);
+	}
+
+	.chev {
+		display: inline-flex;
+		color: var(--t3);
+		transition: transform 0.15s;
+	}
+
+	.chev.open {
+		transform: rotate(90deg);
+	}
+
+	/* Three small photos so a closed album is recognised at a glance */
+	.peek {
+		flex: none;
+		margin-left: 4px;
+	}
+
+	.peek-thumb {
+		width: 26px;
+		height: 26px;
+		border-radius: 5px;
+		background: var(--s3) center / cover;
+		border: 2px solid var(--s1);
+	}
+
+	.peek-thumb + .peek-thumb {
+		margin-left: -8px;
+	}
+
+	.group.closed {
+		border-bottom: 1px solid var(--line);
+	}
+
+	.place-all {
+		margin-left: auto;
+		height: 26px;
 	}
 
 	.drop-tip {

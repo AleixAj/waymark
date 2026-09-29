@@ -1,8 +1,8 @@
 import { auth } from '$lib/google/auth.svelte';
 import { downloadFile } from '$lib/google/drive';
 import { pickFromDrive } from '$lib/google/picker';
-import type { ImportItem } from '$lib/photos/importer';
-import { pickFiles } from '$lib/photos/pick';
+import { fileItem, type ImportItem } from '$lib/photos/importer';
+import { pathOf, pickFiles } from '$lib/photos/pick';
 import { looksLikeTakeout, readTakeout, type TakeoutAlbum } from '$lib/photos/takeout';
 import { library } from './library.svelte';
 import { ui } from './ui.svelte';
@@ -32,7 +32,15 @@ export async function importFiles(files: File[]) {
 			if (ui.importNote?.startsWith('Leyendo')) ui.importNote = null;
 		}
 	}
-	await library.import(files);
+	await library.import(files.map(withFolder));
+}
+
+/** A file from a chosen folder remembers the folder name, like an album */
+function withFolder(file: File): ImportItem {
+	const parts = pathOf(file).split('/');
+	const item = fileItem(file);
+	if (parts.length > 1) item.hint = { album: parts[parts.length - 2] };
+	return item;
 }
 
 /** Takeout: the .zip files, or the folder once unzipped */

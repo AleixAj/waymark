@@ -1,4 +1,4 @@
-import { askForPersistentStorage, findExistingIds, savePhotos } from './db';
+import { askForPersistentStorage, fillAlbums, findExistingIds, savePhotos } from './db';
 import { findPlace } from './placeFinder';
 import { isRaw } from './raw';
 import { toPoint, type Photo, type PhotoPoint } from './types';
@@ -93,6 +93,12 @@ export async function importPhotos(
 		const existing = await findExistingIds(entries.map((entry) => entry.photo.id));
 		const fresh = entries.filter((entry) => !existing.has(entry.photo.id));
 		progress.duplicates += entries.length - fresh.length;
+		// A photo imported again from an album keeps its data, but learns the album
+		await fillAlbums(
+			entries
+				.filter((entry) => existing.has(entry.photo.id) && entry.hint?.album)
+				.map((entry) => ({ id: entry.photo.id, album: entry.hint!.album! }))
+		);
 
 		const now = Date.now();
 		const photos: Photo[] = await Promise.all(
@@ -102,6 +108,7 @@ export async function importPhotos(
 				favorite: false,
 				file,
 				updatedAt: now,
+				album: hint?.album ?? null,
 				// A photo chosen in Drive is not uploaded again: Waymark points to it
 				...(hint?.driveId && { driveId: hint.driveId, driveOriginal: true })
 			}))

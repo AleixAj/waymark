@@ -70,7 +70,9 @@ export async function readTakeout(files: File[]): Promise<TakeoutAlbum[] | null>
 			album = { id: folder, name: albumName, byYear: YEAR_FOLDER.test(albumName), items: [] };
 			albums.set(folder, album);
 		}
-		album.items.push({ name, open: entry.open, hint: sidecar?.hint });
+		// Year folders ("Photos from 2023") are not albums the user made
+		const hint = album.byYear ? sidecar?.hint : { ...sidecar?.hint, album: albumName };
+		album.items.push({ name, open: entry.open, hint });
 	}
 	// Albums first (by name), then the years (newest first)
 	return [...albums.values()].sort((a, b) =>

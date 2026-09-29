@@ -15,7 +15,7 @@ Everything runs in the browser: photos are processed and stored on your device. 
 - **Photo viewer** with EXIF data (camera, lens, settings), location map, favorites and location fixing
 - **Three ways to import**: files or folders from the device, photos already in Google Drive (not copied again), and Google Photos albums through a Google Takeout export
 - **Google account** (optional): the library, favorites, fixed locations and trip titles stay in sync across devices
-- **Photos without GPS**: drag them onto the globe (or click on the map) to place them
+- **Photos without GPS**: their place is estimated from photos with GPS taken up to two hours away, or from the same album (an album is usually one trip). The rest can be dragged onto the globe, or placed a whole album at a time with a place search
 - **Statistics**: countries, continents, distance travelled, photos per year, top cities, extreme points
 - **Search** (Ctrl/⌘ K) for countries, cities, trips or pasted coordinates
 - **Settings**: dark/light/system theme, km/mi, map style, reduced motion, globe quality, storage, export
@@ -91,5 +91,6 @@ scripts/       Build script for the geo data
 - Country shapes: [Natural Earth](https://www.naturalearthdata.com/) via [world-atlas](https://github.com/topojson/world-atlas) (public domain)
 - Cities: [GeoNames](https://www.geonames.org/) `cities15000` (CC BY 4.0)
 - Street and satellite maps: Esri World Topo Map and World Imagery
+- Place search: [Nominatim](https://nominatim.org/) (© OpenStreetMap contributors)
 - Flags: [country-flag-icons](https://gitlab.com/catamphetamine/country-flag-icons)
 - Fonts: Geist, Geist Mono and Instrument Serif

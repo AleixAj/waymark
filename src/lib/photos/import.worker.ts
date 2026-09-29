@@ -29,6 +29,8 @@ export interface ImportHint {
 	takenAt?: number;
 	/** The photo is a file in the user's Google Drive */
 	driveId?: string;
+	/** Album or folder it came from */
+	album?: string;
 }
 
 export type WorkerRequest = { file: File; hint?: ImportHint };

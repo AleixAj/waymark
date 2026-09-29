@@ -4,6 +4,7 @@ import {
 	loadTripEdits,
 	saveTripEdit,
 	setFavorite,
+	setEstimated,
 	setLocation,
 	updatePlaces,
 	type TripEdit
@@ -22,6 +23,7 @@ import { cityCounts, countrySummaries } from '$lib/library/stats';
 import { inRange, type TimeRange } from '$lib/library/timeline';
 import { mergeByTime } from '$lib/library/merge';
 import { detectTrips, findHome, type Trip } from '$lib/library/trips';
+import { estimateLocations } from '$lib/library/estimate';
 import { loadDemo } from '$lib/demo/load';
 import { countries } from './countries.svelte';
 import { forgetThumbs, rememberThumb } from './thumbs.svelte';
@@ -81,7 +83,32 @@ class Library {
 		this.points = points;
 		this.tripEdits = edits;
 		this.loaded = true;
-		void this.addMissingAreas();
+		void this.addMissingAreas().then(() => this.estimateMissing());
+	}
+
+	/**
+	 * Photos without GPS take the place of a photo with GPS taken up to two hours
+	 * before or after (marked as estimated). Returns how many were placed.
+	 */
+	async estimateMissing() {
+		const estimates = estimateLocations(this.points);
+		if (!estimates.length) return 0;
+		const changes = estimates.map(({ id, source }) => ({
+			id,
+			place: {
+				lat: source.lat,
+				lng: source.lng,
+				country: source.country,
+				city: source.city,
+				area: source.area ?? null
+			}
+		}));
+		await setEstimated(changes);
+		const byId = new Map(changes.map((c) => [c.id, c.place]));
+		this.points = this.points.map((p) =>
+			byId.has(p.id) ? { ...p, ...byId.get(p.id), estimated: true } : p
+		);
+		return estimates.length;
 	}
 
 	/** Reads everything again (photos arrived from another device) */
@@ -90,6 +117,7 @@ class Library {
 		this.mergeIncoming();
 		this.points = points;
 		this.tripEdits = edits;
+		await this.estimateMissing();
 	}
 
 	/**
@@ -125,6 +153,9 @@ class Library {
 				onBatch: (points, thumbs) => this.receive(points, thumbs)
 			})
 		);
+		// Read again: photos imported before may have learned their album. Then the
+		// photos without GPS get a place estimated from their neighbours.
+		await this.reload();
 		this.onChange?.();
 		// Files that arrived in the meantime
 		if (this.waiting.length) {
@@ -214,7 +245,9 @@ class Library {
 
 	async assignLocation(ids: string[], place: { lat: number; lng: number } & Place) {
 		await setLocation(ids, place);
-		this.replace(ids, place);
+		this.replace(ids, { ...place, estimated: false });
+		// Photos taken around the same time can follow the ones just placed
+		await this.estimateMissing();
 		this.onChange?.();
 	}
 

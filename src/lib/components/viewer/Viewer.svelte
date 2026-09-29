@@ -355,6 +355,11 @@
 											? `${point.city}, ${countries.name(point.country)}`
 											: countries.name(point.country)}</span
 									>
+									{#if point.estimated}
+										<span class="t-small estimated"
+											>Ubicación estimada con tus fotos de la misma hora</span
+										>
+									{/if}
 								</div>
 							</div>
 							<div class="row coords">
@@ -761,5 +766,9 @@
 		.nav {
 			display: none;
 		}
+	}
+	.estimated {
+		margin-top: 4px;
+		color: var(--warn);
 	}
 </style>
