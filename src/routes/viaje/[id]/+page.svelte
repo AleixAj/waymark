@@ -5,6 +5,7 @@
 	import MapControls from '$lib/components/MapControls.svelte';
 	import Thumb from '$lib/components/photos/Thumb.svelte';
 	import Icon from '$lib/components/ui/Icon.svelte';
+	import { sheet } from '$lib/components/ui/sheet';
 	import { library } from '$lib/state/library.svelte';
 	import { settings } from '$lib/state/settings.svelte';
 	import { ui } from '$lib/state/ui.svelte';
@@ -35,6 +36,8 @@
 
 	$effect(() => {
 		const stops = trip?.stops;
+		// Re-frame when the panel size changes (bottom sheet on phones)
+		void mapView.cameraPadding;
 		if (!mapView.map || !stops) return;
 		untrack(() => mapView.fitPoints(stops, 11));
 	});
@@ -102,7 +105,7 @@
 <MapControls projection={false} style="right: 452px; bottom: 16px" />
 
 {#if trip}
-	<aside class="rpanel panel" aria-label="Viaje">
+	<aside use:sheet={'half'} class="rpanel panel" aria-label="Viaje">
 		<div class="scroll" bind:this={scroller}>
 			<div class="cover-wrap">
 				<div class="cover" style:background-image={cover ? `url(${cover})` : undefined}></div>
@@ -203,7 +206,7 @@
 		</div>
 	</aside>
 {:else if library.loaded}
-	<aside class="rpanel panel">
+	<aside use:sheet={'half'} class="rpanel panel">
 		<div class="empty missing">
 			<h3>Este viaje ya no existe</h3>
 			<p>Puede que hayas borrado sus fotos o cambiado sus fechas.</p>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Icon from './ui/Icon.svelte';
+	import { sheet } from './ui/sheet';
 	import { library } from '$lib/state/library.svelte';
 	import { countries } from '$lib/state/countries.svelte';
 	import { thumbUrl } from '$lib/state/thumbs.svelte';
@@ -18,7 +19,7 @@
 </script>
 
 {#if ui.sidebarOpen}
-	<aside class="side panel" aria-label="Biblioteca" aria-busy={importing}>
+	<aside class="side panel" aria-label="Biblioteca" aria-busy={importing} use:sheet={'peek'}>
 		<div class="head">
 			<div class="row between">
 				<span class="t-h3">Tu mundo</span>
@@ -30,6 +31,9 @@
 					<Icon name="sidebar" />
 				</button>
 			</div>
+			<span class="mono t3 summary">
+				{formatNumber(library.countryList.length)} países · {formatNumber(library.points.length)} fotos
+			</span>
 			<div class="row stats">
 				<div class="col">
 					<span class="mono num">{formatNumber(library.countryList.length)}</span>
@@ -47,7 +51,7 @@
 		</div>
 
 		<div class="scroll">
-			<div class="sec-h">
+			<div class="sec-h trips-h">
 				<h3>Viajes</h3>
 				{#if importing}<span class="t-small t3">Detectando viajes…</span>{/if}
 			</div>
@@ -68,7 +72,7 @@
 					Aún no hay viajes. Aparecen solos cuando tienes varias fotos seguidas lejos de casa.
 				</p>
 			{/if}
-			<div class="col list">
+			<div class="col list trips">
 				{#each library.trips as trip (trip.id)}
 					<a class="place" href="/viaje/{trip.id}">
 						<span
@@ -120,18 +124,6 @@
 {/if}
 
 <style>
-	.side {
-		position: absolute;
-		top: 84px;
-		left: 16px;
-		width: 320px;
-		bottom: 112px;
-		display: flex;
-		flex-direction: column;
-		overflow: hidden;
-		z-index: 10;
-	}
-
 	.head {
 		padding: 16px 16px 14px;
 		border-bottom: 1px solid var(--line);
@@ -206,6 +198,10 @@
 		padding-top: 20px;
 	}
 
+	.summary {
+		display: none;
+	}
+
 	.skeletons {
 		padding: 0 16px 8px;
 		gap: 16px;
@@ -228,5 +224,61 @@
 
 	.empty-note {
 		padding: 0 16px 8px;
+	}
+
+	/* Phones: trips become big cards you scroll sideways */
+	@media (max-width: 767px) {
+		.head {
+			padding: 4px 20px 12px;
+			border-bottom: 0;
+			display: flex;
+			align-items: baseline;
+			justify-content: space-between;
+		}
+
+		.head .between {
+			flex: none;
+		}
+
+		.head .btn,
+		.stats,
+		.trips-h {
+			display: none;
+		}
+
+		.summary {
+			display: block;
+		}
+
+		.trips {
+			flex-direction: row;
+			overflow-x: auto;
+			gap: 10px;
+			padding: 0 20px 8px;
+			scroll-snap-type: x mandatory;
+			scroll-padding-left: 20px;
+			scrollbar-width: none;
+		}
+
+		.trips .place {
+			flex-direction: column;
+			align-items: stretch;
+			width: 148px;
+			flex: none;
+			padding: 0;
+			gap: 8px;
+			scroll-snap-align: start;
+		}
+
+		.trips .cover {
+			width: 100%;
+			height: auto;
+			aspect-ratio: 4 / 3;
+			border-radius: 10px;
+		}
+
+		.trips .ct {
+			display: none;
+		}
 	}
 </style>

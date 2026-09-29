@@ -63,4 +63,12 @@
 	.light {
 		font-weight: 400;
 	}
+
+	@media (max-width: 767px) {
+		.pgrid {
+			padding: 0 16px 12px;
+			grid-template-columns: repeat(3, 1fr) !important;
+			gap: 3px;
+		}
+	}
 </style>

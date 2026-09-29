@@ -16,6 +16,7 @@
 	import RouteLayer from '$lib/map/RouteLayer.svelte';
 	import { mapView } from '$lib/map/view.svelte';
 	import TopBar from '$lib/components/TopBar.svelte';
+	import NoWebGL from '$lib/components/NoWebGL.svelte';
 	import ImportPanel from '$lib/components/ImportPanel.svelte';
 	import ImportErrors from '$lib/components/ImportErrors.svelte';
 	import Viewer from '$lib/components/viewer/Viewer.svelte';
@@ -32,6 +33,17 @@
 	settings.init();
 
 	const onStats = $derived(page.url.pathname.startsWith('/estadisticas'));
+
+	// The globe needs WebGL; very old or locked-down browsers get a flat map instead
+	const hasWebGL = (() => {
+		try {
+			const canvas = document.createElement('canvas');
+			return !!(canvas.getContext('webgl2') || canvas.getContext('webgl'));
+		} catch {
+			return false;
+		}
+	})();
+	ui.webgl = hasWebGL;
 	const welcome = $derived(library.isEmpty);
 	let fileDrag = $state(false);
 
@@ -97,15 +109,19 @@
 <div class="app">
 	{#if library.loaded}
 		<div class="globe" class:hidden={onStats}>
-			<!-- Changing the quality setting rebuilds the map with the new pixel ratio -->
-			{#key settings.quality}
-				<GlobeMap spin={welcome} showVisited={!welcome} onCountryClick={openCountry}>
-					{#if !welcome}
-						<PhotoMarkers points={mapView.points ?? library.visible} labels={mapView.labels} />
-						<RouteLayer />
-					{/if}
-				</GlobeMap>
-			{/key}
+			{#if !hasWebGL}
+				<NoWebGL />
+			{:else}
+				<!-- Changing the quality setting rebuilds the map with the new pixel ratio -->
+				{#key settings.quality}
+					<GlobeMap spin={welcome} showVisited={!welcome} onCountryClick={openCountry}>
+						{#if !welcome}
+							<PhotoMarkers points={mapView.points ?? library.visible} labels={mapView.labels} />
+							<RouteLayer />
+						{/if}
+					</GlobeMap>
+				{/key}
+			{/if}
 		</div>
 
 		{#if !welcome}

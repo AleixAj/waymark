@@ -114,6 +114,7 @@ const CITY_ES = {
 	Kyoto: 'Kioto',
 	'New York City': 'Nueva York',
 	Reykjavik: 'Reikiavik',
+	Reykjavík: 'Reikiavik',
 	Lisbon: 'Lisboa',
 	London: 'Londres',
 	Seville: 'Sevilla',

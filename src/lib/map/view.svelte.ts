@@ -2,6 +2,7 @@ import type { LngLatBoundsLike, MapLibreMap, PaddingOptions } from 'maplibre-gl'
 import { geoBounds } from 'd3-geo';
 import type { Feature, MultiPolygon, Polygon } from 'geojson';
 import { settings } from '$lib/state/settings.svelte';
+import { ui } from '$lib/state/ui.svelte';
 import { countries } from '$lib/state/countries.svelte';
 import type { Stop } from '$lib/library/trips';
 import type { LocatedPoint } from '$lib/photos/types';
@@ -13,7 +14,11 @@ const FLIGHT_MS = 1200;
 
 /** Zoom that makes the globe outline a share of the window height, like in the design */
 export function zoomForGlobe(heightShare: number, lat: number) {
-	const outline = Math.max(150, window.innerHeight * heightShare);
+	// On narrow screens the width limits it too (the globe may bleed a little, like the design)
+	const outline = Math.max(
+		150,
+		Math.min(window.innerHeight * heightShare, window.innerWidth * 0.6)
+	);
 	return zoomForOutline(outline, lat, window.innerHeight);
 }
 
@@ -41,18 +46,30 @@ class MapView {
 		return settings.reducedMotion ? 0 : FLIGHT_MS;
 	}
 
+	/** Padding really used by the camera: on phones the panels are bottom sheets */
+	get cameraPadding(): PaddingOptions {
+		if (typeof window !== 'undefined' && window.innerWidth < 768) {
+			return { top: 80, bottom: ui.sheetHeight + 16, left: 16, right: 16 };
+		}
+		return this.padding;
+	}
+
 	flyTo(center: [number, number], zoom: number) {
 		this.map?.flyTo({
 			center,
 			zoom,
 			duration: this.duration,
-			padding: this.padding,
+			padding: this.cameraPadding,
 			essential: true
 		});
 	}
 
 	fitBounds(bounds: LngLatBoundsLike, maxZoom = 12) {
-		this.map?.fitBounds(bounds, { padding: this.padding, maxZoom, duration: this.duration });
+		if (!this.map) return;
+		// MapLibre adds the fitBounds padding to the map's own padding,
+		// so the panels go in the map padding and here only a small margin
+		this.map.setPadding(this.cameraPadding);
+		this.map.fitBounds(bounds, { padding: 24, maxZoom, duration: this.duration });
 	}
 
 	fitPoints(points: { lat: number; lng: number }[], maxZoom = 12) {
@@ -76,8 +93,14 @@ class MapView {
 	}
 
 	world() {
-		const zoom = zoomForGlobe(0.433, WORLD_CENTER[1]);
-		this.map?.flyTo({ center: WORLD_CENTER, zoom, duration: this.duration, padding: this.padding });
+		// Phones show the globe smaller, above the bottom sheet
+		const zoom = zoomForGlobe(window.innerWidth < 768 ? 0.3 : 0.433, WORLD_CENTER[1]);
+		this.map?.flyTo({
+			center: WORLD_CENTER,
+			zoom,
+			duration: this.duration,
+			padding: this.cameraPadding
+		});
 	}
 
 	/** Big spinning globe behind the welcome screen */

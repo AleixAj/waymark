@@ -6,6 +6,7 @@
 	import MapControls from '$lib/components/MapControls.svelte';
 	import PhotoDays from '$lib/components/photos/PhotoDays.svelte';
 	import Icon from '$lib/components/ui/Icon.svelte';
+	import { sheet } from '$lib/components/ui/sheet';
 	import { library } from '$lib/state/library.svelte';
 	import { countries } from '$lib/state/countries.svelte';
 	import { mapView } from '$lib/map/view.svelte';
@@ -39,6 +40,8 @@
 
 	$effect(() => {
 		const photos = cityPhotos;
+		// Re-frame when the panel size changes (bottom sheet on phones)
+		void mapView.cameraPadding;
 		if (!mapView.map || !photos.length) return;
 		untrack(() => mapView.fitPoints(photos, 14.5));
 	});
@@ -68,7 +71,7 @@
 />
 <MapControls style="right: 452px; bottom: 16px" />
 
-<aside class="rpanel panel" aria-label="Fotos en esta zona">
+<aside use:sheet={'half'} class="rpanel panel" aria-label="Fotos en esta zona">
 	<div class="head">
 		<div class="row between">
 			<span class="t-label">{city}, {countryName}</span>

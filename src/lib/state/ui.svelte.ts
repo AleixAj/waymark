@@ -5,6 +5,12 @@ class Ui {
 	settingsOpen = $state(false);
 	/** Flat map instead of the globe */
 	flat = $state(false);
+	/** False on browsers that can't draw the globe (the flat SVG map is shown instead) */
+	webgl = $state(true);
+	/** Phones: height of the bottom sheet (0 on bigger screens) */
+	sheetHeight = $state(0);
+	/** Phones: the timeline is hidden behind a button */
+	timelineOpen = $state(false);
 	/** Photo hovered in a list: its marker lights up on the map (and the other way round) */
 	hoveredPhoto = $state<string | null>(null);
 
@@ -30,5 +36,3 @@ class Ui {
 }
 
 export const ui = new Ui();
-
-if (import.meta.env.DEV && typeof window !== 'undefined') Object.assign(window, { __ui: ui });

@@ -42,6 +42,13 @@
 		margin: 10px 4px;
 	}
 
+	/* Phones: the back button in the top bar replaces it */
+	@media (max-width: 767px) {
+		.crumbs {
+			display: none;
+		}
+	}
+
 	.current {
 		color: var(--t1);
 		cursor: default;

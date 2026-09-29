@@ -26,7 +26,8 @@
 
 	let photo = $state.raw<Photo | null>(null);
 	let image = $state<string | null>(null);
-	let showInfo = $state(true);
+	// On phones the info starts hidden, the photo comes first
+	let showInfo = $state(typeof window !== 'undefined' && window.innerWidth > 900);
 	let fixing = $state(false);
 	let copied = $state(false);
 	let dialog: HTMLDivElement;
@@ -214,6 +215,27 @@
 		>
 			<Icon name="chevR" />
 		</button>
+
+		<!-- Phones: the main actions live in a bar at the bottom -->
+		<div class="row phone-actions">
+			<button class:fav={point?.favorite} onclick={() => library.toggleFavorite(id)}>
+				<Icon name="heart" filled={point?.favorite} />Favorito
+			</button>
+			{#if trips[0]}
+				<button onclick={() => library.setTripCover(trips[0].id, id)}>
+					<Icon name="folderPlus" />Portada
+				</button>
+			{/if}
+			<button
+				onclick={() => {
+					showInfo = true;
+					fixing = true;
+				}}
+			>
+				<Icon name="pinEdit" />Ubicación
+			</button>
+			<button onclick={download}><Icon name="download" />Descargar</button>
+		</div>
 
 		<div class="row mono hints">
 			<span class="row"><span class="kbd">←</span><span class="kbd">→</span> navegar</span>
@@ -643,7 +665,62 @@
 		text-decoration: none;
 	}
 
+	.phone-actions {
+		display: none;
+	}
+
 	@media (max-width: 900px) {
+		.tools > :not(:last-child) {
+			display: none;
+		}
+
+		.picture {
+			top: 76px;
+			bottom: 190px;
+		}
+
+		.strip {
+			bottom: 104px;
+		}
+
+		.mini {
+			width: 36px;
+			height: 36px;
+		}
+
+		.mini.on {
+			width: 44px;
+			height: 44px;
+		}
+
+		.phone-actions {
+			display: flex;
+			position: absolute;
+			left: 0;
+			right: 0;
+			bottom: 16px;
+			height: 72px;
+			justify-content: space-around;
+			padding: 0 12px;
+			border-top: 1px solid oklch(1 0 0 / 0.08);
+		}
+
+		.phone-actions button {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			gap: 4px;
+			min-width: 72px;
+			min-height: 44px;
+			font-size: 11px;
+			color: oklch(0.85 0.01 255);
+		}
+
+		.phone-actions .fav {
+			color: var(--acc);
+		}
+
 		.info {
 			position: absolute;
 			inset: auto 0 0 0;

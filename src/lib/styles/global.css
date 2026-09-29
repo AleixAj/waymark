@@ -787,7 +787,31 @@ input {
 	transition-duration: 0.01ms !important;
 }
 
-/* Right side panel used by the country, place and trip views */
+/* Floating side panels: library on the left, details on the right */
+.side {
+	position: absolute;
+	top: 84px;
+	left: 16px;
+	width: 320px;
+	bottom: 112px;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	z-index: 10;
+}
+
+.unlocated {
+	position: absolute;
+	top: 84px;
+	left: 16px;
+	bottom: 16px;
+	width: min(660px, calc(100% - 420px));
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	z-index: 10;
+}
+
 .rpanel {
 	position: absolute;
 	top: 84px;
@@ -813,6 +837,63 @@ input {
 
 .ill .a {
 	stroke: var(--acc);
+}
+
+/* Handle of the bottom sheets, only visible on phones */
+.sheet-handle {
+	display: none;
+}
+
+/* Phones: panels become bottom sheets over the globe */
+@media (max-width: 767px) {
+	.side,
+	.rpanel,
+	.unlocated {
+		position: fixed;
+		top: auto;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		width: auto;
+		height: var(--sheet-h, 55vh);
+		border-radius: 24px 24px 0 0;
+		border-bottom: 0;
+		z-index: 15;
+		transition: height 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+	}
+
+	.side.dragging,
+	.rpanel.dragging,
+	.unlocated.dragging {
+		transition: none;
+	}
+
+	.sheet-handle {
+		display: block;
+		flex: none;
+		width: 100%;
+		height: 22px;
+		padding: 0;
+		cursor: grab;
+		touch-action: none;
+		position: relative;
+	}
+
+	.sheet-handle::after {
+		content: '';
+		position: absolute;
+		left: 50%;
+		top: 8px;
+		width: 36px;
+		height: 5px;
+		margin-left: -18px;
+		border-radius: 3px;
+		background: var(--line-strong);
+	}
+
+	.day-h {
+		padding: 10px 16px 8px;
+	}
 }
 
 /* Printing (used by "Exportar informe" in Statistics) */

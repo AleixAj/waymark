@@ -7,6 +7,7 @@
 	import Timeline from '$lib/components/Timeline.svelte';
 	import PhotoDays from '$lib/components/photos/PhotoDays.svelte';
 	import Icon from '$lib/components/ui/Icon.svelte';
+	import { sheet } from '$lib/components/ui/sheet';
 	import Flag from '$lib/components/ui/Flag.svelte';
 	import { library } from '$lib/state/library.svelte';
 	import { countries } from '$lib/state/countries.svelte';
@@ -43,6 +44,8 @@
 	// (only when the country or the city changes, not on every library update)
 	$effect(() => {
 		const target = { iso, city };
+		// Re-frame when the panel size changes (bottom sheet on phones)
+		void mapView.cameraPadding;
 		if (!mapView.map || !countries.features.length) return;
 		untrack(() => {
 			if (target.city && photos.length) mapView.fitPoints(photos, 13);
@@ -65,7 +68,7 @@
 	<Timeline style="right: 452px" />
 {/if}
 
-<aside class="rpanel panel" aria-label={info?.name}>
+<aside use:sheet={'half'} class="rpanel panel" aria-label={info?.name}>
 	<div class="head">
 		<div class="row between">
 			{#if info?.iso2}

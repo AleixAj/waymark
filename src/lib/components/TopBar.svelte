@@ -14,7 +14,10 @@
 	const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent);
 	const modKey = isMac ? '⌘' : 'Ctrl';
 
+	let menuOpen = $state(false);
+
 	async function importPhotos() {
+		menuOpen = false;
 		const files = await pickFiles();
 		library.import(files);
 	}
@@ -22,7 +25,18 @@
 
 <header class="topbar panel">
 	<div class="row">
-		<a class="logo" href="/" aria-label="Waymark, ir al globo"><Logo />Waymark</a>
+		{#if path !== '/'}
+			<button
+				class="btn btn-ghost btn-icon phone-only"
+				aria-label="Volver"
+				onclick={() => history.back()}
+			>
+				<Icon name="arrowL" />
+			</button>
+		{/if}
+		<a class="logo" href="/" aria-label="Waymark, ir al globo"
+			><Logo /><span class="name">Waymark</span></a
+		>
 		<nav class="tabs" aria-label="Secciones">
 			<a class="btn btn-ghost btn-sm" class:is-on={tab === 'globo'} href="/">
 				<Icon name="globe" />Globo
@@ -59,6 +73,58 @@
 			<Icon name="sliders" />
 		</button>
 		<button class="btn btn-secondary" onclick={importPhotos}><Icon name="upload" />Importar</button>
+	</div>
+
+	<!-- Phones: the sections and actions move into a menu -->
+	<div class="phone-only menu-wrap">
+		<button
+			class="btn btn-ghost btn-icon"
+			aria-label="Menú"
+			aria-expanded={menuOpen}
+			onclick={() => (menuOpen = !menuOpen)}
+		>
+			<Icon name="more" />
+		</button>
+		{#if menuOpen}
+			<div class="menu panel" role="menu">
+				<a class="menu-item" role="menuitem" href="/" onclick={() => (menuOpen = false)}>
+					<Icon name="globe" />Globo
+				</a>
+				<a
+					class="menu-item"
+					role="menuitem"
+					href="/sin-ubicacion"
+					onclick={() => (menuOpen = false)}
+				>
+					<Icon name="imageOff" />Sin ubicación
+					<span class="mono t3 count">{library.unlocated.length}</span>
+				</a>
+				<a
+					class="menu-item"
+					role="menuitem"
+					href="/estadisticas"
+					onclick={() => (menuOpen = false)}
+				>
+					<Icon name="chart" />Estadísticas
+				</a>
+				<div class="hr"></div>
+				<button class="menu-item" role="menuitem" onclick={importPhotos}
+					><Icon name="upload" />Importar fotos</button
+				>
+				<button
+					class="menu-item"
+					role="menuitem"
+					onclick={() => {
+						menuOpen = false;
+						ui.settingsOpen = true;
+					}}><Icon name="sliders" />Ajustes</button
+				>
+				<button class="menu-item" role="menuitem" onclick={() => settings.toggleTheme()}>
+					<Icon name={settings.resolvedTheme === 'dark' ? 'sun' : 'moon'} />
+					{settings.resolvedTheme === 'dark' ? 'Tema claro' : 'Tema oscuro'}
+				</button>
+			</div>
+		{/if}
 	</div>
 </header>
 
@@ -151,7 +217,68 @@
 		}
 	}
 
-	@media (max-width: 1080px) {
+	.phone-only {
+		display: none;
+	}
+
+	.menu-wrap {
+		position: relative;
+	}
+
+	.menu {
+		position: absolute;
+		top: 44px;
+		right: 0;
+		z-index: 30;
+		background: var(--glass-strong);
+	}
+
+	.menu a.menu-item {
+		text-decoration: none;
+	}
+
+	.count {
+		margin-left: auto;
+	}
+
+	/* Phones: back button, logo mark, search and a menu */
+	@media (max-width: 767px) {
+		.topbar {
+			top: 8px;
+			left: 8px;
+			right: 8px;
+			height: 52px;
+			grid-template-columns: auto 1fr auto;
+			padding: 0 6px 0 8px;
+		}
+
+		.tabs,
+		.actions,
+		.logo .name {
+			display: none;
+		}
+
+		.phone-only {
+			display: inline-flex;
+		}
+
+		.search {
+			width: 100%;
+		}
+
+		.search .placeholder {
+			display: block;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+
+		.search .kbds {
+			display: none;
+		}
+	}
+
+	@media (min-width: 768px) and (max-width: 1080px) {
 		.search .placeholder,
 		.search .kbds {
 			display: none;

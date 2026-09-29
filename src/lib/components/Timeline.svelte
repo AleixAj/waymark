@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { library } from '$lib/state/library.svelte';
+	import { ui } from '$lib/state/ui.svelte';
 	import { buildMonths, monthStart } from '$lib/library/timeline';
 	import { formatMonth, formatNumber } from '$lib/library/format';
 
@@ -69,7 +70,12 @@
 </script>
 
 {#if bars.length}
-	<div class="timeline panel" {style}>
+	<div
+		class="timeline panel"
+		class:open={ui.timelineOpen}
+		{style}
+		style:--sheet="{ui.sheetHeight}px"
+	>
 		<div class="col info">
 			<span class="t-label">Línea de tiempo</span>
 			<span class="mono range">{label}</span>
@@ -247,6 +253,34 @@
 		position: relative;
 		height: 14px;
 		margin-top: 6px;
+	}
+
+	/* Phones: only shown when opened from the calendar button */
+	@media (max-width: 767px) {
+		.timeline {
+			display: none;
+			left: 8px !important;
+			right: 8px !important;
+			bottom: calc(var(--sheet) + 8px);
+			grid-template-columns: 1fr;
+			height: auto;
+			gap: 8px;
+			z-index: 16;
+		}
+
+		.timeline.open {
+			display: grid;
+		}
+
+		.info {
+			flex-direction: row;
+			align-items: baseline;
+			gap: 10px;
+		}
+
+		.info .t-label {
+			display: none;
+		}
 	}
 
 	.years span {

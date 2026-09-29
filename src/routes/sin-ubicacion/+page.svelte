@@ -2,6 +2,7 @@
 	import Thumb from '$lib/components/photos/Thumb.svelte';
 	import MapControls from '$lib/components/MapControls.svelte';
 	import Icon from '$lib/components/ui/Icon.svelte';
+	import { sheet } from '$lib/components/ui/sheet';
 	import { library } from '$lib/state/library.svelte';
 	import { countries } from '$lib/state/countries.svelte';
 	import { thumbUrl } from '$lib/state/thumbs.svelte';
@@ -158,7 +159,7 @@
 <svelte:head><title>Sin ubicación · Waymark</title></svelte:head>
 <svelte:window onkeydown={onKey} ondragend={endDrag} />
 
-<section class="unlocated panel" aria-label="Fotos sin ubicación">
+<section class="unlocated panel" aria-label="Fotos sin ubicación" use:sheet={'half'}>
 	<div class="head">
 		<div class="row between top">
 			<div>
@@ -271,18 +272,6 @@
 </div>
 
 <style>
-	.unlocated {
-		position: absolute;
-		top: 84px;
-		left: 16px;
-		bottom: 16px;
-		width: 660px;
-		display: flex;
-		flex-direction: column;
-		overflow: hidden;
-		z-index: 10;
-	}
-
 	.head {
 		padding: 20px 20px 16px;
 	}
@@ -441,10 +430,6 @@
 	}
 
 	@media (max-width: 1100px) {
-		.unlocated {
-			width: 460px;
-		}
-
 		.pgrid {
 			grid-template-columns: repeat(4, 1fr);
 		}

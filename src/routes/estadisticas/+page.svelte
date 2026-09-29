@@ -275,6 +275,7 @@
 	.stats {
 		position: absolute;
 		top: 88px;
+		scrollbar-gutter: stable;
 		left: 0;
 		right: 0;
 		bottom: 0;
@@ -527,6 +528,28 @@
 
 	.coord {
 		margin-top: 6px;
+	}
+
+	@media (max-width: 767px) {
+		.wrap {
+			padding: 12px 16px 32px;
+		}
+
+		.tools {
+			flex-wrap: wrap;
+			width: 100%;
+		}
+
+		.tools .seg {
+			max-width: 100%;
+			overflow-x: auto;
+		}
+
+		.card,
+		.card.tall {
+			height: auto;
+			min-height: 300px;
+		}
 	}
 
 	@media (max-width: 1100px) {

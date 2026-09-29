@@ -77,13 +77,13 @@
 			});
 			map = instance;
 			mapView.map = instance;
-			if (import.meta.env.DEV) Object.assign(window, { __map: instance });
 		});
 
 		return () => {
 			cancelled = true;
 			instance?.remove();
-			mapView.map = null;
+			// When the map is rebuilt, the new one may already be registered
+			if (mapView.map === instance) mapView.map = null;
 		};
 	});
 
@@ -126,8 +126,11 @@
 	// Panels opened or closed: keep the globe centered in the free space
 	let paddingSet = false;
 	$effect(() => {
-		const padding = mapView.padding;
+		// On phones the panels are bottom sheets: the globe stays above them
+		const padding = mapView.cameraPadding;
 		if (!map || spin) return;
+		// A camera flight already carries its own padding: don't interrupt it
+		if (map.isMoving()) return;
 		// The first time it jumps, later changes (sidebar toggled) glide
 		const duration = paddingSet && !settings.reducedMotion ? 400 : 0;
 		paddingSet = true;
