@@ -84,6 +84,15 @@
 		else if (event.key.toLowerCase() === 'f') library.toggleFavorite(id);
 	}
 
+	function close() {
+		ui.closeViewer();
+	}
+
+	/** Closes when the click lands on empty space, not on the photo or a button */
+	function closeOnEmpty(event: MouseEvent) {
+		if (event.target === event.currentTarget) close();
+	}
+
 	function download() {
 		if (!image || !photo) return;
 		// Sample photos belong to their authors: their page on Commons has the original
@@ -125,16 +134,12 @@
 	tabindex="-1"
 	use:focusTrap
 >
-	<div class="stage">
-		<header class="row top">
+	<!-- A click on the dark space around the photo closes the viewer -->
+	<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+	<div class="stage" onclick={closeOnEmpty}>
+		<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+		<header class="row top" onclick={closeOnEmpty}>
 			<div class="row left">
-				<button
-					class="btn btn-ghost btn-icon"
-					aria-label="Cerrar (Esc)"
-					onclick={() => ui.closeViewer()}
-				>
-					<Icon name="x" />
-				</button>
 				<div class="col">
 					<span class="name">{title}</span>
 					<span class="mono counter">
@@ -193,10 +198,14 @@
 				>
 					<Icon name="info" />
 				</button>
+				<button class="close" aria-label="Cerrar (Esc)" title="Cerrar (Esc)" onclick={close}>
+					<Icon name="x" />
+				</button>
 			</div>
 		</header>
 
-		<div class="picture">
+		<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+		<div class="picture" onclick={closeOnEmpty}>
 			{#if photo && photo.previewable === false}
 				<div class="cannot-show empty">
 					<h3>Este navegador no puede mostrar esta foto</h3>
@@ -250,12 +259,14 @@
 			<button onclick={download}><Icon name="download" />Descargar</button>
 		</div>
 
-		<div class="row mono hints">
+		<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+		<div class="row mono hints" onclick={closeOnEmpty}>
 			<span class="row"><span class="kbd">←</span><span class="kbd">→</span> navegar</span>
 			<span class="row"><span class="kbd">I</span> información</span>
 			<span class="row"><span class="kbd">Esc</span> cerrar</span>
 		</div>
-		<div class="row strip">
+		<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+		<div class="row strip" onclick={closeOnEmpty}>
 			{#each strip as item (item.id)}
 				<button
 					class="mini"
@@ -498,6 +509,27 @@
 		gap: 2px;
 	}
 
+	/* Big and always in the same corner, like in any photo viewer */
+	.close {
+		display: grid;
+		place-items: center;
+		width: 40px;
+		height: 40px;
+		margin-left: 10px;
+		border-radius: 50%;
+		background: oklch(1 0 0 / 0.12);
+		border: 1px solid oklch(1 0 0 / 0.16);
+		color: #fff;
+		transition:
+			background-color 0.15s,
+			transform 0.15s;
+	}
+
+	.close:hover {
+		background: oklch(1 0 0 / 0.22);
+		transform: scale(1.05);
+	}
+
 	.tools .sep {
 		margin: 10px 6px;
 		background: oklch(1 0 0 / 0.12);
@@ -519,8 +551,10 @@
 		left: 96px;
 		right: 96px;
 		bottom: 150px;
-		display: grid;
-		place-items: center;
+		/* Flex, not grid: here max-height: 100% really limits tall photos to this box */
+		display: flex;
+		align-items: center;
+		justify-content: center;
 	}
 
 	.picture img {
@@ -724,7 +758,8 @@
 	}
 
 	@media (max-width: 900px) {
-		.tools > :not(:last-child) {
+		/* Phones: only "information" and "close" stay up here (the rest is in the bottom bar) */
+		.tools > :not(:nth-last-child(-n + 2)) {
 			display: none;
 		}
 
