@@ -41,6 +41,7 @@ The interface is in Spanish.
 - **Photos without a location:** grouped by album, date or camera; drag them onto the globe or place a whole album with a place search.
 - **Statistics:** countries, continents, distance travelled, photos per year, top cities and extreme points.
 - **Search** (Ctrl/⌘ K) for countries, cities, trips or pasted coordinates.
+- **Globe color styles:** natural, grey (the world in grey and your countries in color), night and atlas, with a preview and saved choice.
 - **Settings:** dark/light/system theme, km/mi, map style, reduced motion, globe quality, storage and export.
 - **Responsive:** on phones the panels become draggable bottom sheets.
 
@@ -170,7 +171,7 @@ The app runs at `http://localhost:5173`. It works with no configuration; the Goo
 - [x] Google account, Drive sync and import from Drive and Google Takeout.
 - [x] Estimated locations and placing whole albums with a place search.
 - [x] Performance review measured with Chrome profiles.
-- [ ] Selectable globe color styles (natural, grey, night, atlas).
+- [x] Selectable globe color styles (natural, grey, night and atlas).
 - [ ] Deployment on Cloudflare Pages and continuous integration with GitHub Actions.
 - [ ] Screenshots and a demo video in this README.
 

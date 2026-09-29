@@ -59,7 +59,9 @@ export const ICONS = {
 	minimize: '<path d="M5 12h14"/>',
 	expand: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
 	copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8"/>',
-	refresh: '<path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4.5v4h-4"/>'
+	refresh: '<path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4.5v4h-4"/>',
+	palette:
+		'<path d="M12 3.5a8.5 8.5 0 0 0 0 17c1.3 0 2-.8 2-1.8 0-.5-.2-.9-.5-1.3-.3-.3-.5-.7-.5-1.2 0-1 .8-1.7 1.8-1.7h2.1A4.1 4.1 0 0 0 20.5 10c0-3.6-3.8-6.5-8.5-6.5z"/><circle cx="7.6" cy="11.6" r="1.1"/><circle cx="9.8" cy="7.6" r="1.1"/><circle cx="14.3" cy="7.6" r="1.1"/>'
 } as const;
 
 export type IconName = keyof typeof ICONS;

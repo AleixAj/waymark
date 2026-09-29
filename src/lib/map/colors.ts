@@ -31,6 +31,13 @@ export function mix(a: string, b: string, amount: number) {
 	return toCss(out);
 }
 
+/** The same color in grey, with the same brightness */
+export function gray(color: string) {
+	const [r, g, b, a] = toRgba(color);
+	const y = Math.round(0.2126 * r + 0.7152 * g + 0.0722 * b);
+	return toCss([y, y, y, a]);
+}
+
 export interface MapColors {
 	bg: string;
 	ocean: string;

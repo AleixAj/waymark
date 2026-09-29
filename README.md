@@ -39,6 +39,7 @@ Es un proyecto de portfolio con enfoque de producto real. **No tiene servidor:**
 - **Fotos sin ubicación:** agrupadas por álbum, fecha o cámara; se arrastran al globo o se ubica un álbum entero con un buscador de lugares.
 - **Estadísticas:** países, continentes, distancia recorrida, fotos por año, ciudades más visitadas y puntos extremos.
 - **Búsqueda** (Ctrl/⌘ K) de países, ciudades, viajes o coordenadas pegadas.
+- **Estilos de color del globo:** natural, gris (el mundo en grises y tus países a color), noche y atlas, con vista previa y guardado.
 - **Ajustes:** tema oscuro/claro/sistema, km/mi, estilo de mapa, movimiento reducido, calidad del globo, almacenamiento y exportación.
 - **Responsive:** en el móvil los paneles pasan a ser hojas inferiores que se arrastran.
 
@@ -168,7 +169,7 @@ La app queda en `http://localhost:5173`. Funciona sin configurar nada; la cuenta
 - [x] Cuenta de Google, sincronización con Drive e importación desde Drive y Google Takeout.
 - [x] Ubicaciones estimadas y ubicación de álbumes enteros con buscador de lugares.
 - [x] Revisión de rendimiento medida con perfiles de Chrome.
-- [ ] Estilos de color del globo a elegir (natural, gris, noche, atlas).
+- [x] Estilos de color del globo a elegir (natural, gris, noche y atlas).
 - [ ] Despliegue en Cloudflare Pages e integración continua con GitHub Actions.
 - [ ] Capturas y vídeo de demostración en este README.
 

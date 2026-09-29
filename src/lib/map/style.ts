@@ -7,6 +7,7 @@ import type {
 import type { FeatureCollection } from 'geojson';
 import type { MapStyle } from '$lib/state/settings.svelte';
 import { mix, type MapColors } from './colors';
+import { paletteColors, type Palette } from './palette';
 import { graticule } from './graticule';
 
 // Raster basemaps for street level, the same ones the design mockups use
@@ -24,6 +25,7 @@ export interface StyleOptions {
 	mapStyle: MapStyle;
 	borders: boolean;
 	dark: boolean;
+	palette: Palette;
 	/** Flat map instead of the globe */
 	flat?: boolean;
 }
@@ -46,15 +48,21 @@ function byBiome(c: MapColors, color: (land: string) => string): ExpressionSpeci
 }
 
 /**
- * Country fill. Visited countries are clearly amber (a hint of their biome
- * keeps the relief); the rest keep their biome but muted towards the ocean,
- * so a desert you visited never looks like one you didn't.
+ * Country fill, from the chosen palette. By default visited countries are clearly
+ * amber (a hint of their biome keeps the relief) and the rest keep their biome
+ * but muted towards the ocean, so a desert you visited never looks like one you didn't.
  * When a country is focused (country view) the rest of the world fades out.
  */
-export function countryPaint(c: MapColors, visited: string[], focus: string | null) {
+export function countryPaint(
+	c: MapColors,
+	visited: string[],
+	focus: string | null,
+	palette: Palette = 'natural'
+) {
+	const p = paletteColors(c, palette);
 	const isVisited: ExpressionSpecification = ['in', ['get', 'iso3'], ['literal', visited]];
-	const visitedColor = byBiome(c, (land) => mix(c.acc, land, 0.2));
-	const otherColor = byBiome(c, (land) => mix(land, c.ocean, 0.3));
+	const visitedColor = byBiome(c, p.visited);
+	const otherColor = byBiome(c, p.other);
 	if (!focus) {
 		return {
 			color: ['case', isVisited, visitedColor, otherColor] as ExpressionSpecification,
@@ -66,7 +74,7 @@ export function countryPaint(c: MapColors, visited: string[], focus: string | nu
 		color: [
 			'case',
 			isFocus,
-			byBiome(c, (land) => mix(land, c.acc, 0.14)),
+			palette === 'natural' ? byBiome(c, (land) => mix(land, c.acc, 0.14)) : visitedColor,
 			isVisited,
 			visitedColor,
 			otherColor
@@ -115,15 +123,17 @@ export function buildStyle({
 	mapStyle,
 	borders,
 	dark,
+	palette,
 	flat = false
 }: StyleOptions) {
-	const paint = countryPaint(c, [], null);
+	const paint = countryPaint(c, [], null, palette);
+	const colors = paletteColors(c, palette);
 	const rasterPaint = dark
 		? { 'raster-brightness-max': 0.55, 'raster-contrast': 0.12, 'raster-saturation': 0.15 }
 		: {};
 
 	const layers: LayerSpecification[] = [
-		{ id: 'ocean', type: 'background', paint: { 'background-color': c.ocean } },
+		{ id: 'ocean', type: 'background', paint: { 'background-color': colors.ocean } },
 		{
 			id: 'graticule',
 			type: 'line',
@@ -173,7 +183,7 @@ export function buildStyle({
 			filter: visitedFilter([]),
 			layout: { 'line-join': 'round' },
 			paint: {
-				'line-color': c.acc,
+				'line-color': colors.outline,
 				'line-width': ['interpolate', ['linear'], ['zoom'], 1, 0.8, 6, 1.6],
 				'line-opacity': ['interpolate', ['linear'], ['zoom'], 5, 0.85, 7, 0]
 			}

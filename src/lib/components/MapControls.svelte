@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Icon from './ui/Icon.svelte';
+	import PalettePicker from './PalettePicker.svelte';
 	import { mapView } from '$lib/map/view.svelte';
 	import { ui } from '$lib/state/ui.svelte';
 
@@ -34,6 +35,7 @@
 				<Icon name="target" />
 			</button>
 		</div>
+		<PalettePicker />
 		{#if projection}
 			<div class="ctl panel projection">
 				<button

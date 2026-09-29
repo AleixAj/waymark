@@ -10,6 +10,7 @@
 	import { ui } from '$lib/state/ui.svelte';
 	import { readMapColors } from './colors';
 	import { buildStyle, countryPaint, sky, vectorOpacity, visitedFilter } from './style';
+	import { paletteColors } from './palette';
 	import { mapView, zoomForGlobe } from './view.svelte';
 	import GlobeShade from './GlobeShade.svelte';
 
@@ -49,6 +50,7 @@
 			mapStyle: settings.mapStyle,
 			borders: settings.borders,
 			dark: settings.resolvedTheme === 'dark',
+			palette: settings.palette,
 			flat: ui.flat
 		});
 	}
@@ -142,7 +144,16 @@
 	$effect(() => {
 		if (!map || !styleReady || !map.getLayer('country-fill')) return;
 		const colors = readMapColors();
-		const paint = countryPaint(colors, showVisited ? library.visited : [], mapView.focus);
+		const paint = countryPaint(
+			colors,
+			showVisited ? library.visited : [],
+			mapView.focus,
+			settings.palette
+		);
+		// Palette: the sea and the outline of the visited countries change too
+		const palette = paletteColors(colors, settings.palette);
+		map.setPaintProperty('ocean', 'background-color', palette.ocean);
+		map.setPaintProperty('country-visited', 'line-color', palette.outline);
 		map.setPaintProperty('country-fill', 'fill-color', paint.color);
 		if (settings.mapStyle === 'sobrio') {
 			map.setPaintProperty(

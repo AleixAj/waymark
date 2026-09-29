@@ -2,6 +2,8 @@ export type Theme = 'dark' | 'light' | 'system';
 export type MapStyle = 'sobrio' | 'relieve' | 'satelite';
 export type Quality = 'alta' | 'equilibrada' | 'ahorro';
 export type Units = 'km' | 'mi';
+export type { Palette } from '$lib/map/palette';
+import type { Palette } from '$lib/map/palette';
 
 interface SavedSettings {
 	theme: Theme;
@@ -10,6 +12,7 @@ interface SavedSettings {
 	borders: boolean;
 	reducedMotion: boolean;
 	quality: Quality;
+	palette: Palette;
 }
 
 const KEY = 'waymark:settings';
@@ -26,14 +29,16 @@ const DEFAULTS: SavedSettings = {
 	mapStyle: 'sobrio',
 	borders: true,
 	reducedMotion: systemPrefersReducedMotion(),
-	quality: 'equilibrada'
+	quality: 'equilibrada',
+	palette: 'natural'
 };
 
 const ALLOWED = {
 	theme: ['dark', 'light', 'system'],
 	units: ['km', 'mi'],
 	mapStyle: ['sobrio', 'relieve', 'satelite'],
-	quality: ['alta', 'equilibrada', 'ahorro']
+	quality: ['alta', 'equilibrada', 'ahorro'],
+	palette: ['natural', 'gris', 'noche', 'atlas']
 };
 
 // localStorage can throw in private windows, and old or edited values can be wrong:
@@ -54,6 +59,7 @@ function read(): SavedSettings {
 		units: pick('units'),
 		mapStyle: pick('mapStyle'),
 		quality: pick('quality'),
+		palette: pick('palette'),
 		borders: flag('borders'),
 		reducedMotion: flag('reducedMotion')
 	};
@@ -67,6 +73,8 @@ class Settings {
 	borders = $state(DEFAULTS.borders);
 	reducedMotion = $state(DEFAULTS.reducedMotion);
 	quality = $state<Quality>(DEFAULTS.quality);
+	/** Color style of the globe */
+	palette = $state<Palette>(DEFAULTS.palette);
 
 	/** "system" resolved to the real theme */
 	systemDark = $state(true);
@@ -97,7 +105,8 @@ class Settings {
 					mapStyle: this.mapStyle,
 					borders: this.borders,
 					reducedMotion: this.reducedMotion,
-					quality: this.quality
+					quality: this.quality,
+					palette: this.palette
 				};
 				try {
 					localStorage.setItem(KEY, JSON.stringify(data));
