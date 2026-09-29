@@ -12,7 +12,12 @@ export interface TripEdit {
 	anchorId?: string;
 	title?: string;
 	coverId?: string;
+	/** Last change, so two devices know which version is newer */
+	updatedAt?: number;
 }
+
+/** A photo without its images: what is synced as text between devices */
+export type PhotoRecord = Omit<Photo, 'thumb' | 'file' | 'display'>;
 
 // IndexedDB database that lives in the browser.
 const db = new Dexie('waymark') as Dexie & {
@@ -59,11 +64,14 @@ export async function getThumbs(ids: string[]) {
 }
 
 export async function setFavorite(id: string, favorite: boolean) {
-	await db.photos.update(id, { favorite });
+	await db.photos.update(id, { favorite, updatedAt: Date.now() });
 }
 
 export async function setLocation(ids: string[], place: { lat: number; lng: number } & Place) {
-	await db.photos.where('id').anyOf(ids).modify(place);
+	await db.photos
+		.where('id')
+		.anyOf(ids)
+		.modify({ ...place, updatedAt: Date.now() });
 }
 
 /** New country, city and area for photos whose place was looked up again */
@@ -89,7 +97,7 @@ export function loadTripEdits() {
 
 export async function saveTripEdit(edit: TripEdit) {
 	const current = await db.trips.get(edit.id);
-	await db.trips.put({ ...current, ...edit });
+	await db.trips.put({ ...current, ...edit, updatedAt: Date.now() });
 }
 
 /** Sizes of what we keep, for the storage section in Settings */
@@ -106,13 +114,26 @@ export async function measureLibrary() {
 	return { thumbs, originals };
 }
 
-/** Everything except the images: used by "Export library" */
+/** Everything except the images: used by "Export library" and the Drive sync */
 export async function exportMetadata() {
-	const photos: Omit<Photo, 'thumb' | 'file' | 'display'>[] = [];
+	const photos: PhotoRecord[] = [];
 	await db.photos.each(({ thumb: _thumb, file: _file, display: _display, ...rest }) =>
 		photos.push(rest)
 	);
 	return { photos, trips: await db.trips.toArray() };
+}
+
+/** Changes that came from another device (only text fields, the images stay) */
+export async function applyRecords(records: PhotoRecord[]) {
+	await db.photos.bulkUpdate(records.map(({ id, ...changes }) => ({ key: id, changes })));
+}
+
+export async function setDriveId(id: string, driveId: string) {
+	await db.photos.update(id, { driveId });
+}
+
+export async function saveTripEdits(edits: TripEdit[]) {
+	await db.trips.bulkPut(edits);
 }
 
 export async function clearLibrary() {

@@ -48,10 +48,12 @@ export class CityIndex {
 	 * Kópavogur -> Reikiavik, Getafe -> Madrid, Shinjuku -> Tokio.
 	 * A town far enough from the big city keeps its own name (Alcalá de Henares).
 	 */
-	locate(lat: number, lng: number): CityMatch | null {
+	locate(lat: number, lng: number, iso2?: string): CityMatch | null {
 		let near: CityRow | null = null;
 		let nearKm = MAX_DISTANCE_KM;
 		this.around(lat, lng, (row) => {
+			// When the country is known, only its cities count
+			if (iso2 && row[3] !== iso2) return;
 			const km = distanceKm(lat, lng, row[1], row[2]);
 			if (km <= nearKm) {
 				near = row;

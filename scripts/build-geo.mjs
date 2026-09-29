@@ -205,7 +205,8 @@ const CITY_ES = {
 	Frankfurt: 'Fráncfort',
 	Nuremberg: 'Núremberg',
 	'Rio de Janeiro': 'Río de Janeiro',
-	'The Hague': 'La Haya'
+	'The Hague': 'La Haya',
+	Paris: 'París'
 };
 
 function buildCities() {

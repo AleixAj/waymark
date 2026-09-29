@@ -1,8 +1,18 @@
+import type { TakeoutAlbum } from '$lib/photos/takeout';
+
 /** Small bits of UI state shared between the layout, the pages and the map */
 class Ui {
 	sidebarOpen = $state(true);
 	searchOpen = $state(false);
 	settingsOpen = $state(false);
+	/** "Importar" window with the three ways to add photos */
+	importOpen = $state(false);
+	/** Opened from the "Google Fotos" button: only the Takeout steps */
+	importOnly = $state<'takeout' | null>(null);
+	/** Albums of a Google Takeout export, waiting for the user to choose */
+	takeout = $state.raw<TakeoutAlbum[] | null>(null);
+	/** Reading a Takeout export, or a short message about the last import */
+	importNote = $state<string | null>(null);
 	/** Flat map instead of the globe */
 	flat = $state(false);
 	/** False on browsers that can't draw the globe (the flat SVG map is shown instead) */
@@ -26,6 +36,16 @@ class Ui {
 	placing = $state<string[] | null>(null);
 	/** Pages opened inside the app; 0 means the app was opened from a link */
 	inAppNavigations = $state(0);
+
+	openImport(only: 'takeout' | null = null) {
+		this.importOnly = only;
+		this.importOpen = true;
+	}
+
+	closeImport() {
+		this.importOpen = false;
+		this.importOnly = null;
+	}
 
 	openViewer(ids: string[], id: string, context = '') {
 		// A photo that is not in the list is shown on its own instead of opening another one

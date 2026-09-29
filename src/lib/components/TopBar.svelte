@@ -6,7 +6,7 @@
 	import { library } from '$lib/state/library.svelte';
 	import { settings } from '$lib/state/settings.svelte';
 	import { ui } from '$lib/state/ui.svelte';
-	import { pickFiles } from '$lib/photos/pick';
+	import AccountButton from './AccountButton.svelte';
 
 	const path = $derived(page.url.pathname);
 	const tab = $derived(
@@ -34,10 +34,9 @@
 		if (menuOpen && !menuWrap?.contains(event.target as Node)) menuOpen = false;
 	}
 
-	async function importPhotos() {
+	function importPhotos() {
 		menuOpen = false;
-		const files = await pickFiles();
-		library.import(files);
+		ui.openImport();
 	}
 </script>
 
@@ -94,10 +93,12 @@
 			<Icon name="sliders" />
 		</button>
 		<button class="btn btn-secondary" onclick={importPhotos}><Icon name="upload" />Importar</button>
+		<AccountButton />
 	</div>
 
 	<!-- Phones: the sections and actions move into a menu -->
 	<div class="phone-only menu-wrap" bind:this={menuWrap}>
+		<AccountButton />
 		<button
 			class="btn btn-ghost btn-icon"
 			aria-label="Menú"
@@ -244,6 +245,8 @@
 
 	.menu-wrap {
 		position: relative;
+		align-items: center;
+		gap: 4px;
 	}
 
 	.menu {

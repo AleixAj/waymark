@@ -10,7 +10,12 @@ import {
 } from '$lib/photos/db';
 import { findPlace } from '$lib/photos/placeFinder';
 import type { Place } from '$lib/photos/places';
-import { importPhotos, type ImportError, type ImportProgress } from '$lib/photos/importer';
+import {
+	importPhotos,
+	type ImportError,
+	type ImportItem,
+	type ImportProgress
+} from '$lib/photos/importer';
 import { forgetFullImages } from '$lib/photos/image';
 import { isLocated, type PhotoPoint } from '$lib/photos/types';
 import { cityCounts, countrySummaries } from '$lib/library/stats';
@@ -64,10 +69,12 @@ class Library {
 	busy = $derived(this.progress !== null);
 
 	// Files dropped while another import is running wait here
-	private waiting: File[] = [];
+	private waiting: (File | ImportItem)[] = [];
 	private incoming: PhotoPoint[] = [];
 	private mergeTimer: ReturnType<typeof setTimeout> | null = null;
 	private abort: AbortController | null = null;
+	/** Called after the user changes something that other devices should get */
+	onChange: (() => void) | null = null;
 
 	async load() {
 		const [points, edits] = await Promise.all([loadPhotoPoints(), loadTripEdits()]);
@@ -75,6 +82,14 @@ class Library {
 		this.tripEdits = edits;
 		this.loaded = true;
 		void this.addMissingAreas();
+	}
+
+	/** Reads everything again (photos arrived from another device) */
+	async reload() {
+		const [points, edits] = await Promise.all([loadPhotoPoints(), loadTripEdits()]);
+		this.mergeIncoming();
+		this.points = points;
+		this.tripEdits = edits;
 	}
 
 	/**
@@ -97,7 +112,7 @@ class Library {
 	}
 
 	/** Imports photos. Called while another import runs, the files are queued. */
-	async import(files: File[]) {
+	async import(files: (File | ImportItem)[]) {
 		if (files.length === 0) return;
 		if (this.abort) {
 			this.waiting.push(...files);
@@ -110,6 +125,7 @@ class Library {
 				onBatch: (points, thumbs) => this.receive(points, thumbs)
 			})
 		);
+		this.onChange?.();
 		// Files that arrived in the meantime
 		if (this.waiting.length) {
 			const next = this.waiting;
@@ -133,7 +149,7 @@ class Library {
 
 	async retryErrors() {
 		if (this.abort) return;
-		const files = this.errors.filter((e) => e.retryable).map((e) => e.file);
+		const files = this.errors.filter((e) => e.retryable).map((e) => e.item);
 		this.errors = [];
 		await this.import(files);
 	}
@@ -157,7 +173,7 @@ class Library {
 						name: 'Importación',
 						reason: 'Se ha interrumpido',
 						retryable: false,
-						file: new File([], '')
+						item: { name: '', open: async () => new File([], '') }
 					}
 				];
 			}
@@ -193,21 +209,25 @@ class Library {
 		const favorite = !point.favorite;
 		this.replace([id], { favorite });
 		await setFavorite(id, favorite);
+		this.onChange?.();
 	}
 
 	async assignLocation(ids: string[], place: { lat: number; lng: number } & Place) {
 		await setLocation(ids, place);
 		this.replace(ids, place);
+		this.onChange?.();
 	}
 
 	async renameTrip(trip: Trip, title: string) {
 		await saveTripEdit({ id: trip.id, anchorId: trip.photoIds[0], title });
 		this.tripEdits = await loadTripEdits();
+		this.onChange?.();
 	}
 
 	async setTripCover(trip: Trip, coverId: string) {
 		await saveTripEdit({ id: trip.id, anchorId: trip.photoIds[0], coverId });
 		this.tripEdits = await loadTripEdits();
+		this.onChange?.();
 	}
 
 	/** Deletes everything, including an import that is still running */

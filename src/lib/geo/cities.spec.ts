@@ -42,6 +42,10 @@ describe('CityIndex', () => {
 		expect(at(35.44, 139.64)).toEqual(['Yokohama', null]);
 	});
 
+	it('only uses cities of the country when it is known', () => {
+		expect(index.locate(32.556, -117.045, 'MX')?.city.name).toBe('Tijuana');
+	});
+
 	it('does not group places across a border', () => {
 		expect(at(32.556, -117.045)).toEqual(['San Ysidro', null]);
 	});

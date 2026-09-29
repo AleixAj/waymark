@@ -52,7 +52,9 @@ export interface RawFile {
 export async function readPhotoMeta(
 	file: File,
 	now = Date.now(),
-	raw?: RawFile
+	raw?: RawFile,
+	/** Date to use when the photo has none inside (the file date by default) */
+	fallbackTime?: number
 ): Promise<ExifResult> {
 	let data: Record<string, unknown> | undefined;
 	try {
@@ -71,6 +73,7 @@ export async function readPhotoMeta(
 		toTime(data?.DateTimeOriginal, offset, now) ??
 		toTime(data?.CreateDate, offset, now) ??
 		toTime(data?.ModifyDate, offset, now) ??
+		fallbackTime ??
 		file.lastModified;
 
 	const orientation = toOrientation(data?.Orientation);

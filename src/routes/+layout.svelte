@@ -33,6 +33,11 @@
 	import { countries } from '$lib/state/countries.svelte';
 	import { ui } from '$lib/state/ui.svelte';
 	import { droppedFiles, pickFiles } from '$lib/photos/pick';
+	import ImportChooser from '$lib/components/ImportChooser.svelte';
+	import TakeoutAlbums from '$lib/components/TakeoutAlbums.svelte';
+	import { importFiles } from '$lib/state/importing';
+	import { auth } from '$lib/google/auth.svelte';
+	import { sync } from '$lib/sync/sync.svelte';
 
 	let { children } = $props();
 
@@ -56,8 +61,13 @@
 	const welcome = $derived(library.isEmpty);
 	let fileDrag = $state(false);
 
+	// Changes go to Drive, and photos from other devices come back into the library
+	library.onChange = () => sync.schedule();
+	sync.onPulled = () => library.reload();
+
 	onMount(() => {
-		library.load();
+		auth.preload();
+		library.load().then(() => sync.run(false));
 		countries.load().catch(() => {
 			// Offline on the very first visit: names show as codes until the next load
 		});
@@ -107,7 +117,8 @@
 		event.preventDefault();
 		fileDrag = false;
 		// Folders are opened too, so dropping a DCIM folder imports its photos
-		if (event.dataTransfer) droppedFiles(event.dataTransfer).then((files) => library.import(files));
+		// A Google Takeout export (zip files) opens the album chooser
+		if (event.dataTransfer) droppedFiles(event.dataTransfer).then(importFiles);
 	}
 </script>
 
@@ -162,6 +173,18 @@
 		{#if ui.viewer}<Viewer />{/if}
 		{#if ui.searchOpen}<Search />{/if}
 		{#if ui.settingsOpen}<Settings />{/if}
+		{#if ui.importOpen}<ImportChooser />{/if}
+		{#if ui.takeout}<TakeoutAlbums albums={ui.takeout} />{/if}
+		{#if ui.importNote}
+			<div class="row note panel" role="status">
+				<span class="t-small">{ui.importNote}</span>
+				<button
+					class="btn btn-ghost btn-icon btn-sm"
+					aria-label="Cerrar"
+					onclick={() => (ui.importNote = null)}>×</button
+				>
+			</div>
+		{/if}
 	{/if}
 
 	{#if fileDrag}
@@ -185,6 +208,18 @@
 	.globe {
 		position: absolute;
 		inset: 0;
+	}
+
+	.note {
+		position: absolute;
+		left: 50%;
+		bottom: 24px;
+		transform: translateX(-50%);
+		z-index: 60;
+		gap: 10px;
+		padding: 8px 8px 8px 16px;
+		max-width: calc(100% - 32px);
+		background: var(--glass-strong);
 	}
 
 	.globe.hidden {

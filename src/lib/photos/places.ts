@@ -25,9 +25,11 @@ export class PlaceFinder {
 
 	find(lat: number | null, lng: number | null): Place {
 		if (lat === null || lng === null) return NO_PLACE;
-		const match = this.cities.locate(lat, lng);
+		const inCountry = this.countries.find(lat, lng);
+		// The city must be in the same country: a photo in Rome is not in Vatican City
+		const match = this.cities.locate(lat, lng, inCountry?.iso2);
 		const city = match?.city;
-		const country = this.countries.find(lat, lng)?.iso3 ?? null;
+		const country = inCountry?.iso3 ?? null;
 		// Photos taken from a boat or right on the coast fall outside the country
 		// shapes, so we use the country of the nearest city instead
 		const fallback = city ? (this.iso2to3.get(city.iso2) ?? null) : null;

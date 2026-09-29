@@ -45,6 +45,12 @@ export interface Photo extends PhotoMeta {
 	display?: Blob;
 	/** False when this browser can't show the image (e.g. HEIC outside Safari) */
 	previewable?: boolean;
+	/** Copy of the photo in the user's Google Drive, once synced */
+	driveId?: string;
+	/** The Drive file is the user's own photo (chosen in Drive), not a copy made by Waymark */
+	driveOriginal?: boolean;
+	/** Last change, so two devices know which version is newer */
+	updatedAt?: number;
 	/** Sample photos have no real image: the viewer paints this scene instead */
 	demo?: { scene: string; label: string };
 }

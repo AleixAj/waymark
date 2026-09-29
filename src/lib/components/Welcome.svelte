@@ -3,12 +3,35 @@
 	import Logo from './Logo.svelte';
 	import { library } from '$lib/state/library.svelte';
 	import { settings } from '$lib/state/settings.svelte';
-	import { pickFiles } from '$lib/photos/pick';
+	import AccountButton from './AccountButton.svelte';
+	import ServiceMark from './ui/ServiceMark.svelte';
+	import { importFromDevice, importFromDrive } from '$lib/state/importing';
+	import { ui } from '$lib/state/ui.svelte';
+	import { auth } from '$lib/google/auth.svelte';
+	import { drivePickerEnabled, googleEnabled } from '$lib/google/config';
+	import { signIn } from '$lib/sync/sync.svelte';
 
 	const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent);
 
-	async function choose(folder: boolean) {
-		library.import(await pickFiles(folder));
+	let busy = $state(false);
+	let error = $state<string | null>(null);
+
+	function choose(folder: boolean) {
+		importFromDevice(folder);
+	}
+
+	/** Drive needs the Google account: signing in comes first when there is none */
+	async function fromDrive() {
+		error = null;
+		busy = true;
+		try {
+			if (!auth.signedIn) await signIn();
+			await importFromDrive();
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'No se pudo abrir Google Drive';
+		} finally {
+			busy = false;
+		}
 	}
 </script>
 
@@ -25,6 +48,7 @@
 			<Icon name={settings.resolvedTheme === 'dark' ? 'sun' : 'moon'} />
 		</button>
 		<span class="btn btn-ghost lang">Español</span>
+		<AccountButton />
 	</div>
 </div>
 
@@ -39,19 +63,38 @@
 		<p class="t-small t3">
 			JPG, HEIC, RAW y más. Leemos la ubicación GPS de cada foto para colocarla en el globo.
 		</p>
-		<div class="row buttons">
+		<div class="choices">
 			<button class="btn btn-primary btn-lg" onclick={() => choose(false)}
 				><Icon name="image" />Elegir fotos</button
 			>
 			<button class="btn btn-secondary btn-lg" onclick={() => choose(true)}
 				><Icon name="folder" />Elegir carpeta</button
 			>
+			<div class="row t-small t3 or" aria-hidden="true">o importa desde</div>
+			{#if drivePickerEnabled}
+				<button class="btn btn-secondary btn-lg" disabled={busy} onclick={fromDrive}
+					><ServiceMark service="drive" />Google Drive</button
+				>
+			{/if}
+			<button
+				class="btn btn-secondary btn-lg"
+				class:wide={!drivePickerEnabled}
+				onclick={() => ui.openImport('takeout')}
+				><ServiceMark service="photos" />Google Fotos</button
+			>
 		</div>
+		{#if error}<p class="t-small err" role="alert">{error}</p>{/if}
 	</div>
 
 	<p class="row t2 privacy">
-		<Icon name="lock" size={16} />Tus fotos no salen de tu dispositivo. Todo se procesa en este
-		navegador.
+		<Icon name="lock" size={16} />
+		{#if auth.signedIn}
+			Todo se procesa en este navegador y se guarda una copia ligera en tu Drive.
+		{:else if googleEnabled}
+			Todo se procesa en este navegador. Entra con Google para verlas en todos tus dispositivos.
+		{:else}
+			Tus fotos no salen de tu dispositivo. Todo se procesa en este navegador.
+		{/if}
 	</p>
 	<button class="demo" onclick={() => library.loadDemo()}>Probar con fotos de ejemplo</button>
 </main>
@@ -169,11 +212,43 @@
 		white-space: normal;
 	}
 
-	.buttons {
+	/* Four buttons of the same size: this device on top, Google below */
+	.choices {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
 		gap: 8px;
+		width: min(400px, 100%);
 		margin-top: 22px;
-		flex-wrap: wrap;
+	}
+
+	.choices .btn {
 		justify-content: center;
+		position: relative;
+		z-index: 1;
+	}
+
+	.choices .wide {
+		grid-column: 1 / -1;
+	}
+
+	/* "o importa desde" between two lines */
+	.or {
+		grid-column: 1 / -1;
+		gap: 12px;
+		margin: 6px 0 2px;
+	}
+
+	.or::before,
+	.or::after {
+		content: '';
+		flex: 1;
+		height: 1px;
+		background: var(--line-strong);
+	}
+
+	.err {
+		margin-top: 12px;
+		color: var(--err);
 	}
 
 	.privacy {

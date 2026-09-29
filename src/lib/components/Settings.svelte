@@ -9,6 +9,8 @@
 	import { exportMetadata, measureLibrary } from '$lib/photos/db';
 	import { downloadText } from '$lib/library/gpx';
 	import { formatBytes } from '$lib/library/format';
+	import { auth } from '$lib/google/auth.svelte';
+	import { sync } from '$lib/sync/sync.svelte';
 
 	let storage = $state<{ thumbs: number; originals: number; used: number; quota: number } | null>(
 		null
@@ -55,7 +57,19 @@
 		downloadText(`waymark-${date}.json`, JSON.stringify(data, null, 2), 'application/json');
 	}
 
+	let deleteError = $state<string | null>(null);
+
 	async function deleteLibrary() {
+		deleteError = null;
+		// The copy in Drive goes to its trash first: otherwise the next sync would bring it back
+		if (auth.signedIn) {
+			try {
+				await sync.deleteRemote();
+			} catch {
+				deleteError = 'No se pudo borrar la copia de Google Drive. Inténtalo de nuevo.';
+				return;
+			}
+		}
 		await library.clear();
 		ui.settingsOpen = false;
 		goto('/');
@@ -311,8 +325,11 @@
 					<div class="set">
 						<div class="l">
 							<b>Borrar biblioteca</b><span
-								>Elimina todo lo guardado en este navegador. Tus fotos originales no se tocan.</span
+								>{auth.signedIn
+									? 'Elimina todo lo guardado en este navegador y envía la carpeta Waymark de tu Drive a la papelera. Tus fotos originales no se tocan.'
+									: 'Elimina todo lo guardado en este navegador. Tus fotos originales no se tocan.'}</span
 							>
+							{#if deleteError}<span class="err-text">{deleteError}</span>{/if}
 						</div>
 						{#if confirmDelete}
 							<div class="row confirm">
@@ -336,6 +353,10 @@
 </div>
 
 <style>
+	.err-text {
+		color: var(--err);
+	}
+
 	.backdrop {
 		position: fixed;
 		inset: 0;

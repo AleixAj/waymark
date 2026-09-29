@@ -5,14 +5,17 @@ const RAW_TYPES = '.dng,.cr2,.cr3,.nef,.arw,.raf,.orf,.rw2,.pef,.srw';
  * Opens the system file picker. With `folder` the user picks a whole folder.
  * Resolves with an empty list if the user cancels.
  */
-export function pickFiles(folder = false): Promise<File[]> {
+export function pickFiles(
+	folder = false,
+	accept = `image/*,.heic,.heif,${RAW_TYPES}`
+): Promise<File[]> {
 	return new Promise((resolve) => {
 		const input = document.createElement('input');
 		input.type = 'file';
 		input.multiple = true;
 		input.hidden = true;
 		if (folder) input.webkitdirectory = true;
-		else input.accept = `image/*,.heic,.heif,${RAW_TYPES}`;
+		else input.accept = accept;
 
 		const finish = (files: File[]) => {
 			input.remove();
@@ -24,6 +27,15 @@ export function pickFiles(folder = false): Promise<File[]> {
 		document.body.append(input);
 		input.click();
 	});
+}
+
+// Folder of each dropped file ("Takeout/Google Fotos/Viaje a Roma/IMG_1.jpg"),
+// needed to know the albums of a Google Takeout export
+const droppedPaths = new WeakMap<File, string>();
+
+/** Path of a file inside the folder the user chose or dropped */
+export function pathOf(file: File) {
+	return droppedPaths.get(file) ?? (file.webkitRelativePath || file.name);
 }
 
 /** Files dropped on the page, including the photos inside dropped folders */
@@ -44,7 +56,10 @@ async function collect(entry: FileSystemEntry, files: File[]) {
 		const file = await new Promise<File | null>((resolve) =>
 			(entry as FileSystemFileEntry).file(resolve, () => resolve(null))
 		);
-		if (file) files.push(file);
+		if (file) {
+			droppedPaths.set(file, entry.fullPath.replace(/^\//, ''));
+			files.push(file);
+		}
 		return;
 	}
 	if (!entry.isDirectory) return;
