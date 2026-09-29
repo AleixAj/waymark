@@ -1,6 +1,7 @@
 import Dexie, { type EntityTable } from 'dexie';
 import { toPoint, type Photo, type PhotoPoint } from './types';
 import type { Place } from './places';
+import { demoMode } from '$lib/state/mode';
 
 /** Things the user changed on a detected trip */
 export interface TripEdit {
@@ -20,7 +21,8 @@ export interface TripEdit {
 export type PhotoRecord = Omit<Photo, 'thumb' | 'file' | 'display'>;
 
 // IndexedDB database that lives in the browser.
-const db = new Dexie('waymark') as Dexie & {
+// The sample library has its own database (see state/mode.ts)
+const db = new Dexie(demoMode ? 'waymark-demo' : 'waymark') as Dexie & {
 	photos: EntityTable<Photo, 'id'>;
 	trips: EntityTable<TripEdit, 'id'>;
 };

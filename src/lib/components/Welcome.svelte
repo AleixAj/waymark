@@ -1,7 +1,6 @@
 <script lang="ts">
 	import Icon from './ui/Icon.svelte';
 	import Logo from './Logo.svelte';
-	import { library } from '$lib/state/library.svelte';
 	import { settings } from '$lib/state/settings.svelte';
 	import AccountButton from './AccountButton.svelte';
 	import ServiceMark from './ui/ServiceMark.svelte';
@@ -10,6 +9,7 @@
 	import { auth } from '$lib/google/auth.svelte';
 	import { drivePickerEnabled, googleEnabled } from '$lib/google/config';
 	import { signIn } from '$lib/sync/sync.svelte';
+	import { enterDemo } from '$lib/state/mode';
 
 	const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent);
 
@@ -96,7 +96,7 @@
 			Tus fotos no salen de tu dispositivo. Todo se procesa en este navegador.
 		{/if}
 	</p>
-	<button class="demo" onclick={() => library.loadDemo()}>Probar con fotos de ejemplo</button>
+	<button class="demo" onclick={enterDemo}>Probar con fotos de ejemplo</button>
 </main>
 
 <div class="row mono t3 bottom">

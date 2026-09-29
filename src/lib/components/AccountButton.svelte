@@ -59,8 +59,13 @@
 {#if googleEnabled}
 	<div class="wrap" bind:this={wrap}>
 		{#if !account}
-			<button class="btn btn-secondary" disabled={busy} onclick={() => attempt(signIn)}>
-				<GoogleMark />Entrar
+			<button
+				class="btn btn-secondary enter"
+				disabled={busy}
+				aria-label="Entrar con Google"
+				onclick={() => attempt(signIn)}
+			>
+				<GoogleMark /><span class="label">Entrar</span>
 			</button>
 			{#if error}<p class="t-small bubble panel" role="alert">{error}</p>{/if}
 		{:else}
@@ -191,6 +196,17 @@
 
 	.foot {
 		padding: 6px 10px 4px;
+	}
+
+	/* Phones: only the Google mark, so the menu button keeps its space */
+	@media (max-width: 767px) {
+		.enter .label {
+			display: none;
+		}
+
+		.enter {
+			padding: 0 10px;
+		}
 	}
 
 	.bubble {

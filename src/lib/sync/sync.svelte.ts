@@ -21,6 +21,7 @@ import {
 } from '$lib/photos/db';
 import { createWorker, processInWorker } from '$lib/photos/importer';
 import { syncCopy } from './copy';
+import { demoMode } from '$lib/state/mode';
 import { mergeTrips, planSync, toRemote } from './plan';
 
 // Everything lives in one folder of the user's Drive
@@ -68,14 +69,15 @@ class Sync {
 
 	/** Syncs soon: many quick changes (favorites, an import) become one sync */
 	schedule(delay = 3000) {
-		if (!auth.signedIn) return;
+		// The sample library never goes to the user's Drive
+		if (!auth.signedIn || demoMode) return;
 		if (this.timer) clearTimeout(this.timer);
 		this.timer = setTimeout(() => this.run(false), delay);
 	}
 
 	/** Syncs now. From a click (`interactive`) it may ask Google for a new token. */
 	run(interactive: boolean): Promise<void> {
-		if (!auth.signedIn) return Promise.resolve();
+		if (!auth.signedIn || demoMode) return Promise.resolve();
 		if (this.running) {
 			this.again = true;
 			return this.running;

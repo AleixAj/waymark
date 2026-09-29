@@ -7,6 +7,7 @@
 	import { settings } from '$lib/state/settings.svelte';
 	import { ui } from '$lib/state/ui.svelte';
 	import AccountButton from './AccountButton.svelte';
+	import { demoMode, enterDemo, exitDemo } from '$lib/state/mode';
 
 	const path = $derived(page.url.pathname);
 	const tab = $derived(
@@ -58,14 +59,25 @@
 			><Logo /><span class="name">Waymark</span></a
 		>
 		<nav class="tabs" aria-label="Secciones">
-			<a class="btn btn-ghost btn-sm" class:is-on={tab === 'globo'} href="/">
-				<Icon name="globe" />Globo
+			<a class="btn btn-ghost btn-sm" class:is-on={tab === 'globo'} href="/" title="Globo">
+				<Icon name="globe" /><span class="label">Globo</span>
 			</a>
-			<a class="btn btn-ghost btn-sm" class:is-on={tab === 'sin'} href="/sin-ubicacion">
-				<Icon name="imageOff" />Sin ubicación <span class="mono">{library.unlocated.length}</span>
+			<a
+				class="btn btn-ghost btn-sm"
+				class:is-on={tab === 'sin'}
+				href="/sin-ubicacion"
+				title="Sin ubicación"
+			>
+				<Icon name="imageOff" /><span class="label">Sin ubicación</span>
+				<span class="mono">{library.unlocated.length}</span>
 			</a>
-			<a class="btn btn-ghost btn-sm" class:is-on={tab === 'stats'} href="/estadisticas">
-				<Icon name="chart" />Estadísticas
+			<a
+				class="btn btn-ghost btn-sm"
+				class:is-on={tab === 'stats'}
+				href="/estadisticas"
+				title="Estadísticas"
+			>
+				<Icon name="chart" /><span class="label">Estadísticas</span>
 			</a>
 		</nav>
 	</div>
@@ -92,7 +104,24 @@
 		>
 			<Icon name="sliders" />
 		</button>
-		<button class="btn btn-secondary" onclick={importPhotos}><Icon name="upload" />Importar</button>
+		{#if demoMode}
+			<button
+				class="demo-pill"
+				onclick={exitDemo}
+				title="Estás viendo fotos de ejemplo; tu biblioteca no se toca"
+				aria-label="Salir de la demo">Demo<Icon name="x" size={14} /></button
+			>
+		{:else}
+			<button
+				class="btn btn-ghost demo-btn"
+				onclick={enterDemo}
+				title="Ver la biblioteca de ejemplo"
+				><Icon name="play" /><span class="label">Ver demo</span></button
+			>
+		{/if}
+		<button class="btn btn-secondary" onclick={importPhotos} title="Importar fotos"
+			><Icon name="upload" /><span class="label">Importar</span></button
+		>
 		<AccountButton />
 	</div>
 
@@ -132,6 +161,9 @@
 				<div class="hr"></div>
 				<button class="menu-item" role="menuitem" onclick={importPhotos}
 					><Icon name="upload" />Importar fotos</button
+				>
+				<button class="menu-item" role="menuitem" onclick={demoMode ? exitDemo : enterDemo}
+					><Icon name="play" />{demoMode ? 'Salir de la demo' : 'Ver demo'}</button
 				>
 				<button
 					class="menu-item"
@@ -233,7 +265,7 @@
 		gap: 6px;
 	}
 
-	@media (max-width: 1280px) {
+	@media (max-width: 1400px) {
 		.search {
 			width: 300px;
 		}
@@ -263,6 +295,46 @@
 
 	.count {
 		margin-left: auto;
+	}
+
+	/* Always clear that these are sample photos, not the user's */
+	.demo-pill {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		height: 28px;
+		padding: 0 8px 0 12px;
+		cursor: pointer;
+		border-radius: 999px;
+		background: var(--acc-soft);
+		border: 1px solid color-mix(in oklab, var(--acc) 45%, transparent);
+		color: var(--acc-text);
+		font-size: 12px;
+		font-weight: 600;
+		letter-spacing: 0.02em;
+	}
+
+	.demo-pill:hover {
+		background: color-mix(in oklab, var(--acc) 25%, transparent);
+	}
+
+	/* Tablets: tabs and buttons keep only their icons */
+	@media (min-width: 768px) and (max-width: 1000px) {
+		.tabs .label,
+		.actions .label {
+			display: none;
+		}
+
+		.tabs {
+			margin-left: 8px;
+		}
+	}
+
+	/* Medium screens: the demo button keeps only its icon */
+	@media (max-width: 1360px) {
+		.demo-btn .label {
+			display: none;
+		}
 	}
 
 	/* Phones: back button, logo mark, search and a menu */
@@ -302,7 +374,7 @@
 		}
 	}
 
-	@media (min-width: 768px) and (max-width: 1080px) {
+	@media (min-width: 768px) and (max-width: 1200px) {
 		.search .placeholder,
 		.search .kbds {
 			display: none;

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
-	import { afterNavigate, goto } from '$app/navigation';
+	import { afterNavigate, goto, replaceState } from '$app/navigation';
 	// Only the Latin alphabets: Spanish plus names like Kraków, Þingvellir or Höfn
 	import '@fontsource/geist/latin-400.css';
 	import '@fontsource/geist/latin-ext-400.css';
@@ -38,6 +38,7 @@
 	import { importFiles } from '$lib/state/importing';
 	import { auth } from '$lib/google/auth.svelte';
 	import { sync } from '$lib/sync/sync.svelte';
+	import { demoMode } from '$lib/state/mode';
 
 	let { children } = $props();
 
@@ -58,7 +59,8 @@
 		}
 	})();
 	ui.webgl = hasWebGL;
-	const welcome = $derived(library.isEmpty);
+	// In demo mode the globe shows up at once while the sample photos load
+	const welcome = $derived(library.isEmpty && !demoMode);
 	let fileDrag = $state(false);
 
 	// Changes go to Drive, and photos from other devices come back into the library
@@ -67,7 +69,11 @@
 
 	onMount(() => {
 		auth.preload();
-		library.load().then(() => sync.run(false));
+		library.load().then(() => {
+			// The first time in demo mode the sample library is created
+			if (demoMode && library.isEmpty) library.loadDemo();
+			else sync.run(false);
+		});
 		countries.load().catch(() => {
 			// Offline on the very first visit: names show as codes until the next load
 		});
@@ -80,6 +86,12 @@
 
 	// Pages visited inside the app, so "back" knows whether there is somewhere to go back to
 	afterNavigate(({ type }) => {
+		// A /?demo link did its job: the address stays clean (the router is ready here)
+		if (type === 'enter' && page.url.searchParams.has('demo')) {
+			const url = new URL(page.url);
+			url.searchParams.delete('demo');
+			replaceState(url, page.state);
+		}
 		if (type !== 'enter') ui.inAppNavigations++;
 		ui.searchOpen = false;
 	});

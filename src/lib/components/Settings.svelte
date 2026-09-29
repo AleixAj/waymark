@@ -11,6 +11,7 @@
 	import { formatBytes } from '$lib/library/format';
 	import { auth } from '$lib/google/auth.svelte';
 	import { sync } from '$lib/sync/sync.svelte';
+	import { demoMode } from '$lib/state/mode';
 
 	let storage = $state<{ thumbs: number; originals: number; used: number; quota: number } | null>(
 		null
@@ -62,7 +63,7 @@
 	async function deleteLibrary() {
 		deleteError = null;
 		// The copy in Drive goes to its trash first: otherwise the next sync would bring it back
-		if (auth.signedIn) {
+		if (auth.signedIn && !demoMode) {
 			try {
 				await sync.deleteRemote();
 			} catch {
