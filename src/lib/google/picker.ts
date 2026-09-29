@@ -37,7 +37,7 @@ interface DocsView {
 	setEnableDrives(enabled: boolean): DocsView;
 }
 interface PickerApi {
-	DocsViewMode: { GRID: string };
+	DocsViewMode: { LIST: string };
 	PickerBuilder: new () => PickerBuilder;
 	DocsView: new (viewId: string) => DocsView;
 	ViewId: { DOCS: string };
@@ -82,11 +82,12 @@ async function loadPicker(): Promise<PickerApi> {
 export async function pickFromDrive(token: string): Promise<PickedFile[]> {
 	const picker = await loadPicker();
 	return new Promise((resolve) => {
-		// Every tab shows photos as thumbnails; folders are opened one level at a time
+		// A list, not a grid: with the drive.file permission Google shows no thumbnails
+		// until a photo is chosen. Folders are opened one level at a time.
 		const photos = (label: string) =>
 			new picker.DocsView(picker.ViewId.DOCS)
 				.setMimeTypes(PHOTO_TYPES)
-				.setMode(picker.DocsViewMode.GRID)
+				.setMode(picker.DocsViewMode.LIST)
 				.setLabel(label);
 		new picker.PickerBuilder()
 			.addView(photos('Mi unidad').setParent('root').setIncludeFolders(true))
