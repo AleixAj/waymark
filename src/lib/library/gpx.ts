@@ -7,6 +7,7 @@ function escapeXml(text: string) {
 /** The trip route as a GPX file, so it can be opened in Google Earth, Strava, etc. */
 export function tripToGpx(trip: Trip) {
 	const points = trip.stops
+		.filter((s) => Number.isFinite(s.start))
 		.map(
 			(s) =>
 				`    <trkpt lat="${s.lat.toFixed(6)}" lon="${s.lng.toFixed(6)}"><time>${new Date(s.start).toISOString()}</time><name>${escapeXml(s.city)}</name></trkpt>`
@@ -31,5 +32,6 @@ export function downloadText(name: string, text: string, type: string) {
 	link.href = url;
 	link.download = name;
 	link.click();
-	URL.revokeObjectURL(url);
+	// Some browsers start the download a bit later, so the URL is freed afterwards
+	setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }

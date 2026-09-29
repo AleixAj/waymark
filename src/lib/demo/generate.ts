@@ -89,7 +89,7 @@ function nearTrip(time: number) {
 }
 
 /** Everyday photos around home, a few per month, so Madrid is detected as home */
-function homePhotos(rnd: () => number, counter: { n: number }): DemoPhoto[] {
+function homePhotos(rnd: () => number, counter: { n: number }, now: number): DemoPhoto[] {
 	const photos: DemoPhoto[] = [];
 	const scenes = SCENE_SETS.ciudad;
 	for (let month = 0; month < 93; month++) {
@@ -101,13 +101,17 @@ function homePhotos(rnd: () => number, counter: { n: number }): DemoPhoto[] {
 				1 + Math.floor(rnd() * 27),
 				10 + Math.floor(rnd() * 10)
 			).getTime();
-			// Stay away from trip dates, or the photo would join the trip
-			if (takenAt > Date.now() || nearTrip(takenAt)) continue;
+			// Random values are always drawn, even for skipped photos, so the rest of
+			// the library doesn't change depending on today's date
 			const scene = scenes[Math.floor(rnd() * scenes.length)];
+			const place = jitter(HOME.lat, HOME.lng, 6, rnd);
+			const camera = cameraFields(rnd, 1000 + counter.n + 1);
+			// Stay away from trip dates, or the photo would join the trip
+			if (takenAt > now || nearTrip(takenAt)) continue;
 			counter.n++;
 			photos.push({
 				id: `demo-${counter.n}`,
-				...jitter(HOME.lat, HOME.lng, 6, rnd),
+				...place,
 				altitude: 650,
 				takenAt,
 				offset: null,
@@ -116,7 +120,7 @@ function homePhotos(rnd: () => number, counter: { n: number }): DemoPhoto[] {
 				favorite: false,
 				scene,
 				label: `${scene} · madrid`,
-				...cameraFields(rnd, 1000 + counter.n)
+				...camera
 			});
 		}
 	}
@@ -124,7 +128,7 @@ function homePhotos(rnd: () => number, counter: { n: number }): DemoPhoto[] {
 }
 
 /** Screenshots and chat photos: no GPS */
-function unlocatedPhotos(rnd: () => number, counter: { n: number }): DemoPhoto[] {
+function unlocatedPhotos(rnd: () => number, counter: { n: number }, now: number): DemoPhoto[] {
 	const photos: DemoPhoto[] = [];
 	const scenes = Object.values(SCENE_SETS).flat();
 	// Screenshots and chat photos come in bursts: a few months with several each
@@ -141,8 +145,10 @@ function unlocatedPhotos(rnd: () => number, counter: { n: number }): DemoPhoto[]
 		)
 	);
 	for (const [i, takenAt] of dates.entries()) {
-		if (takenAt > Date.now()) continue;
 		const scene = scenes[Math.floor(rnd() * scenes.length)];
+		const camera = cameraFields(rnd, 1000 + counter.n + 1);
+		const cameraName = rnd() > 0.5 ? null : 'iPhone 15 Pro';
+		if (takenAt > now) continue;
 		counter.n++;
 		photos.push({
 			id: `demo-${counter.n}`,
@@ -156,30 +162,33 @@ function unlocatedPhotos(rnd: () => number, counter: { n: number }): DemoPhoto[]
 			favorite: false,
 			scene,
 			label: `${scene} · sin gps`,
-			...cameraFields(rnd, 1000 + counter.n),
-			camera: rnd() > 0.5 ? null : 'iPhone 15 Pro',
+			...camera,
+			camera: cameraName,
 			name: `IMG-2025${String(1000 + i)}-WA00${i % 10}.jpg`
 		});
 	}
 	return photos;
 }
 
-export function generateDemo() {
+/** `now` only hides photos "from the future"; tests pass a fixed date */
+export function generateDemo(now = Date.now()) {
 	const rnd = random(42);
 	const counter = { n: 0 };
 	const photos = [
-		...homePhotos(rnd, counter),
+		...homePhotos(rnd, counter, now),
 		...TRIPS.flatMap((trip) => tripPhotos(trip, rnd, counter)),
-		...unlocatedPhotos(rnd, counter)
-	].sort((a, b) => a.takenAt - b.takenAt);
+		...unlocatedPhotos(rnd, counter, now)
+	]
+		.filter((p) => p.takenAt <= now)
+		.sort((a, b) => a.takenAt - b.takenAt);
 
 	// Nice names for some trips, as if the user had renamed them.
-	// Trip ids come from the first photo of each trip.
+	// The edit is anchored to the first photo of the trip.
 	const titles = TRIPS.flatMap((trip) => {
 		if (!trip.title) return [];
 		const start = new Date(...trip.start).getTime();
 		const first = photos.find((p) => p.city === trip.stops[0].city && p.takenAt >= start);
-		return first ? [{ id: `trip-${first.takenAt}`, title: trip.title }] : [];
+		return first ? [{ id: `trip-${first.takenAt}`, anchorId: first.id, title: trip.title }] : [];
 	});
 	return { photos, titles };
 }

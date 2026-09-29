@@ -2,7 +2,7 @@
 
 Your travel photos on an interactive 3D globe. Drop your photos in, Waymark reads where each one was taken and places it on the planet. Spin the globe, fly into a country or a city, replay a trip along its route and browse the photos you took there.
 
-Everything runs in the browser: photos are processed and stored on your device and are never uploaded anywhere. It even works offline.
+Everything runs in the browser: photos are processed and stored on your device and are never uploaded anywhere. After the first visit it also works offline (only the street-level maps need a connection).
 
 **Try it without your own photos:** open the app and click _"Probar con fotos de ejemplo"_. It generates a sample library (about 2,000 photos across 15 trips) right in the browser.
 
@@ -29,9 +29,11 @@ Everything runs in the browser: photos are processed and stored on your device a
 
 ## How it works
 
-- **Import pipeline**: files go to a pool of Web Workers. Each worker reads EXIF, makes a WebP thumbnail with `createImageBitmap` + `OffscreenCanvas` and finds the country and nearest city offline. The main thread only saves batches, so the globe stays smooth while importing.
+- **Import pipeline**: files go to a pool of Web Workers. Each worker fingerprints the file (SHA-256 of its size, start and end, to skip duplicates even if renamed), reads EXIF and makes a WebP thumbnail with `createImageBitmap` resizing while decoding. Stuck files time out and their worker is replaced; formats the browser can't show (HEIC in Chrome) keep their GPS and date with a placeholder preview. The main thread looks up the place and saves in batches, so the globe stays smooth while importing.
+- **Dates and places**: EXIF time zones (`OffsetTimeOriginal`) are applied, impossible dates and "null island" (0,0) GPS are ignored.
+- **Offline**: a service worker keeps the app shell and the geo data; IndexedDB is marked as persistent storage.
 - **Offline places**: country shapes (Natural Earth) and ~34k cities (GeoNames) are bundled as static files. A bounding-box check plus `geoContains` finds the country; a 1° grid index finds the city.
-- **Trips**: photos sorted by time are split when there is a pause of more than 2.5 days; runs far from home with enough photos become trips, and consecutive photos in the same city become stops.
+- **Trips**: home is the place photographed in the most different months. Photos away from home are split into trips when you get back home or pause for more than 2.5 days; consecutive photos in the same city become stops. Renamed titles and covers are anchored to a photo, so they survive when the trip changes.
 - **Performance**: the map only receives light data (id, position, date). Clustering uses Supercluster, thumbnails load only when they get close to the screen, and long lists use `content-visibility`.
 - **The globe look**: MapLibre draws the planet; the halo and shading are a CSS layer that follows it. Its size is computed from the zoom, the latitude and the camera distance (`src/lib/map/globe.ts`, with tests).
 

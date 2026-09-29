@@ -11,6 +11,12 @@ export interface CountryProps {
 	biome: 'polar' | 'arid' | 'trop' | 'boreal' | 'temperate';
 }
 
+/** Country data without shapes, from countries-info.json */
+export interface CountryInfo extends CountryProps {
+	/** [west, south, east, north] of its biggest piece of land */
+	bbox: [number, number, number, number];
+}
+
 export type CountryFeature = Feature<Polygon | MultiPolygon, CountryProps>;
 export type CountryTopology = Topology<{ countries: GeometryCollection<CountryProps> }>;
 

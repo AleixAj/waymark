@@ -23,7 +23,12 @@
 			.map((y) => y.year)
 			.reverse()
 	);
-	const shownYears = $derived(allYears.slice(0, 4));
+	// The last four years, plus an older one chosen in the chart so it shows as selected
+	const shownYears = $derived(
+		year && !allYears.slice(0, 4).includes(year)
+			? [...allYears.slice(0, 3), year]
+			: allYears.slice(0, 4)
+	);
 	const points = $derived(
 		year
 			? library.located.filter((p) => new Date(p.takenAt).getFullYear() === year)
@@ -72,11 +77,7 @@
 	const kmTrip = $derived(
 		trips.reduce<(typeof trips)[number] | null>((a, t) => (!a || t.km > a.km ? t : a), null)
 	);
-	const topCities = $derived(
-		cityCounts(points)
-			.slice(0, 8)
-			.map((c) => points.find((p) => p.city === c.city)!)
-	);
+	const topCities = $derived(cityCounts(points).slice(0, 8));
 
 	const range = $derived(
 		points.length

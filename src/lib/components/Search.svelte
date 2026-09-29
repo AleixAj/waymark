@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import Icon from './ui/Icon.svelte';
+	import { focusTrap } from './ui/focusTrap';
 	import { library } from '$lib/state/library.svelte';
 	import { countries } from '$lib/state/countries.svelte';
 	import { ui } from '$lib/state/ui.svelte';
@@ -66,8 +67,7 @@
 			});
 		}
 
-		const countryMatches = countries.features
-			.map((f) => f.properties)
+		const countryMatches = countries.list
 			.filter((c) =>
 				q
 					? normalize(c.name).includes(q) || c.iso3.toLowerCase() === q
@@ -113,10 +113,14 @@
 
 	function choose(result: Result) {
 		ui.searchOpen = false;
+		ui.closeViewer();
 		result.run();
 	}
 
 	function onKey(event: KeyboardEvent) {
+		// Keys used here must not reach the viewer or other dialogs underneath
+		if (['Escape', 'ArrowDown', 'ArrowUp', 'Enter'].includes(event.key)) event.stopPropagation();
+		if (event.isComposing) return;
 		if (event.key === 'Escape') {
 			ui.searchOpen = false;
 		} else if (event.key === 'ArrowDown') {
@@ -130,7 +134,7 @@
 		}
 	}
 
-	onMount(() => input.focus());
+	onMount(() => requestAnimationFrame(() => input.focus()));
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
@@ -139,6 +143,7 @@
 	<div
 		class="palette panel"
 		role="dialog"
+		use:focusTrap
 		tabindex="-1"
 		aria-modal="true"
 		aria-label="Buscar"

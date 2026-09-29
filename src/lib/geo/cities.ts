@@ -37,8 +37,13 @@ export class CityIndex {
 	nearest(lat: number, lng: number): City | null {
 		let best: CityRow | null = null;
 		let bestScore = 0;
+		// Near the poles one degree of longitude is only a few km: look at more cells
+		const lngCells = Math.min(
+			180,
+			Math.ceil(MAX_DISTANCE_KM / (111 * Math.max(0.01, Math.cos((lat * Math.PI) / 180))))
+		);
 		for (let dLat = -1; dLat <= 1; dLat++) {
-			for (let dLng = -1; dLng <= 1; dLng++) {
+			for (let dLng = -lngCells; dLng <= lngCells; dLng++) {
 				const cell = this.cells.get(cellKey(lat + dLat, lng + dLng));
 				for (const row of cell ?? []) {
 					const km = distanceKm(lat, lng, row[1], row[2]);

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { Marker, type GeoJSONSource } from 'maplibre-gl';
 	import type { Feature, LineString } from 'geojson';
 	import type { Stop } from '$lib/library/trips';
@@ -54,13 +54,36 @@
 		markers = stops.map((stop, i) => {
 			const el = document.createElement('button');
 			el.className = 'wm-stop';
-			const showLabel = i === 0 || i === stops.length - 1 || i % labelEvery === 0;
-			el.innerHTML = `<span class="stop">${stop.index}</span>${showLabel ? `<span class="mk-label">${stop.city}</span>` : ''}`;
+			const badge = document.createElement('span');
+			badge.className = 'stop';
+			badge.textContent = String(stop.index);
+			el.append(badge);
+			if (i === 0 || i === stops.length - 1 || i % labelEvery === 0) {
+				// textContent, never innerHTML: place names are data, not markup
+				const label = document.createElement('span');
+				label.className = 'mk-label';
+				label.textContent = stop.city;
+				el.append(label);
+			}
 			el.setAttribute('aria-label', `${stop.index}. ${stop.city}`);
-			el.addEventListener('click', () => (mapView.activeStop = stop.index));
+			el.addEventListener('click', (event) => {
+				// Without this the map would also open the country under the stop
+				event.stopPropagation();
+				mapView.activeStop = stop.index;
+			});
 			return new Marker({ element: el, opacityWhenCovered: 0 })
 				.setLngLat([stop.lng, stop.lat])
 				.addTo(map);
+		});
+		highlight(mapView.activeStop);
+	}
+
+	function highlight(active: number | null) {
+		markers.forEach((m, i) => {
+			m.getElement()
+				.querySelector('.stop')
+				?.classList.toggle('is-on', active === i + 1);
+			m.getElement().style.zIndex = active === i + 1 ? '2' : '1';
 		});
 	}
 
@@ -84,25 +107,29 @@
 		});
 	}
 
+	// Line: drawn again when the route changes or a new map style removed it
 	$effect(() => {
 		const stops = mapView.route;
-		ensureLayers();
-		const source = map.getSource<GeoJSONSource>(SOURCE);
-		source?.setData(
-			stops && stops.length > 1 ? line(stops) : { type: 'FeatureCollection', features: [] }
-		);
-		drawStops(stops ?? []);
+		void mapView.styleVersion;
+		untrack(() => {
+			ensureLayers();
+			map
+				.getSource<GeoJSONSource>(SOURCE)
+				?.setData(
+					stops && stops.length > 1 ? line(stops) : { type: 'FeatureCollection', features: [] }
+				);
+		});
+	});
+
+	// Stop markers are HTML, a style change doesn't affect them
+	$effect(() => {
+		const stops = mapView.route ?? [];
+		untrack(() => drawStops(stops));
 	});
 
 	// Highlight the active stop
 	$effect(() => {
-		const active = mapView.activeStop;
-		markers.forEach((m, i) => {
-			m.getElement()
-				.querySelector('.stop')
-				?.classList.toggle('is-on', active === i + 1);
-			m.getElement().style.zIndex = active === i + 1 ? '2' : '1';
-		});
+		highlight(mapView.activeStop);
 	});
 
 	onMount(() => () => {

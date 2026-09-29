@@ -2,6 +2,7 @@
 	import Icon from '../ui/Icon.svelte';
 	import { thumbUrl } from '$lib/state/thumbs.svelte';
 	import { ui } from '$lib/state/ui.svelte';
+	import { whenVisible } from './visible';
 
 	interface Props {
 		id: string;
@@ -28,26 +29,17 @@
 	// Only ask for the image once the tile is close to the screen
 	const url = $derived(visible ? thumbUrl(id) : undefined);
 
-	function whenVisible(node: HTMLElement) {
-		const observer = new IntersectionObserver(
-			([entry]) => {
-				if (entry.isIntersecting) {
-					visible = true;
-					observer.disconnect();
-				}
-			},
-			{ rootMargin: '300px' }
-		);
-		observer.observe(node);
-		return { destroy: () => observer.disconnect() };
-	}
+	// The hover highlight on the map must not stay if the tile disappears under the mouse
+	$effect(() => () => {
+		if (ui.hoveredPhoto === id) ui.hoveredPhoto = null;
+	});
 </script>
 
 <button
 	class="ph"
 	class:is-sel={selected}
 	class:is-hover={ui.hoveredPhoto === id}
-	use:whenVisible
+	use:whenVisible={() => (visible = true)}
 	draggable={!!ondragstart}
 	{ondragstart}
 	{onclick}

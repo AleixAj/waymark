@@ -1,32 +1,38 @@
-import { loadCountries, loadMapCountries } from '$lib/geo/data';
-import { toCountryFeatures, type CountryFeature, type CountryProps } from '$lib/geo/countries';
+import { loadCountryInfo, loadMapCountries } from '$lib/geo/data';
+import { toCountryFeatures, type CountryFeature, type CountryInfo } from '$lib/geo/countries';
 
-/** Country shapes and names, loaded once from /static/geo */
+/**
+ * Countries, loaded once from /static/geo: a small list with names and camera boxes
+ * for the whole app, and the detailed shapes drawn on the globe.
+ */
 class Countries {
-	/** Spherical shapes for d3 (bounds, names...) */
-	features = $state.raw<CountryFeature[]>([]);
-	/** Shapes cut at the date line, drawn by MapLibre */
+	/** Every country (241), with its name, codes and camera box */
+	list = $state.raw<CountryInfo[]>([]);
+	/** Detailed shapes cut at the date line, drawn by MapLibre */
 	mapFeatures = $state.raw<CountryFeature[]>([]);
-	byIso3 = $derived(new Map(this.features.map((f) => [f.properties.iso3, f])));
+	byIso3 = $derived(new Map(this.list.map((c) => [c.iso3, c])));
 
-	async load() {
-		if (this.features.length) return;
-		const [spherical, flat] = await Promise.all([loadCountries(), loadMapCountries()]);
-		this.features = toCountryFeatures(spherical);
-		this.mapFeatures = toCountryFeatures(flat);
+	private loading: Promise<void> | undefined;
+
+	/** Safe to call many times: the files are requested only once */
+	load() {
+		this.loading ??= Promise.all([loadCountryInfo(), loadMapCountries()])
+			.then(([list, forMap]) => {
+				this.list = list;
+				this.mapFeatures = toCountryFeatures(forMap);
+			})
+			.catch((error) => {
+				this.loading = undefined;
+				throw error;
+			});
+		return this.loading;
 	}
 
-	info(iso3: string | null | undefined): CountryProps | undefined {
-		return iso3 ? this.byIso3.get(iso3)?.properties : undefined;
+	info(iso3: string | null | undefined): CountryInfo | undefined {
+		return iso3 ? this.byIso3.get(iso3) : undefined;
 	}
 
 	name = (iso3: string | null | undefined) => this.info(iso3)?.name ?? iso3 ?? '';
 }
 
 export const countries = new Countries();
-
-/** 🇯🇵 style flag from the 2-letter code, used in the country panel */
-export function flagEmoji(iso2: string | undefined) {
-	if (!iso2 || iso2.length !== 2) return '';
-	return String.fromCodePoint(...[...iso2.toUpperCase()].map((c) => 0x1f1a5 + c.charCodeAt(0)));
-}

@@ -2,14 +2,14 @@
 //   static/geo/countries-50m.json  -> TopoJSON with Spanish names, ISO codes, continent and biome
 //   static/geo/countries-110m.json -> same, lighter, for the small flat map in Statistics
 //   static/geo/countries-map.json  -> the 50m shapes cut at the ±180° line, for MapLibre
+//   static/geo/countries-info.json -> name, codes, continent and bounding box of every country
 //   static/geo/cities.json         -> cities with 15k+ people (GeoNames, CC BY 4.0)
 //
 // Run: node scripts/build-geo.mjs
 // It expects scripts/.cache/cities15000.txt from https://download.geonames.org/export/dump/
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { geoCentroid } from 'd3-geo';
-import { geoEquirectangular } from 'd3-geo';
+import { geoBounds, geoCentroid, geoEquirectangular } from 'd3-geo';
 import { geoProject } from 'd3-geo-projection';
 import { feature } from 'topojson-client';
 import { topology } from 'topojson-server';
@@ -62,7 +62,8 @@ function enrich(file, outName, cutName) {
 	geoms.forEach((geom, i) => {
 		const english = geom.properties.name;
 		const iso3 = geom.id ? countries.numericToAlpha3(geom.id) : BY_NAME[english];
-		const iso2 = iso3 ? countries.alpha3ToAlpha2(iso3) : undefined;
+		// Kosovo has no official code; GeoNames (the cities) uses "XK"
+		const iso2 = iso3 === 'XKX' ? 'XK' : iso3 ? countries.alpha3ToAlpha2(iso3) : undefined;
 		const name = (iso3 && countries.getName(iso3, 'es')) || EXTRA_NAMES[iso3] || english;
 		const continent = CONTINENTS[countryInfo[iso2]?.continent] ?? '';
 		geom.id = iso3 ?? english;
@@ -77,8 +78,33 @@ function enrich(file, outName, cutName) {
 
 	// d3 works on the sphere, so it gets the original shapes
 	writeFileSync(`${OUT}/${outName}`, JSON.stringify(topo));
+	if (cutName) writeCountryInfo(geoms, shapes);
 	if (cutName) writeFileSync(`${OUT}/${cutName}`, JSON.stringify(cutAtDateLine(topo)));
 	console.log(`${outName}: ${geoms.length} countries`);
+}
+
+/**
+ * Small file loaded on start: every country with its names and a box to frame
+ * the camera (around its biggest piece of land: the USA without Alaska).
+ */
+function writeCountryInfo(geoms, shapes) {
+	const info = geoms.map((geom, i) => {
+		const [[w, s], [e, n]] = geoBounds(mainland(shapes[i]));
+		const box = [w, s, e, n].map((v) => Math.round(v * 100) / 100);
+		return { ...geom.properties, bbox: box };
+	});
+	writeFileSync(`${OUT}/countries-info.json`, JSON.stringify(info));
+	console.log(`countries-info.json: ${info.length} countries`);
+}
+
+function mainland(shape) {
+	const { geometry } = shape;
+	if (geometry.type !== 'MultiPolygon') return shape;
+	let best = geometry.coordinates[0];
+	for (const polygon of geometry.coordinates) {
+		if (polygon[0].length > best[0].length) best = polygon;
+	}
+	return { ...shape, geometry: { type: 'Polygon', coordinates: best } };
 }
 
 /**
@@ -183,17 +209,40 @@ const CITY_ES = {
 };
 
 function buildCities() {
-	const rows = readFileSync('scripts/.cache/cities15000.txt', 'utf8').split('\n');
-	const cities = [];
-	for (const row of rows) {
-		const cols = row.split('\t');
-		if (cols.length < 15) continue;
-		const [, name, , , lat, lng] = cols;
-		const iso2 = cols[8];
-		const population = Number(cols[14]);
-		// [name, lat, lng, iso2, population] keeps the file small
-		cities.push([CITY_ES[name] ?? name, round(lat), round(lng), iso2, population]);
+	const source = 'scripts/.cache/cities15000.txt';
+	if (!existsSync(source)) {
+		console.error(
+			`Missing ${source}. Download cities15000.zip from https://download.geonames.org/export/dump/ and unzip it there.`
+		);
+		process.exit(1);
 	}
+	const rows = readFileSync(source, 'utf8')
+		.split('\n')
+		.map((row) => row.split('\t'))
+		.filter((cols) => cols.length >= 15)
+		.map((cols) => ({
+			name: cols[1],
+			lat: cols[4],
+			lng: cols[5],
+			iso2: cols[8],
+			population: Number(cols[14])
+		}));
+
+	// Only the biggest city with each name gets the Spanish name:
+	// London is "Londres", but London in Canada stays "London"
+	const biggest = new Map();
+	for (const row of rows) {
+		if (!CITY_ES[row.name]) continue;
+		if (!biggest.has(row.name) || row.population > biggest.get(row.name).population) {
+			biggest.set(row.name, row);
+		}
+	}
+
+	const cities = rows.map((row) => {
+		const name = biggest.get(row.name) === row ? CITY_ES[row.name] : row.name;
+		// [name, lat, lng, iso2, population] keeps the file small
+		return [name, round(row.lat), round(row.lng), row.iso2, row.population];
+	});
 	writeFileSync(`${OUT}/cities.json`, JSON.stringify(cities));
 	console.log(`cities.json: ${cities.length} cities`);
 }

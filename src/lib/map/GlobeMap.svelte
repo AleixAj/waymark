@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, type Snippet } from 'svelte';
+	import { onMount, untrack, type Snippet } from 'svelte';
 	import { MapLibreMap, setWorkerUrl } from 'maplibre-gl';
 	import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 	import 'maplibre-gl/dist/maplibre-gl.css';
@@ -30,6 +30,9 @@
 
 	let container: HTMLDivElement;
 	let map = $state.raw<MapLibreMap>();
+	/** True once the first style has loaded: children (markers, route) stay mounted after that */
+	let loaded = $state(false);
+	/** False while a new style is being applied; paint changes wait for it */
 	let styleReady = $state(false);
 
 	// Quality setting: fewer pixels to draw means smoother frames on slow machines
@@ -45,8 +48,15 @@
 			countries: countryData,
 			mapStyle: settings.mapStyle,
 			borders: settings.borders,
-			dark: settings.resolvedTheme === 'dark'
+			dark: settings.resolvedTheme === 'dark',
+			flat: ui.flat
 		});
+	}
+
+	function markStyleReady() {
+		styleReady = true;
+		// Custom layers (the trip route) are added again after a new style
+		mapView.styleVersion++;
 	}
 
 	onMount(() => {
@@ -55,11 +65,13 @@
 
 		countries.load().then(() => {
 			if (cancelled) return;
+			// When the map is rebuilt (quality setting) the camera stays where it was
+			const saved = mapView.savedCamera;
 			instance = new MapLibreMap({
 				container,
 				style: currentStyle({ type: 'FeatureCollection', features: countries.mapFeatures }),
-				center: spin ? [-20, 18] : [-24, 36],
-				zoom: zoomForGlobe(spin ? 0.478 : 0.433, spin ? 18 : 36),
+				center: saved?.center ?? (spin ? [-20, 18] : [-24, 36]),
+				zoom: saved?.zoom ?? zoomForGlobe(spin ? 0.478 : 0.433, spin ? 18 : 36),
 				minZoom: 1,
 				maxPitch: 0,
 				pixelRatio,
@@ -68,27 +80,40 @@
 			});
 			instance.dragRotate.disable();
 			instance.touchZoomRotate.disableRotation();
-			instance.on('style.load', () => (styleReady = true));
+			instance.once('style.load', () => {
+				loaded = true;
+				markStyleReady();
+			});
 			instance.on('zoom', () => (mapView.zoom = instance!.getZoom()));
 			instance.on('click', (event) => {
-				const hit = instance!.queryRenderedFeatures(event.point, { layers: ['country-fill'] })[0];
+				if (!instance?.getLayer('country-fill')) return;
+				const hit = instance.queryRenderedFeatures(event.point, { layers: ['country-fill'] })[0];
 				const iso3 = hit?.properties?.iso3;
 				if (iso3) onCountryClick?.(iso3, event.lngLat);
 			});
+			// If the graphics card resets, MapLibre drops the style until it recovers
+			instance.on('webglcontextlost', () => (styleReady = false));
+			instance.on('webglcontextrestored', () => instance?.once('idle', markStyleReady));
 			map = instance;
 			mapView.map = instance;
 		});
 
 		return () => {
 			cancelled = true;
+			if (instance) {
+				const center = instance.getCenter();
+				mapView.savedCamera = { center: [center.lng, center.lat], zoom: instance.getZoom() };
+			}
 			instance?.remove();
 			// When the map is rebuilt, the new one may already be registered
 			if (mapView.map === instance) mapView.map = null;
 		};
 	});
 
-	// Theme, map style or borders changed: rebuild the style (sources are reused)
+	// Theme, map style or borders changed: rebuild the style (sources are reused).
+	// Each rebuild has a number: only the latest one may mark the style as ready.
 	let firstStyle = true;
+	let rebuild = 0;
 	$effect(() => {
 		// Read the settings here so the effect re-runs when they change
 		const deps = [settings.resolvedTheme, settings.mapStyle, settings.borders];
@@ -97,18 +122,25 @@
 			firstStyle = false;
 			return;
 		}
+		const current = ++rebuild;
 		styleReady = false;
 		// Wait one frame so the new CSS variables are applied before reading them
-		requestAnimationFrame(() => {
-			map?.setStyle(currentStyle({ type: 'FeatureCollection', features: countries.mapFeatures }));
+		const frame = requestAnimationFrame(() => {
+			if (!map || current !== rebuild) return;
+			untrack(() =>
+				map!.setStyle(currentStyle({ type: 'FeatureCollection', features: countries.mapFeatures }))
+			);
 			// setStyle with diffing does not always fire style.load, idle always comes
-			map?.once('idle', () => (styleReady = true));
+			map.once('idle', () => {
+				if (current === rebuild) markStyleReady();
+			});
 		});
+		return () => cancelAnimationFrame(frame);
 	});
 
 	// Visited countries and the focused country
 	$effect(() => {
-		if (!map || !styleReady) return;
+		if (!map || !styleReady || !map.getLayer('country-fill')) return;
 		const colors = readMapColors();
 		const paint = countryPaint(colors, showVisited ? library.visited : [], mapView.focus);
 		map.setPaintProperty('country-fill', 'fill-color', paint.color);
@@ -123,18 +155,24 @@
 		map.setSky(sky(colors));
 	});
 
-	// Panels opened or closed: keep the globe centered in the free space
+	// Panels opened or closed: keep the globe centered in the free space.
+	// During a camera flight the change waits until the camera stops.
 	let paddingSet = false;
 	$effect(() => {
 		// On phones the panels are bottom sheets: the globe stays above them
 		const padding = mapView.cameraPadding;
 		if (!map || spin) return;
-		// A camera flight already carries its own padding: don't interrupt it
-		if (map.isMoving()) return;
-		// The first time it jumps, later changes (sidebar toggled) glide
-		const duration = paddingSet && !settings.reducedMotion ? 400 : 0;
-		paddingSet = true;
-		map.easeTo({ padding, duration });
+		const apply = () => {
+			const duration = paddingSet && !settings.reducedMotion ? 400 : 0;
+			paddingSet = true;
+			map!.easeTo({ padding, duration });
+		};
+		if (!map.isMoving()) {
+			apply();
+			return;
+		}
+		map.once('moveend', apply);
+		return () => map?.off('moveend', apply);
 	});
 
 	// Globe or flat map
@@ -143,25 +181,47 @@
 		map.setProjection({ type: ui.flat ? 'mercator' : 'globe' });
 	});
 
-	// Welcome screen: the planet turns slowly (skipped with reduced motion)
+	// Welcome screen: the planet turns slowly (skipped with reduced motion).
+	// It pauses while the user drags or zooms, so it never fights their hands.
 	$effect(() => {
 		if (!map || !spin || settings.reducedMotion) return;
+		const instance = map;
 		let frame = 0;
 		let last = performance.now();
+		let paused = false;
+		const pause = () => (paused = true);
+		const resume = () => {
+			paused = false;
+			last = performance.now();
+		};
 		const turn = (now: number) => {
-			const center = map!.getCenter();
-			center.lng += ((now - last) / 1000) * 4;
+			// A tab in the background makes this gap huge: never jump more than 50 ms
+			const dt = Math.min(now - last, 50);
 			last = now;
-			map!.setCenter(center);
+			if (!paused) {
+				const center = instance.getCenter();
+				center.lng += (dt / 1000) * 4;
+				instance.setCenter(center);
+			}
 			frame = requestAnimationFrame(turn);
 		};
+		instance.on('dragstart', pause);
+		instance.on('zoomstart', pause);
+		instance.on('dragend', resume);
+		instance.on('zoomend', resume);
 		frame = requestAnimationFrame(turn);
-		return () => cancelAnimationFrame(frame);
+		return () => {
+			cancelAnimationFrame(frame);
+			instance.off('dragstart', pause);
+			instance.off('zoomstart', pause);
+			instance.off('dragend', resume);
+			instance.off('zoomend', resume);
+		};
 	});
 </script>
 
 <div class="map" bind:this={container} role="application" aria-label="Globo con tus fotos"></div>
-{#if map && styleReady}
+{#if map && loaded}
 	<GlobeShade />
 	{@render children?.()}
 {/if}

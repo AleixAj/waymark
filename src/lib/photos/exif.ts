@@ -18,11 +18,25 @@ const TAGS = [
 	'FNumber',
 	'ExposureTime',
 	'ISO',
-	'FocalLength'
+	'FocalLength',
+	'ExifImageWidth',
+	'ExifImageHeight'
 ];
 
+// Dates before this come from a camera with its clock never set
+const OLDEST_PHOTO = Date.UTC(1990, 0, 1);
+const DAY = 86_400_000;
+
+export interface ExifResult extends PhotoMeta {
+	/** Size of the original image, when the camera wrote it */
+	width: number | null;
+	height: number | null;
+	/** The file had readable EXIF data (a real photo, even if the browser can't show it) */
+	hasExif: boolean;
+}
+
 /** Reads GPS position, capture date and camera settings from the photo */
-export async function readPhotoMeta(file: File): Promise<PhotoMeta> {
+export async function readPhotoMeta(file: File, now = Date.now()): Promise<ExifResult> {
 	let data: Record<string, unknown> | undefined;
 	try {
 		// exifr adds decimal latitude/longitude when the raw GPS tags are picked
@@ -32,19 +46,28 @@ export async function readPhotoMeta(file: File): Promise<PhotoMeta> {
 		data = undefined;
 	}
 
+	const offset = toOffset(data?.OffsetTimeOriginal);
+	// Each date is checked on its own: a broken DateTimeOriginal falls back to CreateDate
+	const takenAt =
+		toTime(data?.DateTimeOriginal, offset, now) ??
+		toTime(data?.CreateDate, offset, now) ??
+		toTime(data?.ModifyDate, offset, now) ??
+		file.lastModified;
+
 	return {
-		lat: toCoordinate(data?.latitude, 90),
-		lng: toCoordinate(data?.longitude, 180),
+		...toPosition(data?.latitude, data?.longitude),
 		altitude: toNumber(data?.GPSAltitude),
-		takenAt:
-			toTime(data?.DateTimeOriginal ?? data?.CreateDate ?? data?.ModifyDate) ?? file.lastModified,
-		offset: typeof data?.OffsetTimeOriginal === 'string' ? data.OffsetTimeOriginal : null,
+		takenAt,
+		offset,
 		camera: cameraName(data?.Make, data?.Model),
 		lens: typeof data?.LensModel === 'string' ? data.LensModel : null,
 		aperture: toNumber(data?.FNumber),
 		exposure: toNumber(data?.ExposureTime),
 		iso: toNumber(data?.ISO),
-		focal: toNumber(data?.FocalLength)
+		focal: toNumber(data?.FocalLength),
+		width: toNumber(data?.ExifImageWidth),
+		height: toNumber(data?.ExifImageHeight),
+		hasExif: !!data && Object.keys(data).length > 0
 	};
 }
 
@@ -54,10 +77,50 @@ export function toCoordinate(value: unknown, limit: number): number | null {
 	return value;
 }
 
-export function toTime(value: unknown): number | null {
+/** Latitude and longitude, or nulls. Phones without signal often write 0,0 ("null island"). */
+export function toPosition(lat: unknown, lng: unknown) {
+	const la = toCoordinate(lat, 90);
+	const lo = toCoordinate(lng, 180);
+	if (la === null || lo === null || (la === 0 && lo === 0)) return { lat: null, lng: null };
+	return { lat: la, lng: lo };
+}
+
+/**
+ * EXIF dates have no time zone, so exifr reads them as local time of this browser.
+ * When the camera also wrote its offset ("+09:00"), we turn that wall clock into
+ * the real moment, so photos from a phone and a camera sort correctly.
+ */
+export function toTime(value: unknown, offset: string | null = null, now = Date.now()) {
 	if (!(value instanceof Date)) return null;
-	const time = value.getTime();
-	return Number.isNaN(time) ? null : time;
+	let time = value.getTime();
+	if (Number.isNaN(time)) return null;
+	if (offset) {
+		const wallClock = Date.UTC(
+			value.getFullYear(),
+			value.getMonth(),
+			value.getDate(),
+			value.getHours(),
+			value.getMinutes(),
+			value.getSeconds()
+		);
+		time = wallClock - offsetMinutes(offset) * 60_000;
+	}
+	// A camera with a wrong clock can say 1970 or 2099
+	if (time < OLDEST_PHOTO || time > now + 2 * DAY) return null;
+	return time;
+}
+
+/** "+09:00" stays, anything else becomes null */
+export function toOffset(value: unknown): string | null {
+	if (typeof value !== 'string') return null;
+	const text = value.trim();
+	return /^[+-]\d{2}:\d{2}$/.test(text) ? text : null;
+}
+
+export function offsetMinutes(offset: string) {
+	const sign = offset.startsWith('-') ? -1 : 1;
+	const [hours, minutes] = offset.slice(1).split(':').map(Number);
+	return sign * (hours * 60 + minutes);
 }
 
 function toNumber(value: unknown): number | null {

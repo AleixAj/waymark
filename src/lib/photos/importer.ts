@@ -1,10 +1,13 @@
-import { findExistingIds, savePhotos } from './db';
+import { askForPersistentStorage, findExistingIds, savePhotos } from './db';
+import { findPlace } from './placeFinder';
 import { toPoint, type Photo, type PhotoPoint } from './types';
-import type { WorkerRequest, WorkerResponse } from './import.worker';
+import type { ProcessedPhoto, WorkerRequest, WorkerResponse } from './import.worker';
 
 export interface ImportError {
 	name: string;
 	reason: string;
+	/** Worth trying again (a busy or broken read), unlike a video or a full disk */
+	retryable: boolean;
 	file: File;
 }
 
@@ -20,70 +23,124 @@ export interface ImportProgress {
 
 interface ImportOptions {
 	onProgress: (progress: ImportProgress) => void;
-	/** Called every few photos so the globe fills up while importing */
+	/** Called after each saved batch so the globe fills up while importing */
 	onBatch: (points: PhotoPoint[], thumbs: Blob[]) => void;
+	/** Aborted when the library is deleted during an import */
+	signal?: AbortSignal;
 }
 
-const BATCH_SIZE = 24;
-const IMAGE_EXTENSIONS = /\.(jpe?g|png|webp|heic|heif|avif|gif)$/i;
-
-/** Same file imported twice gets the same id, so we can skip it */
-export function photoId(file: File) {
-	return `${file.name}-${file.size}-${file.lastModified}`;
-}
+const BATCH_SIZE = 48;
+// A photo that takes longer than this is skipped (and its worker replaced)
+const FILE_TIMEOUT_MS = 30_000;
+const IMAGE_EXTENSIONS = /\.(jpe?g|png|webp|heic|heif|avif|gif|tiff?|dng)$/i;
 
 export function isImage(file: File) {
 	return file.type.startsWith('image/') || IMAGE_EXTENSIONS.test(file.name);
 }
 
-export async function importPhotos(files: File[], { onProgress, onBatch }: ImportOptions) {
-	const images = files.filter(isImage);
-	const existing = await findExistingIds(images.map(photoId));
-	const queue = images.filter((file) => !existing.has(photoId(file)));
-
+export async function importPhotos(files: File[], { onProgress, onBatch, signal }: ImportOptions) {
+	const queue = files.filter(isImage);
 	const progress: ImportProgress = {
-		total: images.length,
-		done: existing.size,
+		total: queue.length,
+		done: 0,
 		withLocation: 0,
 		withoutLocation: 0,
-		duplicates: existing.size,
-		// Videos and other files are listed as errors so the user knows they were skipped
+		duplicates: 0,
+		// Videos and other files are listed so the user knows they were skipped
 		errors: files
 			.filter((file) => !isImage(file))
-			.map((file) => ({ name: file.name, reason: 'No es una foto', file })),
+			.map((file) => ({ name: file.name, reason: 'No es una foto', retryable: false, file })),
 		startedAt: Date.now()
 	};
 	onProgress({ ...progress });
+	if (queue.length === 0) return progress;
+	askForPersistentStorage();
 
-	let batch: Photo[] = [];
-	async function flush() {
-		if (batch.length === 0) return;
-		const saved = batch;
+	// Ids seen in this import, to skip the same photo selected twice
+	const seen = new Set<string>();
+	let batch: { photo: ProcessedPhoto; file: File }[] = [];
+	let stopped = false;
+
+	const flush = async () => {
+		if (!batch.length || signal?.aborted) return;
+		const items = batch;
 		batch = [];
-		await savePhotos(saved);
-		onBatch(
-			saved.map(toPoint),
-			saved.map((photo) => photo.thumb)
-		);
-	}
+		const existing = await findExistingIds(items.map((item) => item.photo.id));
+		const fresh = items.filter((item) => !existing.has(item.photo.id));
+		progress.duplicates += items.length - fresh.length;
 
-	// One worker per CPU core (max 4), each one takes the next file from the queue
+		const photos: Photo[] = await Promise.all(
+			fresh.map(async ({ photo, file }) => ({
+				...photo,
+				...(await findPlace(photo.lat, photo.lng)),
+				favorite: false,
+				file
+			}))
+		);
+		try {
+			await savePhotos(photos);
+		} catch {
+			// Usually the browser storage is full: stop and tell the user which photos are missing
+			stopped = true;
+			queue.length = 0;
+			for (const { file } of fresh) {
+				progress.errors.push({
+					name: file.name,
+					reason: 'Sin espacio en el navegador',
+					retryable: false,
+					file
+				});
+			}
+			onProgress({ ...progress });
+			return;
+		}
+		for (const p of photos) {
+			if (p.lat === null) progress.withoutLocation++;
+			else progress.withLocation++;
+		}
+		if (!signal?.aborted) {
+			onBatch(
+				photos.map(toPoint),
+				photos.map((p) => p.thumb)
+			);
+			onProgress({ ...progress });
+		}
+	};
+
+	// One worker per CPU core (max 4); each takes the next file from the shared queue
 	const workerCount = Math.min(4, navigator.hardwareConcurrency || 2, queue.length);
-	const workers = Array.from({ length: workerCount }, () => runWorker());
+	await Promise.all(Array.from({ length: workerCount }, runWorker));
+	await flush();
+	return progress;
 
 	async function runWorker() {
-		const worker = new Worker(new URL('./import.worker.ts', import.meta.url), { type: 'module' });
+		let worker = createWorker();
 		try {
 			let file = queue.shift();
-			while (file) {
+			while (file && !stopped && !signal?.aborted) {
 				const result = await processInWorker(worker, file);
-				if (result.ok) {
-					const photo: Photo = { id: photoId(file), file, favorite: false, ...result.photo };
-					batch.push(photo);
-					if (photo.lat === null) progress.withoutLocation++;
-					else progress.withLocation++;
+				if (result === 'timeout') {
+					// A stuck worker (huge or broken file) is replaced by a fresh one
+					worker.terminate();
+					worker = createWorker();
+					progress.errors.push({
+						name: file.name,
+						reason: 'Tardó demasiado',
+						retryable: true,
+						file
+					});
+				} else if (!result.ok) {
+					progress.errors.push({
+						name: file.name,
+						reason: result.error,
+						retryable: result.retryable,
+						file
+					});
+				} else if (seen.has(result.photo.id)) {
+					progress.duplicates++;
 				} else {
-					progress.errors.push({ name: file.name, reason: result.error, file });
+					seen.add(result.photo.id);
+					batch.push({ photo: result.photo, file });
 				}
 				progress.done++;
 				onProgress({ ...progress });
@@ -94,16 +151,23 @@ export async function importPhotos(files: File[], { onProgress, onBatch }: Impor
 			worker.terminate();
 		}
 	}
+}
 
-	await Promise.all(workers);
-	await flush();
-	return progress;
+function createWorker() {
+	return new Worker(new URL('./import.worker.ts', import.meta.url), { type: 'module' });
 }
 
 function processInWorker(worker: Worker, file: File) {
-	return new Promise<WorkerResponse>((resolve) => {
-		worker.onmessage = (event: MessageEvent<WorkerResponse>) => resolve(event.data);
-		worker.onerror = () => resolve({ ok: false, error: 'No se pudo leer' });
+	return new Promise<WorkerResponse | 'timeout'>((resolve) => {
+		const timer = setTimeout(() => resolve('timeout'), FILE_TIMEOUT_MS);
+		const done = (value: WorkerResponse | 'timeout') => {
+			clearTimeout(timer);
+			resolve(value);
+		};
+		worker.onmessage = (event: MessageEvent<WorkerResponse>) => done(event.data);
+		const fail = () => done({ ok: false, error: 'No se pudo leer', retryable: true });
+		worker.onerror = fail;
+		worker.onmessageerror = fail;
 		worker.postMessage({ file } satisfies WorkerRequest);
 	});
 }

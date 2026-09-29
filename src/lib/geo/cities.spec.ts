@@ -9,6 +9,7 @@ const rows: CityRow[] = [
 	['Tokio', 35.6895, 139.6917, 'JP', 8_336_599],
 	['Yotsuya', 35.6833, 139.7333, 'JP', 60_000],
 	['Madrid', 40.4165, -3.7026, 'ES', 3_255_944],
+	['Polar Station', 80.0, 15.63, 'SJ', 20_000],
 	['Alcalá de Henares', 40.4818, -3.3643, 'ES', 196_888]
 ];
 const index = new CityIndex(rows);
@@ -24,6 +25,10 @@ describe('CityIndex', () => {
 
 	it('keeps the name of a town far from the big city', () => {
 		expect(index.nearest(40.48, -3.37)?.name).toBe('Alcalá de Henares');
+	});
+
+	it('finds cities close to the poles, where longitude degrees are short', () => {
+		expect(index.nearest(80.0, 13.9)?.name).toBe('Polar Station');
 	});
 
 	it('returns null far from every city', () => {

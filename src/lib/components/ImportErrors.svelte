@@ -3,7 +3,7 @@
 	import { library } from '$lib/state/library.svelte';
 
 	const count = $derived(library.errors.length);
-	const canRetry = $derived(library.errors.some((e) => e.reason !== 'No es una foto'));
+	const canRetry = $derived(library.errors.some((e) => e.retryable));
 </script>
 
 <div class="errors panel" role="alert">
@@ -22,7 +22,7 @@
 		</button>
 	</div>
 	<div class="col list">
-		{#each library.errors.slice(0, 5) as error (error.name)}
+		{#each library.errors.slice(0, 5) as error, i (i)}
 			<div class="row item">
 				<span class="mono name">{error.name}</span>
 				<span class="t-small t3">{error.reason}</span>

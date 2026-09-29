@@ -24,6 +24,8 @@ export interface StyleOptions {
 	mapStyle: MapStyle;
 	borders: boolean;
 	dark: boolean;
+	/** Flat map instead of the globe */
+	flat?: boolean;
 }
 
 /** Land color by biome; `amount` tints it with the accent (0 = plain land) */
@@ -94,7 +96,14 @@ export function sky(c: MapColors): SkySpecification {
 	};
 }
 
-export function buildStyle({ colors: c, countries, mapStyle, borders, dark }: StyleOptions) {
+export function buildStyle({
+	colors: c,
+	countries,
+	mapStyle,
+	borders,
+	dark,
+	flat = false
+}: StyleOptions) {
 	const paint = countryPaint(c, [], null);
 	const rasterPaint = dark
 		? { 'raster-brightness-max': 0.55, 'raster-contrast': 0.12, 'raster-saturation': 0.15 }
@@ -153,7 +162,7 @@ export function buildStyle({ colors: c, countries, mapStyle, borders, dark }: St
 
 	const style: StyleSpecification = {
 		version: 8,
-		projection: { type: 'globe' },
+		projection: { type: flat ? 'mercator' : 'globe' },
 		sky: sky(c),
 		sources: {
 			[COUNTRY_SOURCE]: { type: 'geojson', data: countries, tolerance: 0.3 },

@@ -4,11 +4,10 @@
 	import Supercluster from 'supercluster';
 	import type { Feature, Point } from 'geojson';
 	import type { LocatedPoint } from '$lib/photos/types';
-	import { getThumbs } from '$lib/photos/db';
 	import { formatNumber, formatRange } from '$lib/library/format';
 	import { ranked } from '$lib/library/trips';
 	import { ui } from '$lib/state/ui.svelte';
-	import { thumbUrl } from '$lib/state/thumbs.svelte';
+	import { loadThumbUrl, thumbUrl } from '$lib/state/thumbs.svelte';
 	import { mapView } from './view.svelte';
 
 	interface Props {
@@ -25,6 +24,14 @@
 	type ClusterProps = { cluster: true; cluster_id: number; point_count: number };
 	type ClusterItem = Feature<Point, ClusterProps>;
 	type Item = Feature<Point, Props_> | ClusterItem;
+
+	interface Entry {
+		marker: Marker;
+		el: HTMLElement;
+		html: string;
+		/** Latest data of this marker: event handlers read it here, never a stale copy */
+		item: Item;
+	}
 
 	// Below this zoom photos are amber circles; above it they become thumbnails
 	const PHOTO_ZOOM = 11;
@@ -45,7 +52,11 @@
 		return sc;
 	});
 
-	const markers = new Map<string, { marker: Marker; el: HTMLElement; html: string }>();
+	const markers = new Map<string, Entry>();
+	// Label of each cluster doesn't change while the index is the same,
+	// so it is computed once instead of on every animation frame
+	let labelCache = new Map<string, string>();
+
 	let preview = $state<{
 		key: string;
 		lng: number;
@@ -58,18 +69,25 @@
 	let tick = $state(0);
 
 	function keyOf(item: Item) {
-		return 'cluster' in item.properties && item.properties.cluster
-			? `c${item.properties.cluster_id}`
-			: `p${(item.properties as Props_).id}`;
+		return isCluster(item) ? `c${item.properties.cluster_id}` : `p${item.properties.id}`;
 	}
 
 	function isCluster(item: Item): item is ClusterItem {
 		return 'cluster' in item.properties && item.properties.cluster === true;
 	}
 
-	function leaves(item: Item): Props_[] {
-		if (!isCluster(item)) return [item.properties as Props_];
-		return index.getLeaves(item.properties.cluster_id, Infinity).map((l) => l.properties);
+	function leaves(item: Item, limit = Infinity): Props_[] {
+		if (!isCluster(item)) return [item.properties];
+		return index.getLeaves(item.properties.cluster_id, limit).map((l) => l.properties);
+	}
+
+	function labelOf(item: Item, key: string) {
+		let label = labelCache.get(key);
+		if (label === undefined) {
+			label = placeLabel(leaves(item));
+			labelCache.set(key, label);
+		}
+		return label;
 	}
 
 	/** "Kioto · Osaka" when two cities share the cluster */
@@ -95,27 +113,28 @@
 				: [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()];
 		const items = index.getClusters(bbox, Math.floor(zoom)) as Item[];
 		const seen = new Set<string>();
+		const photoMode = zoom >= PHOTO_ZOOM;
+		const showLabels = labels && zoom >= LABEL_ZOOM && !photoMode;
 
 		for (const item of items) {
 			const key = keyOf(item);
 			seen.add(key);
 			const count = isCluster(item) ? item.properties.point_count : 1;
 			const [lng, lat] = item.geometry.coordinates;
-			const photoMode = zoom >= PHOTO_ZOOM;
-			// Leaves are only needed for labels and thumbnails, skip them on the world view
-			const needLeaves = photoMode || (labels && zoom >= LABEL_ZOOM);
-			const itemLeaves = needLeaves ? leaves(item) : [];
-			const label = labels && zoom >= LABEL_ZOOM && !photoMode ? placeLabel(itemLeaves) : '';
-			const firstId = itemLeaves[0]?.id;
+			const firstId = photoMode ? (leaves(item, 1)[0]?.id ?? '') : '';
+			const label = showLabels ? labelOf(item, key) : '';
 			const html = markerHtml(count, photoMode, label, firstId);
 
 			const existing = markers.get(key);
 			if (existing) {
+				existing.item = item;
+				existing.marker.setLngLat([lng, lat]);
 				if (existing.html !== html) {
 					existing.el.innerHTML = html;
 					existing.html = html;
+					// The new HTML has an empty image: fill it again
+					if (photoMode) showThumb(existing.el, firstId);
 				}
-				existing.marker.setLngLat([lng, lat]);
 				continue;
 			}
 
@@ -123,34 +142,43 @@
 			el.className = 'wm-marker';
 			el.innerHTML = html;
 			el.setAttribute('aria-label', label ? `${label}, ${count} fotos` : `${count} fotos`);
+			const entry: Entry = {
+				el,
+				html,
+				item,
+				marker: new Marker({ element: el, opacityWhenCovered: 0, subpixelPositioning: true })
+					.setLngLat([lng, lat])
+					.addTo(map)
+			};
 			el.addEventListener('click', (e) => {
+				// Stop the click here, or the map would also open the country below
 				e.stopPropagation();
-				open(item);
+				preview = null;
+				open(entry.item);
 			});
-			el.addEventListener('mouseenter', () => showPreview(item, key));
+			el.addEventListener('mouseenter', () => showPreview(entry.item, key));
 			el.addEventListener('mouseleave', () => (preview = null));
-			const marker = new Marker({ element: el, opacityWhenCovered: 0, subpixelPositioning: true })
-				.setLngLat([lng, lat])
-				.addTo(map);
-			markers.set(key, { marker, el, html });
-			if (photoMode) loadThumbs(el);
+			markers.set(key, entry);
+			if (photoMode) showThumb(el, firstId);
 		}
 
 		for (const [key, entry] of markers) {
 			if (!seen.has(key)) {
 				entry.marker.remove();
 				markers.delete(key);
+				// A marker removed under the mouse never gets its mouseleave
+				if (preview?.key === key) preview = null;
 			}
 		}
+		highlightHovered();
 		tick++;
 	}
 
-	function markerHtml(count: number, photoMode: boolean, label: string, firstId?: string) {
+	function markerHtml(count: number, photoMode: boolean, label: string, firstId: string) {
 		const labelHtml = label ? `<span class="mk-label">${escapeHtml(label)}</span>` : '';
 		if (photoMode) {
 			const badge = count > 1 ? `<span class="badge">${formatNumber(count)}</span>` : '';
-			const hover = firstId && firstId === ui.hoveredPhoto ? ' is-hover' : '';
-			return `<span class="pm${hover}" data-thumb="${firstId}"><img alt="" /></span>${badge}`;
+			return `<span class="pm" data-thumb="${escapeHtml(firstId)}"><img alt="" /></span>${badge}`;
 		}
 		if (count === 1) return `<span class="dot"></span>${labelHtml}`;
 		const size = clusterSize(count);
@@ -158,13 +186,12 @@
 		return `<span class="cluster${small}" style="width:${size}px;height:${size}px">${formatNumber(count)}</span>${labelHtml}`;
 	}
 
-	async function loadThumbs(el: HTMLElement) {
-		const holder = el.querySelector<HTMLElement>('[data-thumb]');
-		const id = holder?.dataset.thumb;
-		if (!holder || !id) return;
-		const [blob] = await getThumbs([id]);
-		const img = holder.querySelector('img');
-		if (blob && img) img.src = URL.createObjectURL(blob);
+	/** Puts the thumbnail in the marker, using the shared cache (no URL is created twice) */
+	async function showThumb(el: HTMLElement, id: string) {
+		if (!id) return;
+		const url = thumbUrl(id) ?? (await loadThumbUrl(id));
+		const img = el.querySelector<HTMLImageElement>(`[data-thumb="${CSS.escape(id)}"] img`);
+		if (url && img) img.src = url;
 	}
 
 	function open(item: Item) {
@@ -204,20 +231,27 @@
 		);
 	}
 
-	// Re-render when the photos change (import, timeline filter...)
+	function highlightHovered() {
+		const id = ui.hoveredPhoto;
+		for (const { el } of markers.values()) {
+			const pm = el.querySelector('.pm');
+			pm?.classList.toggle('is-hover', !!id && pm.getAttribute('data-thumb') === id);
+		}
+	}
+
+	// Re-render when the photos or the label setting change (import, timeline filter, page)
 	$effect(() => {
 		void index;
+		void labels;
+		labelCache = new Map();
 		// render() also writes state (tick), so it must not become a dependency
 		untrack(render);
 	});
 
 	// Highlight the marker of the photo hovered in a list
 	$effect(() => {
-		const id = ui.hoveredPhoto;
-		for (const { el } of markers.values()) {
-			const pm = el.querySelector('.pm');
-			pm?.classList.toggle('is-hover', !!id && pm.getAttribute('data-thumb') === id);
-		}
+		void ui.hoveredPhoto;
+		untrack(highlightHovered);
 	});
 
 	onMount(() => {
@@ -330,6 +364,10 @@
 		transition:
 			transform 0.18s,
 			border-color 0.18s;
+	}
+
+	:global(.wm-marker .pm img:not([src])) {
+		visibility: hidden;
 	}
 
 	:global(.wm-marker .pm img) {

@@ -9,7 +9,11 @@ function toRgba(cssColor: string): RGBA {
 	ctx ??= document.createElement('canvas').getContext('2d', { willReadFrequently: true });
 	if (!ctx) return [0, 0, 0, 1];
 	ctx.clearRect(0, 0, 1, 1);
+	// An invalid color leaves fillStyle unchanged: detect it instead of painting the previous one
+	const sentinel = '#010203';
+	ctx.fillStyle = sentinel;
 	ctx.fillStyle = cssColor;
+	if (ctx.fillStyle === sentinel && cssColor.trim().toLowerCase() !== sentinel) return [0, 0, 0, 0];
 	ctx.fillRect(0, 0, 1, 1);
 	const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data;
 	return [r, g, b, a / 255];

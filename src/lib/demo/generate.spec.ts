@@ -3,7 +3,8 @@ import type { LocatedPoint } from '$lib/photos/types';
 import { detectTrips, findHome } from '$lib/library/trips';
 import { generateDemo } from './generate';
 
-const { photos, titles } = generateDemo();
+// A fixed date keeps the test the same every day
+const { photos, titles } = generateDemo(new Date(2026, 8, 29).getTime());
 const located = photos.filter((p) => p.lat !== null && p.lng !== null) as LocatedPoint[];
 const home = findHome(located);
 const trips = detectTrips(located, home, (iso3) => iso3, titles);

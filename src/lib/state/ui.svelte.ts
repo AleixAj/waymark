@@ -7,6 +7,8 @@ class Ui {
 	flat = $state(false);
 	/** False on browsers that can't draw the globe (the flat SVG map is shown instead) */
 	webgl = $state(true);
+	/** Window width, kept in state so layouts react when the window is resized */
+	viewportWidth = $state(typeof window === 'undefined' ? 1440 : window.innerWidth);
 	/** Phones: height of the bottom sheet (0 on bigger screens) */
 	sheetHeight = $state(0);
 	/** Phones: the timeline is hidden behind a button */
@@ -22,12 +24,13 @@ class Ui {
 
 	/** "Asignar ubicación": next click on the map places these photos */
 	placing = $state<string[] | null>(null);
-	/** Set by the "Sin ubicación" page: what to do with a click while placing */
-	placeAt: ((lngLat: { lng: number; lat: number }) => void) | null = null;
+	/** Pages opened inside the app; 0 means the app was opened from a link */
+	inAppNavigations = $state(0);
 
 	openViewer(ids: string[], id: string, context = '') {
-		const index = Math.max(0, ids.indexOf(id));
-		this.viewer = { ids, index, context };
+		// A photo that is not in the list is shown on its own instead of opening another one
+		const index = ids.indexOf(id);
+		this.viewer = index === -1 ? { ids: [id], index: 0, context } : { ids, index, context };
 	}
 
 	closeViewer() {

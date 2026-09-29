@@ -8,7 +8,7 @@
 	import { thumbUrl } from '$lib/state/thumbs.svelte';
 	import { ui } from '$lib/state/ui.svelte';
 	import { mapView } from '$lib/map/view.svelte';
-	import { getPhoto } from '$lib/photos/db';
+	import { getCameras } from '$lib/photos/db';
 	import { placeAt } from '$lib/photos/placeFinder';
 	import { groupBy } from '$lib/library/trips';
 	import { formatMonthLong, formatNumber, monthKey } from '$lib/library/format';
@@ -28,11 +28,15 @@
 	});
 
 	// Camera names are not in the light points, so we read them once for this view
+	// (one database call; if the list changes meanwhile, the old answer is ignored)
 	$effect(() => {
 		const ids = photos.map((p) => p.id);
-		Promise.all(ids.map((id) => getPhoto(id))).then((list) => {
-			cameras = new Map(list.map((p, i) => [ids[i], p?.camera ?? 'Cámara desconocida']));
+		let current = true;
+		getCameras(ids).then((found) => {
+			if (!current) return;
+			cameras = new Map(ids.map((id) => [id, found.get(id) ?? 'Cámara desconocida']));
 		});
+		return () => (current = false);
 	});
 
 	const groups = $derived.by(() => {
@@ -105,6 +109,8 @@
 			}
 			lastLookup = Date.now();
 			placeAt(lngLat.lat, lngLat.lng).then((spot) => {
+				// The drag may have ended while the name was being looked up
+				if (!ui.dragging) return;
 				mapView.focus = spot.country;
 				const name = [countries.name(spot.country), spot.city].filter(Boolean).join(' · ');
 				dropLabel = {
@@ -131,11 +137,21 @@
 			ui.placing = null;
 		};
 
+		// Leaving the map (back to the list) hides the "drop here" label
+		const leave = (event: DragEvent) => {
+			if (!container.contains(event.relatedTarget as Node)) {
+				dropLabel = null;
+				mapView.focus = null;
+			}
+		};
+
 		container.addEventListener('dragover', over);
+		container.addEventListener('dragleave', leave);
 		container.addEventListener('drop', drop);
 		map.on('click', click);
 		return () => {
 			container.removeEventListener('dragover', over);
+			container.removeEventListener('dragleave', leave);
 			container.removeEventListener('drop', drop);
 			map.off('click', click);
 			ui.placing = null;

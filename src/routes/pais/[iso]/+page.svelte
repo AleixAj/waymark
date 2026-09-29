@@ -25,6 +25,15 @@
 		detail ? (city ? detail.photos.filter((p) => p.city === city) : detail.photos) : []
 	);
 
+	// "/pais/esp" works too: codes are always upper case
+	$effect(() => {
+		if (iso && iso !== iso.toUpperCase())
+			goto(`/pais/${iso.toUpperCase()}`, { replaceState: true });
+	});
+
+	// A code that no country has (an old or mistyped link)
+	const unknown = $derived(countries.list.length > 0 && !info && !detail);
+
 	// Changing country resets the city filter
 	$effect(() => {
 		void iso;
@@ -46,7 +55,7 @@
 		const target = { iso, city };
 		// Re-frame when the panel size changes (bottom sheet on phones)
 		void mapView.cameraPadding;
-		if (!mapView.map || !countries.features.length) return;
+		if (!mapView.map || !countries.list.length) return;
 		untrack(() => {
 			if (target.city && photos.length) mapView.fitPoints(photos, 13);
 			else mapView.fitCountry(target.iso);
@@ -147,7 +156,11 @@
 				/>
 				<circle class="a" cx="52" cy="18" r="4" stroke-dasharray="2.5 2.5" />
 			</svg>
-			<h3>Aún no tienes fotos en {info?.name ?? iso}</h3>
+			{#if unknown}
+				<h3>No encontramos este país</h3>
+			{:else}
+				<h3>Aún no tienes fotos en {info?.name ?? iso}</h3>
+			{/if}
 			<p>Si hiciste fotos allí y no tienen GPS, puedes ubicarlas desde Sin ubicación.</p>
 			<a class="btn btn-secondary btn-sm" href="/sin-ubicacion">
 				Revisar fotos sin ubicación <span class="mono t3">{library.unlocated.length}</span>

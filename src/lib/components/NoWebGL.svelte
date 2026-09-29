@@ -8,11 +8,7 @@
 	// the panels, lists, viewer and statistics don't need WebGL.
 	let dismissed = $state(false);
 
-	const dots = $derived(
-		cityCounts(library.located)
-			.slice(0, 30)
-			.map((c) => library.located.find((p) => p.city === c.city)!)
-	);
+	const dots = $derived(cityCounts(library.located).slice(0, 30));
 </script>
 
 <div class="fallback">
@@ -29,8 +25,8 @@
 		</svg>
 		<h3>Tu navegador no puede mostrar el globo 3D</h3>
 		<p>
-			Falta soporte para WebGL o está desactivado. Puedes seguir con el mapa plano: tiene las mismas
-			fotos y funciones.
+			Falta soporte para WebGL o está desactivado. Puedes seguir con el mapa plano: tus fotos,
+			viajes, países y estadísticas siguen disponibles.
 		</p>
 		<div class="row buttons">
 			<button class="btn btn-primary btn-sm" onclick={() => (dismissed = true)}>

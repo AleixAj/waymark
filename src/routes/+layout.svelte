@@ -1,14 +1,19 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
-	import { goto } from '$app/navigation';
-	import '@fontsource/geist/400.css';
-	import '@fontsource/geist/500.css';
-	import '@fontsource/geist/600.css';
-	import '@fontsource/geist-mono/400.css';
-	import '@fontsource/geist-mono/500.css';
-	import '@fontsource/geist-mono/600.css';
-	import '@fontsource/instrument-serif/400-italic.css';
+	import { afterNavigate, goto } from '$app/navigation';
+	// Only the Latin alphabets: Spanish plus names like Kraków, Þingvellir or Höfn
+	import '@fontsource/geist/latin-400.css';
+	import '@fontsource/geist/latin-ext-400.css';
+	import '@fontsource/geist/latin-500.css';
+	import '@fontsource/geist/latin-ext-500.css';
+	import '@fontsource/geist/latin-600.css';
+	import '@fontsource/geist/latin-ext-600.css';
+	import '@fontsource/geist-mono/latin-400.css';
+	import '@fontsource/geist-mono/latin-ext-400.css';
+	import '@fontsource/geist-mono/latin-500.css';
+	import '@fontsource/geist-mono/latin-600.css';
+	import '@fontsource/instrument-serif/latin-400-italic.css';
 	import '$lib/styles/global.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import GlobeMap from '$lib/map/GlobeMap.svelte';
@@ -26,7 +31,7 @@
 	import { settings } from '$lib/state/settings.svelte';
 	import { countries } from '$lib/state/countries.svelte';
 	import { ui } from '$lib/state/ui.svelte';
-	import { pickFiles } from '$lib/photos/pick';
+	import { droppedFiles, pickFiles } from '$lib/photos/pick';
 
 	let { children } = $props();
 
@@ -38,7 +43,10 @@
 	const hasWebGL = (() => {
 		try {
 			const canvas = document.createElement('canvas');
-			return !!(canvas.getContext('webgl2') || canvas.getContext('webgl'));
+			const gl = canvas.getContext('webgl2') ?? canvas.getContext('webgl');
+			// Browsers allow only a few WebGL contexts: give this test one back
+			gl?.getExtension('WEBGL_lose_context')?.loseContext();
+			return !!gl;
 		} catch {
 			return false;
 		}
@@ -49,26 +57,39 @@
 
 	onMount(() => {
 		library.load();
-		countries.load();
+		countries.load().catch(() => {
+			// Offline on the very first visit: names show as codes until the next load
+		});
+	});
+
+	// With no photos every page leads to the welcome screen (e.g. an old link to a trip)
+	$effect(() => {
+		if (library.isEmpty && page.url.pathname !== '/') goto('/', { replaceState: true });
+	});
+
+	// Pages visited inside the app, so "back" knows whether there is somewhere to go back to
+	afterNavigate(({ type }) => {
+		if (type !== 'enter') ui.inAppNavigations++;
+		ui.searchOpen = false;
 	});
 
 	function openCountry(iso3: string, lngLat: { lng: number; lat: number }) {
 		if (welcome) return;
-		// "Asignar ubicación" mode: the click places the photos instead
-		if (ui.placing) {
-			ui.placeAt?.(lngLat);
-			return;
-		}
+		// "Asignar ubicación" mode: the "Sin ubicación" page places the photos instead
+		if (ui.placing) return;
+		void lngLat;
 		// Only at country level: when zoomed in you are exploring streets, not countries
 		if (mapView.zoom < 5) goto(`/pais/${iso3}`);
 	}
 
 	function onKeydown(event: KeyboardEvent) {
 		const mod = event.metaKey || event.ctrlKey;
-		if (mod && event.key.toLowerCase() === 'k') {
+		// Shortcuts don't open things on top of the Settings dialog
+		if (!mod || ui.settingsOpen) return;
+		if (event.key.toLowerCase() === 'k') {
 			event.preventDefault();
 			ui.searchOpen = true;
-		} else if (mod && event.key.toLowerCase() === 'o') {
+		} else if (event.key.toLowerCase() === 'o') {
 			event.preventDefault();
 			pickFiles().then((files) => library.import(files));
 		}
@@ -84,7 +105,8 @@
 		if (!isFileDrag(event)) return;
 		event.preventDefault();
 		fileDrag = false;
-		library.import(Array.from(event.dataTransfer?.files ?? []));
+		// Folders are opened too, so dropping a DCIM folder imports its photos
+		if (event.dataTransfer) droppedFiles(event.dataTransfer).then((files) => library.import(files));
 	}
 </script>
 
@@ -94,6 +116,7 @@
 </svelte:head>
 
 <svelte:window
+	bind:innerWidth={ui.viewportWidth}
 	onkeydown={onKeydown}
 	ondragover={(e) => {
 		if (!isFileDrag(e)) return;

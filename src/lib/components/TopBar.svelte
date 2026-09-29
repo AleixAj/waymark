@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
 	import Icon from './ui/Icon.svelte';
 	import Logo from './Logo.svelte';
 	import { library } from '$lib/state/library.svelte';
@@ -15,6 +16,23 @@
 	const modKey = isMac ? '⌘' : 'Ctrl';
 
 	let menuOpen = $state(false);
+	let menuWrap = $state<HTMLDivElement>();
+
+	// The menu closes when the page changes
+	$effect(() => {
+		void path;
+		menuOpen = false;
+	});
+
+	/** Back inside the app; opened from a link there is no "back", so go to the globe */
+	function goBack() {
+		if (ui.inAppNavigations > 0) history.back();
+		else goto('/');
+	}
+
+	function closeOnOutside(event: PointerEvent) {
+		if (menuOpen && !menuWrap?.contains(event.target as Node)) menuOpen = false;
+	}
 
 	async function importPhotos() {
 		menuOpen = false;
@@ -23,14 +41,17 @@
 	}
 </script>
 
+<svelte:window
+	onpointerdown={closeOnOutside}
+	onkeydown={(e) => {
+		if (e.key === 'Escape') menuOpen = false;
+	}}
+/>
+
 <header class="topbar panel">
 	<div class="row">
 		{#if path !== '/'}
-			<button
-				class="btn btn-ghost btn-icon phone-only"
-				aria-label="Volver"
-				onclick={() => history.back()}
-			>
+			<button class="btn btn-ghost btn-icon phone-only" aria-label="Volver" onclick={goBack}>
 				<Icon name="arrowL" />
 			</button>
 		{/if}
@@ -76,7 +97,7 @@
 	</div>
 
 	<!-- Phones: the sections and actions move into a menu -->
-	<div class="phone-only menu-wrap">
+	<div class="phone-only menu-wrap" bind:this={menuWrap}>
 		<button
 			class="btn btn-ghost btn-icon"
 			aria-label="Menú"

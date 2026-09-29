@@ -909,3 +909,8 @@ input {
 		display: none !important;
 	}
 }
+
+/* Markers on the far side of the globe are invisible: they must not catch clicks either */
+.maplibregl-marker-covered {
+	pointer-events: none;
+}

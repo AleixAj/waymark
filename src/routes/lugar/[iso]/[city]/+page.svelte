@@ -12,22 +12,31 @@
 	import { mapView } from '$lib/map/view.svelte';
 	import { centroid } from '$lib/library/trips';
 	import { formatNumber } from '$lib/library/format';
-	import type { LocatedPoint } from '$lib/photos/types';
+	import type { LngLatBounds } from 'maplibre-gl';
 
 	const iso = $derived(page.params.iso ?? '');
-	const city = $derived(decodeURIComponent(page.params.city ?? ''));
+	// SvelteKit already decodes route parameters
+	const city = $derived(page.params.city ?? '');
 	const countryName = $derived(countries.name(iso));
 	const cityPhotos = $derived(library.located.filter((p) => p.country === iso && p.city === city));
 	const center = $derived(cityPhotos.length ? centroid(cityPhotos) : null);
 
-	// Photos inside the visible part of the map, updated when the map stops moving
-	let inView = $state.raw<LocatedPoint[]>([]);
+	// Photos inside the visible part of the map, updated when the map stops moving.
+	// Until the camera arrives (or without a map at all) the city's photos are shown.
+	let bounds = $state.raw<LngLatBounds | null>(null);
+	const inView = $derived(
+		bounds ? library.located.filter((p) => bounds!.contains([p.lng, p.lat])) : cityPhotos
+	);
+
+	// Another city: start again from its own photos
+	$effect(() => {
+		void city;
+		bounds = null;
+	});
 
 	function updateInView() {
 		const map = mapView.map;
-		if (!map) return;
-		const bounds = map.getBounds();
-		inView = library.located.filter((p) => bounds.contains([p.lng, p.lat]));
+		if (map && !map.isMoving()) bounds = map.getBounds();
 	}
 
 	$effect(() => {
@@ -51,7 +60,6 @@
 		const map = mapView.map;
 		if (!map) return;
 		map.on('moveend', updateInView);
-		updateInView();
 		return () => map.off('moveend', updateInView);
 	});
 

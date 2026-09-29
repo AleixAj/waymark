@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import Icon from './ui/Icon.svelte';
+	import { focusTrap } from './ui/focusTrap';
 	import { settings, type MapStyle, type Quality } from '$lib/state/settings.svelte';
 	import { library } from '$lib/state/library.svelte';
 	import { ui } from '$lib/state/ui.svelte';
@@ -41,7 +42,8 @@
 
 	/** MapLibre keeps downloaded map tiles in the browser cache */
 	async function clearMapCache() {
-		const names = await caches.keys();
+		// Only MapLibre's cache: the app's own offline cache must stay
+		const names = (await caches.keys()).filter((name) => name.includes('maplibre'));
 		await Promise.all(names.map((name) => caches.delete(name)));
 		cacheCleared = true;
 		measure();
@@ -60,7 +62,11 @@
 	}
 
 	function onKey(event: KeyboardEvent) {
-		if (event.key === 'Escape') ui.settingsOpen = false;
+		if (event.key === 'Escape') {
+			// Marked as handled, so the viewer (if open behind) doesn't close too
+			event.preventDefault();
+			ui.settingsOpen = false;
+		}
 	}
 
 	onMount(measure);
@@ -77,6 +83,7 @@
 	<div
 		class="dialog panel"
 		role="dialog"
+		use:focusTrap
 		tabindex="-1"
 		aria-modal="true"
 		aria-label="Ajustes"

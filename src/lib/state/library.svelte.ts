@@ -8,13 +8,20 @@ import {
 	type TripEdit
 } from '$lib/photos/db';
 import { importPhotos, type ImportError, type ImportProgress } from '$lib/photos/importer';
+import { forgetFullImages } from '$lib/photos/image';
 import { isLocated, type PhotoPoint } from '$lib/photos/types';
 import { cityCounts, countrySummaries } from '$lib/library/stats';
 import { inRange, type TimeRange } from '$lib/library/timeline';
-import { detectTrips, findHome } from '$lib/library/trips';
+import { mergeByTime } from '$lib/library/merge';
+import { detectTrips, findHome, type Trip } from '$lib/library/trips';
 import { loadDemo } from '$lib/demo/load';
 import { countries } from './countries.svelte';
 import { forgetThumbs, rememberThumb } from './thumbs.svelte';
+import { ui } from './ui.svelte';
+
+// New photos are shown on the globe at most this often during an import,
+// so trips and statistics are not recalculated for every small batch
+const MERGE_EVERY_MS = 400;
 
 /**
  * App-wide photo state. Points use $state.raw: with thousands of photos,
@@ -43,8 +50,21 @@ class Library {
 	visited = $derived(this.countryList.map((c) => c.iso3));
 	cityList = $derived(cityCounts(this.located));
 	byId = $derived(new Map(this.points.map((p) => [p.id, p])));
+	/** Trip of each photo, so the viewer doesn't search every trip for every photo */
+	tripByPhoto = $derived.by(() => {
+		const map = new Map<string, Trip>();
+		for (const trip of this.trips) for (const id of trip.photoIds) map.set(id, trip);
+		return map;
+	});
 
 	isEmpty = $derived(this.loaded && this.points.length === 0);
+	busy = $derived(this.progress !== null);
+
+	// Files dropped while another import is running wait here
+	private waiting: File[] = [];
+	private incoming: PhotoPoint[] = [];
+	private mergeTimer: ReturnType<typeof setTimeout> | null = null;
+	private abort: AbortController | null = null;
 
 	async load() {
 		const [points, edits] = await Promise.all([loadPhotoPoints(), loadTripEdits()]);
@@ -53,46 +73,103 @@ class Library {
 		this.loaded = true;
 	}
 
+	/** Imports photos. Called while another import runs, the files are queued. */
 	async import(files: File[]) {
-		if (this.progress || files.length === 0) return;
-		this.importMinimized = false;
-		const result = await importPhotos(files, {
-			onProgress: (progress) => (this.progress = progress),
-			onBatch: (newPoints, thumbs) => {
-				newPoints.forEach((p, i) => rememberThumb(p.id, thumbs[i]));
-				this.points = sortByTime([...this.points, ...newPoints]);
-			}
-		});
-		this.errors = result.errors;
-		this.progress = null;
-	}
-
-	async retryErrors() {
-		const files = this.errors.filter((e) => e.reason !== 'No es una foto').map((e) => e.file);
-		this.errors = [];
-		await this.import(files);
+		if (files.length === 0) return;
+		if (this.abort) {
+			this.waiting.push(...files);
+			return;
+		}
+		await this.run((signal) =>
+			importPhotos(files, {
+				signal,
+				onProgress: (progress) => (this.progress = progress),
+				onBatch: (points, thumbs) => this.receive(points, thumbs)
+			})
+		);
+		// Files that arrived in the meantime
+		if (this.waiting.length) {
+			const next = this.waiting;
+			this.waiting = [];
+			await this.import(next);
+		}
 	}
 
 	/** Fills the library with the sample photos, showing the same progress as an import */
 	async loadDemo() {
-		if (this.progress) return;
-		this.importMinimized = false;
-		await loadDemo({
-			onProgress: (progress) => (this.progress = progress),
-			onBatch: (newPoints, thumbs) => {
-				newPoints.forEach((p, i) => rememberThumb(p.id, thumbs[i]));
-				this.points = sortByTime([...this.points, ...newPoints]);
-			}
-		});
+		if (this.abort) return;
+		await this.run((signal) =>
+			loadDemo({
+				signal,
+				onProgress: (progress) => (this.progress = progress),
+				onBatch: (points, thumbs) => this.receive(points, thumbs)
+			})
+		);
 		this.tripEdits = await loadTripEdits();
-		this.progress = null;
+	}
+
+	async retryErrors() {
+		if (this.abort) return;
+		const files = this.errors.filter((e) => e.retryable).map((e) => e.file);
+		this.errors = [];
+		await this.import(files);
+	}
+
+	/**
+	 * Shared by imports and the demo: only one runs at a time, errors never leave
+	 * the progress panel stuck, and deleting the library cancels it.
+	 */
+	private async run(task: (signal: AbortSignal) => Promise<ImportProgress>) {
+		const controller = new AbortController();
+		this.abort = controller;
+		this.importMinimized = false;
+		this.errors = [];
+		try {
+			const result = await task(controller.signal);
+			if (!controller.signal.aborted) this.errors = result.errors;
+		} catch {
+			if (!controller.signal.aborted) {
+				this.errors = [
+					{
+						name: 'Importación',
+						reason: 'Se ha interrumpido',
+						retryable: false,
+						file: new File([], '')
+					}
+				];
+			}
+		} finally {
+			this.mergeIncoming();
+			if (this.abort === controller) {
+				this.abort = null;
+				this.progress = null;
+			}
+		}
+	}
+
+	/** New photos from an import: kept for a moment and added to the library together */
+	private receive(points: PhotoPoint[], thumbs: Blob[]) {
+		points.forEach((p, i) => rememberThumb(p.id, thumbs[i]));
+		this.incoming.push(...points);
+		this.mergeTimer ??= setTimeout(() => this.mergeIncoming(), MERGE_EVERY_MS);
+	}
+
+	private mergeIncoming() {
+		if (this.mergeTimer) clearTimeout(this.mergeTimer);
+		this.mergeTimer = null;
+		if (!this.incoming.length) return;
+		const incoming = this.incoming;
+		this.incoming = [];
+		this.points = mergeByTime(this.points, incoming);
 	}
 
 	async toggleFavorite(id: string) {
 		const point = this.byId.get(id);
 		if (!point) return;
-		await setFavorite(id, !point.favorite);
-		this.replace([id], { favorite: !point.favorite });
+		// Updated in memory first: a double click reads the new value, not the old one
+		const favorite = !point.favorite;
+		this.replace([id], { favorite });
+		await setFavorite(id, favorite);
 	}
 
 	async assignLocation(
@@ -103,32 +180,44 @@ class Library {
 		this.replace(ids, place);
 	}
 
-	async renameTrip(id: string, title: string) {
-		await saveTripEdit({ id, title });
+	async renameTrip(trip: Trip, title: string) {
+		await saveTripEdit({ id: trip.id, anchorId: trip.photoIds[0], title });
 		this.tripEdits = await loadTripEdits();
 	}
 
-	async setTripCover(id: string, coverId: string) {
-		await saveTripEdit({ id, coverId });
+	async setTripCover(trip: Trip, coverId: string) {
+		await saveTripEdit({ id: trip.id, anchorId: trip.photoIds[0], coverId });
 		this.tripEdits = await loadTripEdits();
 	}
 
+	/** Deletes everything, including an import that is still running */
 	async clear() {
+		this.abort?.abort();
+		this.abort = null;
+		this.waiting = [];
+		this.incoming = [];
+		if (this.mergeTimer) clearTimeout(this.mergeTimer);
+		this.mergeTimer = null;
+
 		await clearLibrary();
 		forgetThumbs();
+		forgetFullImages();
 		this.points = [];
 		this.tripEdits = [];
 		this.range = null;
+		this.progress = null;
+		this.errors = [];
+		this.importMinimized = false;
+		ui.closeViewer();
+		ui.placing = null;
+		ui.dragging = null;
+		ui.hoveredPhoto = null;
 	}
 
 	private replace(ids: string[], changes: Partial<PhotoPoint>) {
 		const set = new Set(ids);
 		this.points = this.points.map((p) => (set.has(p.id) ? { ...p, ...changes } : p));
 	}
-}
-
-function sortByTime(points: PhotoPoint[]) {
-	return points.sort((a, b) => a.takenAt - b.takenAt);
 }
 
 export const library = new Library();

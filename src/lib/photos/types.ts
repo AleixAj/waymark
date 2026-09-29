@@ -36,6 +36,8 @@ export interface Photo extends PhotoMeta {
 	thumb: Blob;
 	/** The original file, kept only in this browser */
 	file: Blob;
+	/** False when this browser can't show the image (e.g. HEIC outside Safari) */
+	previewable?: boolean;
 	/** Sample photos have no real image: the viewer paints this scene instead */
 	demo?: { scene: string; label: string };
 }

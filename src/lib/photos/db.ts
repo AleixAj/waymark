@@ -4,10 +4,13 @@ import { toPoint, type Photo, type PhotoPoint } from './types';
 /** Things the user changed on a detected trip */
 export interface TripEdit {
 	id: string;
+	/**
+	 * A photo of the trip when it was edited. Trip ids change when photos are added
+	 * or removed, so the edit follows the trip that still contains this photo.
+	 */
+	anchorId?: string;
 	title?: string;
 	coverId?: string;
-	/** Photos added by hand from the viewer */
-	extraPhotoIds?: string[];
 }
 
 // IndexedDB database that lives in the browser.
@@ -19,6 +22,20 @@ const db = new Dexie('waymark') as Dexie & {
 // Only indexed fields go here; blobs are stored but not indexed.
 db.version(1).stores({ photos: 'id, takenAt, name' });
 db.version(2).stores({ photos: 'id, takenAt, name, country', trips: 'id' });
+// Version 3 fills fields that older records don't have
+db.version(3)
+	.stores({ photos: 'id, takenAt, name, country', trips: 'id' })
+	.upgrade((tx) =>
+		tx
+			.table('photos')
+			.toCollection()
+			.modify((photo: Partial<Photo>) => {
+				photo.favorite ??= false;
+				photo.country ??= null;
+				photo.city ??= null;
+				photo.previewable ??= true;
+			})
+	);
 
 export async function savePhotos(photos: Photo[]) {
 	await db.photos.bulkPut(photos);
@@ -53,8 +70,14 @@ export async function setLocation(
 
 /** Returns which of these ids are already saved */
 export async function findExistingIds(ids: string[]) {
-	const keys = await db.photos.where('id').anyOf(ids).primaryKeys();
-	return new Set(keys);
+	const found = await db.photos.bulkGet(ids);
+	return new Set(ids.filter((_, i) => found[i]));
+}
+
+/** Camera name of each photo, for the "by camera" grouping */
+export async function getCameras(ids: string[]) {
+	const photos = await db.photos.bulkGet(ids);
+	return new Map(ids.map((id, i) => [id, photos[i]?.camera ?? null]));
 }
 
 export function loadTripEdits() {
@@ -72,7 +95,8 @@ export async function measureLibrary() {
 	let originals = 0;
 	await db.photos.each((photo) => {
 		thumbs += photo.thumb.size;
-		originals += photo.file.size;
+		// Sample photos reuse the thumbnail as file
+		if (photo.file !== photo.thumb) originals += photo.file.size;
 	});
 	return { thumbs, originals };
 }
@@ -86,4 +110,18 @@ export async function exportMetadata() {
 
 export async function clearLibrary() {
 	await Promise.all([db.photos.clear(), db.trips.clear()]);
+}
+
+/**
+ * Asks the browser not to delete our data when the disk gets full.
+ * This library may hold the only copy of the imported photos.
+ */
+export async function askForPersistentStorage() {
+	try {
+		if (navigator.storage?.persisted && !(await navigator.storage.persisted())) {
+			await navigator.storage.persist();
+		}
+	} catch {
+		// Not supported: the data is still saved, just not protected
+	}
 }

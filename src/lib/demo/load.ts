@@ -7,12 +7,14 @@ import type { PaintRequest, PaintResponse } from './paint.worker';
 interface DemoOptions {
 	onProgress: (progress: ImportProgress) => void;
 	onBatch: (points: PhotoPoint[], thumbs: Blob[]) => void;
+	signal?: AbortSignal;
 }
 
 const BATCH_SIZE = 60;
+const PAINT_TIMEOUT_MS = 10_000;
 
 /** Creates the sample library: paints the images in workers and saves them like a real import */
-export async function loadDemo({ onProgress, onBatch }: DemoOptions) {
+export async function loadDemo({ onProgress, onBatch, signal }: DemoOptions) {
 	const { photos, titles } = generateDemo();
 	for (const edit of titles) await saveTripEdit(edit);
 
@@ -25,14 +27,16 @@ export async function loadDemo({ onProgress, onBatch }: DemoOptions) {
 		errors: [],
 		startedAt: Date.now()
 	};
+	onProgress({ ...progress });
 
 	const queue = [...photos];
 	let batch: Photo[] = [];
 	const flush = async () => {
-		if (!batch.length) return;
+		if (!batch.length || signal?.aborted) return;
 		const saved = batch;
 		batch = [];
 		await savePhotos(saved);
+		if (signal?.aborted) return;
 		onBatch(
 			saved.map(toPoint),
 			saved.map((p) => p.thumb)
@@ -43,28 +47,45 @@ export async function loadDemo({ onProgress, onBatch }: DemoOptions) {
 	await Promise.all(
 		Array.from({ length: workerCount }, async () => {
 			const worker = new Worker(new URL('./paint.worker.ts', import.meta.url), { type: 'module' });
-			let next = queue.shift();
-			while (next) {
-				const { thumb } = await paintInWorker(worker, next);
-				const { scene, label, ...fields } = next;
-				// The thumbnail doubles as "file": the viewer paints the big image from `demo`
-				batch.push({ ...fields, thumb, file: thumb, demo: { scene, label } });
-				if (next.lat === null) progress.withoutLocation++;
-				else progress.withLocation++;
-				progress.done++;
-				onProgress({ ...progress });
-				if (batch.length >= BATCH_SIZE) await flush();
-				next = queue.shift();
+			try {
+				let next = queue.shift();
+				while (next && !signal?.aborted) {
+					const result = await paintInWorker(worker, next);
+					if ('thumb' in result) {
+						const { scene, label, ...fields } = next;
+						// The thumbnail doubles as "file": the viewer paints the big image from `demo`
+						batch.push({
+							...fields,
+							thumb: result.thumb,
+							file: result.thumb,
+							demo: { scene, label }
+						});
+						if (next.lat === null) progress.withoutLocation++;
+						else progress.withLocation++;
+					}
+					progress.done++;
+					onProgress({ ...progress });
+					if (batch.length >= BATCH_SIZE) await flush();
+					next = queue.shift();
+				}
+			} finally {
+				worker.terminate();
 			}
-			worker.terminate();
 		})
 	);
 	await flush();
+	return progress;
 }
 
 function paintInWorker(worker: Worker, photo: DemoPhoto) {
 	return new Promise<PaintResponse>((resolve) => {
-		worker.onmessage = (event: MessageEvent<PaintResponse>) => resolve(event.data);
+		const timer = setTimeout(() => resolve({ error: 'timeout' }), PAINT_TIMEOUT_MS);
+		const done = (value: PaintResponse) => {
+			clearTimeout(timer);
+			resolve(value);
+		};
+		worker.onmessage = (event: MessageEvent<PaintResponse>) => done(event.data);
+		worker.onerror = () => done({ error: 'worker' });
 		worker.postMessage({
 			scene: photo.scene,
 			portrait: photo.height > photo.width

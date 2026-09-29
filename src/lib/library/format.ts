@@ -5,6 +5,7 @@ const decimalFormat = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 1 
 
 /** 4912 -> "4.912" (Intl skips the dot for 4-digit numbers in Spanish, the design doesn't) */
 export function formatNumber(value: number) {
+	if (!Number.isFinite(value)) return '—';
 	const rounded = Math.round(value);
 	if (Math.abs(rounded) >= 1000 && Math.abs(rounded) < 10000) {
 		return String(rounded).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
@@ -112,20 +113,31 @@ export function monthKey(time: number) {
 
 /** "34.99490° N, 135.78504° E" */
 export function formatCoords(lat: number, lng: number, digits = 5) {
-	const ns = lat >= 0 ? 'N' : 'S';
-	const ew = lng >= 0 ? 'E' : 'O';
-	return `${Math.abs(lat).toFixed(digits)}° ${ns}, ${Math.abs(lng).toFixed(digits)}° ${ew}`;
+	return `${formatLat(lat, digits)}, ${formatLng(lng, digits)}`;
+}
+
+/** "34.99490° N". A value that rounds to 0 never shows as "0.00000° S". */
+export function formatLat(lat: number, digits = 4) {
+	const text = Math.abs(lat).toFixed(digits);
+	return `${text}° ${lat < 0 && Number(text) !== 0 ? 'S' : 'N'}`;
+}
+
+export function formatLng(lng: number, digits = 4) {
+	const text = Math.abs(lng).toFixed(digits);
+	return `${text}° ${lng < 0 && Number(text) !== 0 ? 'O' : 'E'}`;
 }
 
 /** 1/500 for fast shutters, 2" for long ones */
 export function formatExposure(seconds: number) {
+	if (!Number.isFinite(seconds) || seconds <= 0) return '—';
 	if (seconds >= 1) return `${formatDecimal(seconds)}"`;
 	return `1/${Math.round(1 / seconds)}`;
 }
 
 export function formatBytes(bytes: number) {
-	if (bytes >= 1e9) return `${formatDecimal(bytes / 1e9)} GB`;
-	if (bytes >= 1e6) return `${formatDecimal(bytes / 1e6)} MB`;
+	// Rounded before choosing the unit, so 999.999 bytes is "1 MB" and not "1.000 KB"
+	if (bytes >= 999_500_000) return `${formatDecimal(bytes / 1e9)} GB`;
+	if (bytes >= 999_500) return `${formatDecimal(bytes / 1e6)} MB`;
 	return `${formatNumber(bytes / 1e3)} KB`;
 }
 

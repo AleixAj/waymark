@@ -14,6 +14,9 @@ export interface CityCount {
 	city: string;
 	country: string | null;
 	count: number;
+	/** Where the city's photos are, for dots on a map */
+	lat: number;
+	lng: number;
 }
 
 /** Photos per country, most photographed first */
@@ -39,7 +42,13 @@ export function cityCounts(points: LocatedPoint[]): CityCount[] {
 		(p) => `${p.city}|${p.country ?? ''}`
 	);
 	return [...groups.values()]
-		.map((photos) => ({ city: photos[0].city!, country: photos[0].country, count: photos.length }))
+		.map((photos) => ({
+			city: photos[0].city!,
+			country: photos[0].country,
+			count: photos.length,
+			lat: photos[0].lat,
+			lng: photos[0].lng
+		}))
 		.sort((a, b) => b.count - a.count);
 }
 

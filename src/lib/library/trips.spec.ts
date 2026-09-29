@@ -25,22 +25,31 @@ const tokyo = { lat: 35.68, lng: 139.69, city: 'Tokio', country: 'JPN' };
 const kyoto = { lat: 35.01, lng: 135.77, city: 'Kioto', country: 'JPN' };
 const oviedo = { lat: 43.36, lng: -5.85, city: 'Oviedo', country: 'ESP' };
 
+const jan2024 = new Date(2024, 0, 1).getTime();
+const april2025 = new Date(2025, 3, 3).getTime();
+const july2026 = new Date(2026, 6, 4).getTime();
+
+// Photos at home every few days during 2024
+const everyday = photos(40, jan2024, madrid, 9 * DAY);
+
 describe('findHome', () => {
-	it('picks the city with most photos', () => {
-		const home = findHome([...photos(30, 0, madrid), ...photos(10, 100 * DAY, tokyo)]);
+	it('picks the city photographed in the most months', () => {
+		const home = findHome([...everyday, ...photos(300, april2025, tokyo)]);
 		expect(home?.city).toBe('Madrid');
+	});
+
+	it('has no home when all photos come from one short trip', () => {
+		expect(findHome(photos(200, april2025, tokyo))).toBeNull();
 	});
 });
 
 describe('detectTrips', () => {
-	const april2025 = new Date(2025, 3, 3).getTime();
-	const july2026 = new Date(2026, 6, 4).getTime();
 	const library = [
-		...photos(40, 0, madrid, DAY / 2),
+		...everyday,
 		...photos(20, april2025, tokyo),
 		...photos(15, april2025 + 2 * DAY, kyoto),
 		...photos(12, july2026, oviedo)
-	];
+	].sort((a, b) => a.takenAt - b.takenAt);
 	const home = findHome(library);
 	const trips = detectTrips(library, home, countryName);
 
@@ -58,11 +67,35 @@ describe('detectTrips', () => {
 		expect(japan.stops[1].km).toBeGreaterThan(300);
 	});
 
-	it('uses the title the user wrote', () => {
-		const edited = detectTrips(library, home, countryName, [
-			{ id: trips[1].id, title: 'Primavera en Japón' }
-		]);
-		expect(edited[1].title).toBe('Primavera en Japón');
+	it('does not turn daily photos at home into a trip', () => {
+		expect(trips.every((t) => !t.cities.includes('Madrid'))).toBe(true);
+	});
+
+	it('still finds a trip when the library has no home', () => {
+		const onlyJapan = photos(20, april2025, tokyo);
+		expect(detectTrips(onlyJapan, findHome(onlyJapan), countryName)).toHaveLength(1);
+	});
+
+	it('keeps a renamed title when an older photo joins the trip', () => {
+		const japan = trips[1];
+		const edits = [{ id: japan.id, anchorId: japan.photoIds[0], title: 'Primavera en Japón' }];
+		const earlier = photos(1, april2025 - 3600 * 1000, tokyo);
+		const again = detectTrips(
+			[...earlier, ...library].sort((a, b) => a.takenAt - b.takenAt),
+			home,
+			countryName,
+			edits
+		);
+		const renamed = again.find((t) => t.cities.includes('Kioto'));
+		expect(renamed?.id).not.toBe(japan.id);
+		expect(renamed?.title).toBe('Primavera en Japón');
+	});
+
+	it('ignores a cover that is no longer in the trip', () => {
+		const japan = trips[1];
+		const edits = [{ id: japan.id, coverId: 'not-in-this-trip' }];
+		const again = detectTrips(library, home, countryName, edits);
+		expect(again[1].photoIds).toContain(again[1].coverId);
 	});
 });
 

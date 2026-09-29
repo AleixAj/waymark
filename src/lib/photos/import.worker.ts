@@ -1,50 +1,55 @@
 /// <reference lib="webworker" />
-import { loadCities, loadCountries } from '$lib/geo/data';
-import { readPhotoMeta } from './exif';
-import { PlaceFinder } from './places';
+import { readPhotoMeta, type ExifResult } from './exif';
 import { createThumbnail } from './thumbnail';
-import type { Photo } from './types';
+import { fileFingerprint } from './fingerprint';
 
-export type ProcessedPhoto = Omit<Photo, 'id' | 'file' | 'favorite'>;
-export type WorkerRequest = { file: File };
-export type WorkerResponse = { ok: true; photo: ProcessedPhoto } | { ok: false; error: string };
-
-// Geo data is loaded once per worker and reused for every photo
-let finder: Promise<PlaceFinder> | undefined;
-function getFinder() {
-	finder ??= Promise.all([loadCountries(), loadCities()]).then(
-		([countries, cities]) => new PlaceFinder(countries, cities)
-	);
-	return finder;
+export interface ProcessedPhoto extends Omit<ExifResult, 'width' | 'height' | 'hasExif'> {
+	id: string;
+	name: string;
+	size: number;
+	width: number;
+	height: number;
+	thumb: Blob;
+	previewable: boolean;
 }
 
-// Heavy work (decode, resize, EXIF, place lookup) runs here so the globe never stutters.
+export type WorkerRequest = { file: File };
+export type WorkerResponse =
+	{ ok: true; photo: ProcessedPhoto } | { ok: false; error: string; retryable: boolean };
+
+// Heavy work (hashing, EXIF, decode and resize) runs here so the globe never stutters.
+// Finding the country and city is done once on the main thread, not in every worker.
 self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
 	const { file } = event.data;
 	try {
-		const [meta, preview, places] = await Promise.all([
-			readPhotoMeta(file),
-			createThumbnail(file),
-			getFinder()
-		]);
-		const place = places.find(meta.lat, meta.lng);
+		const [id, meta] = await Promise.all([fileFingerprint(file), readPhotoMeta(file)]);
+		const preview = await createThumbnail(file, meta);
+		// Neither an image the browser can decode nor any camera data: not a photo
+		if (!preview.decoded && !meta.hasExif) {
+			self.postMessage({
+				ok: false,
+				error: 'Archivo dañado',
+				retryable: false
+			} satisfies WorkerResponse);
+			return;
+		}
+		const { hasExif: _hasExif, ...fields } = meta;
 		const photo: ProcessedPhoto = {
+			...fields,
+			id,
 			name: file.name,
 			size: file.size,
-			...meta,
-			...preview,
-			...place
+			width: preview.width,
+			height: preview.height,
+			thumb: preview.thumb,
+			previewable: preview.decoded
 		};
 		self.postMessage({ ok: true, photo } satisfies WorkerResponse);
-	} catch (error) {
-		self.postMessage({ ok: false, error: errorReason(file, error) } satisfies WorkerResponse);
+	} catch {
+		self.postMessage({
+			ok: false,
+			error: 'Archivo dañado',
+			retryable: true
+		} satisfies WorkerResponse);
 	}
 };
-
-/** Short reason shown to the user in the import error list */
-function errorReason(file: File, error: unknown) {
-	if (/heic|heif/i.test(file.type) || /\.(heic|heif)$/i.test(file.name))
-		return 'Formato no compatible';
-	if (error instanceof DOMException && error.name === 'InvalidStateError') return 'Archivo dañado';
-	return 'No se pudo leer';
-}

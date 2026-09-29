@@ -45,7 +45,5 @@ export async function paintDemoImage(scene: string, label: string, portrait: boo
 	canvas.width = portrait ? 1000 : 1500;
 	canvas.height = portrait ? 1500 : 1000;
 	paintScene(canvas, scene, label);
-	return new Promise<Blob>((resolve) =>
-		canvas.toBlob((blob) => resolve(blob!), 'image/webp', 0.85)
-	);
+	return new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/webp', 0.85));
 }

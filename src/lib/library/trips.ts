@@ -1,7 +1,7 @@
 import { distanceKm, pathLengthKm } from '$lib/geo/distance';
 import type { TripEdit } from '$lib/photos/db';
 import type { LocatedPoint } from '$lib/photos/types';
-import { daysBetween } from './format';
+import { daysBetween, monthKey } from './format';
 
 export interface Stop {
 	/** 1-based position in the trip */
@@ -39,8 +39,10 @@ export interface Home {
 // Two photos more than this apart in time belong to different trips
 const MAX_GAP_MS = 2.5 * 24 * 3600 * 1000;
 const MIN_PHOTOS = 8;
-// Photos closer than this to home are not a trip
+// Photos closer than this to home are not part of a trip
 const HOME_RADIUS_KM = 60;
+// A place is home only if you took photos there in several different months
+const MIN_HOME_MONTHS = 3;
 
 const MONTH_NAMES = [
 	'enero',
@@ -57,18 +59,32 @@ const MONTH_NAMES = [
 	'diciembre'
 ];
 
-/** Home is the city where most of your photos were taken */
+/**
+ * Home is the city where you took photos in the most different months (a two-week
+ * trip with 1,000 photos doesn't make a home). Without such a place there is no home.
+ */
 export function findHome(points: LocatedPoint[]): Home | null {
-	if (points.length === 0) return null;
-	const byCity = groupBy(points, (p) => p.city ?? p.country ?? '?');
+	// City and country together: Santiago de Chile is not Santiago de Compostela
+	const byPlace = groupBy(
+		points.filter((p) => p.city || p.country),
+		(p) => `${p.city ?? ''}|${p.country ?? ''}`
+	);
 	let best: LocatedPoint[] = [];
-	for (const group of byCity.values()) if (group.length > best.length) best = group;
-	return { city: best[0].city, country: best[0].country, ...centroid(best) };
+	let bestMonths = 0;
+	for (const group of byPlace.values()) {
+		const months = new Set(group.map((p) => monthKey(p.takenAt))).size;
+		if (months > bestMonths || (months === bestMonths && group.length > best.length)) {
+			best = group;
+			bestMonths = months;
+		}
+	}
+	if (bestMonths < MIN_HOME_MONTHS) return null;
+	return { city: best[0].city, country: best[0].country, ...median(best) };
 }
 
 /**
- * Splits photos (sorted by time) into trips: runs of photos without long
- * pauses, far enough from home and with enough photos.
+ * Splits photos into trips: runs of photos taken away from home without long
+ * pauses. Coming back home, or a pause of a few days, ends the trip.
  */
 export function detectTrips(
 	points: LocatedPoint[],
@@ -76,34 +92,33 @@ export function detectTrips(
 	countryName: (iso3: string) => string,
 	edits: TripEdit[] = []
 ): Trip[] {
+	const sorted = isSorted(points) ? points : [...points].sort((a, b) => a.takenAt - b.takenAt);
 	const runs: LocatedPoint[][] = [];
 	let run: LocatedPoint[] = [];
-	for (const point of points) {
-		const last = run[run.length - 1];
-		if (last && point.takenAt - last.takenAt > MAX_GAP_MS) {
-			runs.push(run);
-			run = [];
+	const close = () => {
+		if (run.length) runs.push(run);
+		run = [];
+	};
+	for (const point of sorted) {
+		if (home && distanceKm(point.lat, point.lng, home.lat, home.lng) <= HOME_RADIUS_KM) {
+			close();
+			continue;
 		}
+		const last = run[run.length - 1];
+		if (last && point.takenAt - last.takenAt > MAX_GAP_MS) close();
 		run.push(point);
 	}
-	if (run.length) runs.push(run);
+	close();
 
-	const editById = new Map(edits.map((e) => [e.id, e]));
 	const trips: Trip[] = [];
 	for (const photos of runs) {
 		if (photos.length < MIN_PHOTOS) continue;
-		const away =
-			!home || photos.some((p) => distanceKm(p.lat, p.lng, home.lat, home.lng) > HOME_RADIUS_KM);
-		if (!away) continue;
-
-		const id = `trip-${photos[0].takenAt}`;
-		const edit = editById.get(id);
 		const stops = buildStops(photos);
 		const first = photos[0].takenAt;
 		const last = photos[photos.length - 1].takenAt;
 		trips.push({
-			id,
-			title: edit?.title ?? tripTitle(photos, home, countryName),
+			id: `trip-${first}`,
+			title: tripTitle(photos, home, countryName),
 			start: first,
 			end: last,
 			days: daysBetween(first, last),
@@ -112,11 +127,35 @@ export function detectTrips(
 			cities: ranked(photos, (p) => p.city),
 			stops,
 			km: Math.round(pathLengthKm(stops)),
-			coverId: edit?.coverId ?? photos[Math.floor(photos.length / 3)].id
+			coverId: photos[Math.floor(photos.length / 3)].id
 		});
 	}
+	applyEdits(trips, edits);
 	// Newest trip first, like in the design
 	return trips.reverse();
+}
+
+/**
+ * Titles and covers chosen by the user. A trip's id changes when an older photo
+ * is added to it, so an edit also matches the trip that contains its anchor photo.
+ */
+function applyEdits(trips: Trip[], edits: TripEdit[]) {
+	if (edits.length === 0) return;
+	const byId = new Map(edits.map((e) => [e.id, e]));
+	const byAnchor = new Map(edits.filter((e) => e.anchorId).map((e) => [e.anchorId!, e]));
+	for (const trip of trips) {
+		let edit = byId.get(trip.id);
+		if (!edit) {
+			for (const id of trip.photoIds) {
+				edit = byAnchor.get(id);
+				if (edit) break;
+			}
+		}
+		if (!edit) continue;
+		if (edit.title) trip.title = edit.title;
+		// A cover from another trip (after photos moved) is ignored
+		if (edit.coverId && trip.photoIds.includes(edit.coverId)) trip.coverId = edit.coverId;
+	}
 }
 
 /** Consecutive photos in the same city form one stop of the route */
@@ -190,6 +229,18 @@ export function centroid(points: { lat: number; lng: number }[]) {
 		lng += p.lng;
 	}
 	return { lat: lat / points.length, lng: lng / points.length };
+}
+
+/** Middle position: unlike the average, a few far away photos don't move it */
+function median(points: { lat: number; lng: number }[]) {
+	const middle = (values: number[]) => values.sort((a, b) => a - b)[Math.floor(values.length / 2)];
+	return { lat: middle(points.map((p) => p.lat)), lng: middle(points.map((p) => p.lng)) };
+}
+
+function isSorted(points: { takenAt: number }[]) {
+	for (let i = 1; i < points.length; i++)
+		if (points[i].takenAt < points[i - 1].takenAt) return false;
+	return true;
 }
 
 export function groupBy<T>(items: T[], key: (item: T) => string) {

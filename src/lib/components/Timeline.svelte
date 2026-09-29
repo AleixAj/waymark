@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { library } from '$lib/state/library.svelte';
 	import { ui } from '$lib/state/ui.svelte';
-	import { buildMonths, monthStart } from '$lib/library/timeline';
+	import { buildMonths, monthStart, rangeIndexes } from '$lib/library/timeline';
 	import { formatMonth, formatNumber } from '$lib/library/format';
 
 	let { style = '' }: { style?: string } = $props();
@@ -12,13 +12,10 @@
 		bars.flatMap((b, i) => (b.month === 0 ? [{ year: b.year, left: (i / bars.length) * 100 }] : []))
 	);
 
-	// Selected months as positions in `bars`
-	const fromIndex = $derived(
-		library.range ? bars.findIndex((b) => b.key === library.range!.from) : 0
-	);
-	const toIndex = $derived(
-		library.range ? bars.findIndex((b) => b.key === library.range!.to) : bars.length - 1
-	);
+	// Selected months as positions in `bars`, always inside the bars
+	const indexes = $derived(rangeIndexes(bars, library.range));
+	const fromIndex = $derived(indexes.from);
+	const toIndex = $derived(indexes.to);
 	const count = $derived(library.visible.length);
 	const label = $derived.by(() => {
 		if (!bars.length) return '';
@@ -92,6 +89,7 @@
 				onpointerdown={(e) => onPointerDown(e, 'new')}
 				onpointermove={onPointerMove}
 				onpointerup={() => (dragging = null)}
+				onpointercancel={() => (dragging = null)}
 				ondblclick={() => (library.range = null)}
 			>
 				{#if library.range}
@@ -106,6 +104,9 @@
 							tabindex="0"
 							aria-label="Inicio del rango"
 							aria-valuenow={fromIndex}
+							aria-valuemin={0}
+							aria-valuemax={bars.length - 1}
+							aria-valuetext={formatMonth(monthStart(bars[fromIndex]?.key ?? 0))}
 							onpointerdown={(e) => {
 								e.stopPropagation();
 								onPointerDown(e, 'from');
@@ -118,6 +119,9 @@
 							tabindex="0"
 							aria-label="Fin del rango"
 							aria-valuenow={toIndex}
+							aria-valuemin={0}
+							aria-valuemax={bars.length - 1}
+							aria-valuetext={formatMonth(monthStart(bars[toIndex]?.key ?? 0))}
 							onpointerdown={(e) => {
 								e.stopPropagation();
 								onPointerDown(e, 'to');

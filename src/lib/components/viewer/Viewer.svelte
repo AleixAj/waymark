@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import Icon from '../ui/Icon.svelte';
 	import StaticMap from './StaticMap.svelte';
+	import { focusTrap } from '../ui/focusTrap';
 	import { ui } from '$lib/state/ui.svelte';
 	import { library } from '$lib/state/library.svelte';
 	import { countries } from '$lib/state/countries.svelte';
@@ -30,7 +30,6 @@
 	let showInfo = $state(typeof window !== 'undefined' && window.innerWidth > 900);
 	let fixing = $state(false);
 	let copied = $state(false);
-	let dialog: HTMLDivElement;
 
 	// Load metadata and the big image of the current photo
 	$effect(() => {
@@ -49,7 +48,8 @@
 		if (next) fullImageUrl(next);
 	});
 
-	const trips = $derived(library.trips.filter((t) => t.photoIds.includes(id)));
+	// Index photo -> trip: no need to search every trip for every photo
+	const trips = $derived(library.tripByPhoto.get(id) ? [library.tripByPhoto.get(id)!] : []);
 	const title = $derived(
 		[point?.city, point?.country ? countries.name(point.country) : null]
 			.filter(Boolean)
@@ -70,12 +70,17 @@
 	}
 
 	function onKey(event: KeyboardEvent) {
-		if (ui.searchOpen || ui.settingsOpen) return;
+		// Another dialog on top handles its own keys; Ctrl+F or Ctrl+I belong to the browser
+		if (ui.searchOpen || ui.settingsOpen || event.defaultPrevented) return;
+		if (event.ctrlKey || event.metaKey || event.altKey) return;
 		if ((event.target as HTMLElement).isContentEditable) return;
 		if (event.key === 'ArrowRight') go(1);
 		else if (event.key === 'ArrowLeft') go(-1);
-		else if (event.key === 'Escape') ui.closeViewer();
-		else if (event.key.toLowerCase() === 'i') showInfo = !showInfo;
+		else if (event.key === 'Escape') {
+			// Escape first cancels "Corregir", a second one closes the viewer
+			if (fixing) fixing = false;
+			else ui.closeViewer();
+		} else if (event.key.toLowerCase() === 'i') showInfo = !showInfo;
 		else if (event.key.toLowerCase() === 'f') library.toggleFavorite(id);
 	}
 
@@ -103,11 +108,6 @@
 	function megapixels(p: Photo) {
 		return formatDecimal((p.width * p.height) / 1e6);
 	}
-
-	onMount(() => {
-		// Keyboard focus goes into the dialog
-		dialog.focus();
-	});
 </script>
 
 <svelte:window onkeydown={onKey} />
@@ -118,7 +118,7 @@
 	aria-modal="true"
 	aria-label="Visor de fotos"
 	tabindex="-1"
-	bind:this={dialog}
+	use:focusTrap
 >
 	<div class="stage">
 		<header class="row top">
@@ -154,7 +154,7 @@
 						class="btn btn-ghost btn-icon"
 						aria-label="Usar como portada de «{trips[0].title}»"
 						title="Usar como portada del viaje"
-						onclick={() => library.setTripCover(trips[0].id, id)}
+						onclick={() => library.setTripCover(trips[0], id)}
 					>
 						<Icon name="folderPlus" />
 					</button>
@@ -192,7 +192,15 @@
 		</header>
 
 		<div class="picture">
-			{#if image}
+			{#if photo && photo.previewable === false}
+				<div class="cannot-show empty">
+					<h3>Este navegador no puede mostrar esta foto</h3>
+					<p>
+						Es un formato que solo abren algunos navegadores (por ejemplo HEIC). Su ubicación y sus
+						datos sí están guardados, y puedes descargarla.
+					</p>
+				</div>
+			{:else if image}
 				<img src={image} alt={title} />
 			{:else if thumbUrl(id)}
 				<img src={thumbUrl(id)} alt="" class="loading" />
@@ -222,7 +230,7 @@
 				<Icon name="heart" filled={point?.favorite} />Favorito
 			</button>
 			{#if trips[0]}
-				<button onclick={() => library.setTripCover(trips[0].id, id)}>
+				<button onclick={() => library.setTripCover(trips[0], id)}>
 					<Icon name="folderPlus" />Portada
 				</button>
 			{/if}
@@ -484,6 +492,15 @@
 		object-fit: contain;
 		border-radius: 4px;
 		box-shadow: 0 30px 80px -20px #000;
+	}
+
+	.cannot-show {
+		max-width: 420px;
+		color: oklch(0.96 0.005 255);
+	}
+
+	.cannot-show p {
+		color: oklch(0.75 0.012 255);
 	}
 
 	.picture img.loading {

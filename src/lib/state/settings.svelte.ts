@@ -29,14 +29,34 @@ const DEFAULTS: SavedSettings = {
 	quality: 'equilibrada'
 };
 
-// localStorage can throw in private windows, so every access is wrapped
+const ALLOWED = {
+	theme: ['dark', 'light', 'system'],
+	units: ['km', 'mi'],
+	mapStyle: ['sobrio', 'relieve', 'satelite'],
+	quality: ['alta', 'equilibrada', 'ahorro']
+};
+
+// localStorage can throw in private windows, and old or edited values can be wrong:
+// every field is checked and falls back to its default
 function read(): SavedSettings {
+	let saved: Record<string, unknown> = {};
 	try {
-		const saved = localStorage.getItem(KEY);
-		return saved ? { ...DEFAULTS, ...JSON.parse(saved) } : DEFAULTS;
+		saved = JSON.parse(localStorage.getItem(KEY) ?? '{}') ?? {};
 	} catch {
-		return DEFAULTS;
+		saved = {};
 	}
+	const pick = <K extends keyof typeof ALLOWED>(key: K) =>
+		(ALLOWED[key].includes(saved[key] as string) ? saved[key] : DEFAULTS[key]) as SavedSettings[K];
+	const flag = (key: 'borders' | 'reducedMotion') =>
+		typeof saved[key] === 'boolean' ? (saved[key] as boolean) : DEFAULTS[key];
+	return {
+		theme: pick('theme'),
+		units: pick('units'),
+		mapStyle: pick('mapStyle'),
+		quality: pick('quality'),
+		borders: flag('borders'),
+		reducedMotion: flag('reducedMotion')
+	};
 }
 
 /** User preferences. Every change is saved at once, like the design says. */
@@ -54,7 +74,12 @@ class Settings {
 		this.theme === 'system' ? (this.systemDark ? 'dark' : 'light') : this.theme
 	);
 
+	private started = false;
+
 	init() {
+		// The layout calls this once; hot reloads in development must not add listeners again
+		if (this.started) return;
+		this.started = true;
 		Object.assign(this, read());
 		const media = matchMedia('(prefers-color-scheme: dark)');
 		this.systemDark = media.matches;
