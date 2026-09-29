@@ -1,8 +1,8 @@
 import { savePhotos, saveTripEdit } from '$lib/photos/db';
+import { findPlace } from '$lib/photos/placeFinder';
 import { toPoint, type Photo, type PhotoPoint } from '$lib/photos/types';
 import type { ImportProgress } from '$lib/photos/importer';
 import { generateDemo, type DemoPhoto } from './generate';
-import type { PaintRequest, PaintResponse } from './paint.worker';
 
 interface DemoOptions {
 	onProgress: (progress: ImportProgress) => void;
@@ -10,10 +10,16 @@ interface DemoOptions {
 	signal?: AbortSignal;
 }
 
-const BATCH_SIZE = 60;
-const PAINT_TIMEOUT_MS = 10_000;
+const BATCH_SIZE = 40;
+// Thumbnails are downloaded a few at a time, not to flood Wikimedia
+const PARALLEL = 6;
+const FETCH_TIMEOUT_MS = 15_000;
 
-/** Creates the sample library: paints the images in workers and saves them like a real import */
+/**
+ * Creates the sample library: downloads the thumbnail of each photo from
+ * Wikimedia Commons and saves it like a real import. The big image is
+ * loaded from Commons when a photo is opened.
+ */
 export async function loadDemo({ onProgress, onBatch, signal }: DemoOptions) {
 	const { photos, titles } = generateDemo();
 	for (const edit of titles) await saveTripEdit(edit);
@@ -31,6 +37,7 @@ export async function loadDemo({ onProgress, onBatch, signal }: DemoOptions) {
 
 	const queue = [...photos];
 	let batch: Photo[] = [];
+	let failed = 0;
 	const flush = async () => {
 		if (!batch.length || signal?.aborted) return;
 		const saved = batch;
@@ -43,52 +50,54 @@ export async function loadDemo({ onProgress, onBatch, signal }: DemoOptions) {
 		);
 	};
 
-	const workerCount = Math.min(4, navigator.hardwareConcurrency || 2);
 	await Promise.all(
-		Array.from({ length: workerCount }, async () => {
-			const worker = new Worker(new URL('./paint.worker.ts', import.meta.url), { type: 'module' });
-			try {
-				let next = queue.shift();
-				while (next && !signal?.aborted) {
-					const result = await paintInWorker(worker, next);
-					if ('thumb' in result) {
-						const { scene, label, ...fields } = next;
-						// The thumbnail doubles as "file": the viewer paints the big image from `demo`
-						batch.push({
-							...fields,
-							thumb: result.thumb,
-							file: result.thumb,
-							demo: { scene, label }
-						});
-						if (next.lat === null) progress.withoutLocation++;
-						else progress.withLocation++;
-					}
-					progress.done++;
-					onProgress({ ...progress });
-					if (batch.length >= BATCH_SIZE) await flush();
-					next = queue.shift();
+		Array.from({ length: PARALLEL }, async () => {
+			let next = queue.shift();
+			while (next && !signal?.aborted) {
+				const thumb = await download(next.thumbUrl, signal);
+				if (thumb) {
+					batch.push(await toRecord(next, thumb));
+					if (next.lat === null) progress.withoutLocation++;
+					else progress.withLocation++;
+				} else {
+					failed++;
 				}
-			} finally {
-				worker.terminate();
+				progress.done++;
+				onProgress({ ...progress });
+				if (batch.length >= BATCH_SIZE) await flush();
+				next = queue.shift();
 			}
 		})
 	);
 	await flush();
+	if (failed === photos.length && !signal?.aborted) {
+		const error = new Error('Hace falta conexión a internet para descargar las fotos de ejemplo');
+		error.name = 'UserError';
+		throw error;
+	}
 	return progress;
 }
 
-function paintInWorker(worker: Worker, photo: DemoPhoto) {
-	return new Promise<PaintResponse>((resolve) => {
-		const timer = setTimeout(() => resolve({ error: 'timeout' }), PAINT_TIMEOUT_MS);
-		const done = (value: PaintResponse) => {
-			clearTimeout(timer);
-			resolve(value);
-		};
-		worker.onmessage = (event: MessageEvent<PaintResponse>) => done(event.data);
-		worker.onerror = () => done({ error: 'worker' });
-		worker.postMessage({
-			scene: photo.scene,
-			portrait: photo.height > photo.width
-		} satisfies PaintRequest);
-	});
+async function toRecord({ thumbUrl: _url, ...photo }: DemoPhoto, thumb: Blob): Promise<Photo> {
+	// Neighbourhoods come from the real position (Shinjuku inside Tokio)
+	const place = await findPlace(photo.lat, photo.lng);
+	const area = place.city === photo.city ? place.area : null;
+	// The thumbnail doubles as "file": the viewer loads the big image from Commons
+	return { ...photo, area, thumb, file: thumb, previewable: true };
+}
+
+async function download(url: string, signal?: AbortSignal): Promise<Blob | null> {
+	const controller = new AbortController();
+	const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+	const stop = () => controller.abort();
+	signal?.addEventListener('abort', stop);
+	try {
+		const response = await fetch(url, { signal: controller.signal });
+		return response.ok ? await response.blob() : null;
+	} catch {
+		return null;
+	} finally {
+		clearTimeout(timer);
+		signal?.removeEventListener('abort', stop);
+	}
 }

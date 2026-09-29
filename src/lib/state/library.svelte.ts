@@ -24,7 +24,6 @@ import { inRange, type TimeRange } from '$lib/library/timeline';
 import { mergeByTime } from '$lib/library/merge';
 import { detectTrips, findHome, type Trip } from '$lib/library/trips';
 import { estimateLocations } from '$lib/library/estimate';
-import { loadDemo } from '$lib/demo/load';
 import { countries } from './countries.svelte';
 import { forgetThumbs, rememberThumb } from './thumbs.svelte';
 import { ui } from './ui.svelte';
@@ -168,6 +167,8 @@ class Library {
 	/** Fills the library with the sample photos, showing the same progress as an import */
 	async loadDemo() {
 		if (this.abort) return;
+		// The sample photo list is only downloaded when someone asks for it
+		const { loadDemo } = await import('$lib/demo/load');
 		await this.run((signal) =>
 			loadDemo({
 				signal,
@@ -197,12 +198,14 @@ class Library {
 		try {
 			const result = await task(controller.signal);
 			if (!controller.signal.aborted) this.errors = result.errors;
-		} catch {
+		} catch (error) {
+			// Errors meant for the user (e.g. "no internet" in the demo) keep their text
+			const message = error instanceof Error && error.name === 'UserError' ? error.message : null;
 			if (!controller.signal.aborted) {
 				this.errors = [
 					{
 						name: 'Importación',
-						reason: 'Se ha interrumpido',
+						reason: message ?? 'Se ha interrumpido',
 						retryable: false,
 						item: { name: '', open: async () => new File([], '') }
 					}

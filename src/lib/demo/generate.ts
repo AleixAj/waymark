@@ -1,8 +1,34 @@
-import type { Photo } from '$lib/photos/types';
-import { CAMERAS, HOME, SCENE_SETS, TRIPS, type DemoTrip } from './data';
+import type { DemoCredit, Photo } from '$lib/photos/types';
+import { CAMERAS, HOME, TRIPS, type DemoTrip } from './data';
+import library from './photos.json';
 
-/** Photo data without the images: they are painted later in the demo worker */
-export type DemoPhoto = Omit<Photo, 'thumb' | 'file'> & { scene: string; label: string };
+/** A photo of scripts/build-demo.mjs: real place, camera and credit from Wikimedia Commons */
+interface CommonsPhoto {
+	title: string;
+	lat: number;
+	lng: number;
+	width: number;
+	height: number;
+	thumb: string;
+	page: string;
+	author: string;
+	license: string;
+	licenseUrl: string;
+	camera: string | null;
+	aperture: number | null;
+	exposure: number | null;
+	iso: number | null;
+	focal: number | null;
+}
+
+const PHOTOS = library as {
+	trips: CommonsPhoto[][][];
+	home: CommonsPhoto[];
+	unlocated: CommonsPhoto[];
+};
+
+/** Photo data without the images: the thumbnails are downloaded when the demo loads */
+export type DemoPhoto = Omit<Photo, 'thumb' | 'file'> & { thumbUrl: string };
 
 const DAY = 24 * 3600 * 1000;
 
@@ -12,71 +38,93 @@ function random(seed: number) {
 	return () => (s = (s * 16807) % 2147483647) / 2147483647;
 }
 
-/** Moves a point a random distance (up to `km`) in a random direction */
-function jitter(lat: number, lng: number, km: number, rnd: () => number) {
-	const r = km * Math.sqrt(rnd());
-	const angle = rnd() * Math.PI * 2;
-	const dLat = (r * Math.cos(angle)) / 111;
-	const dLng = (r * Math.sin(angle)) / (111 * Math.cos((lat * Math.PI) / 180));
-	return { lat: lat + dLat, lng: lng + dLng };
+/** File name like the camera would write it: "IMG_1234.JPG", "DSC_0042.JPG"... */
+function fileName(camera: string | null, counter: number) {
+	const name = camera ?? '';
+	const prefix = /^nikon/i.test(name)
+		? 'DSC_'
+		: /^(sony|dsc)/i.test(name)
+			? 'DSC'
+			: /^fuji/i.test(name)
+				? 'DSCF'
+				: 'IMG_';
+	return `${prefix}${String(counter).padStart(4, '0')}.JPG`;
 }
 
-function cameraFields(rnd: () => number, counter: number) {
-	const cam = CAMERAS[Math.floor(rnd() * CAMERAS.length)];
-	const landscape = rnd() > 0.2;
-	const [w, h] = cam.size;
+/** Wikimedia keeps a few standard sizes: the big one is for the viewer */
+function largeUrl(photo: CommonsPhoto) {
+	const width = photo.width >= 1280 ? 1280 : 960;
+	return photo.thumb.replace(/\/\d+px-/, `/${width}px-`);
+}
+
+/** The fields every sample photo has, from its Commons photo */
+function fromCommons(photo: CommonsPhoto, rnd: () => number, counter: { n: number }) {
+	// Some photos have no camera data: they get one of the demo cameras
+	const fallback = CAMERAS[Math.floor(rnd() * CAMERAS.length)];
+	const camera = photo.camera ?? fallback.camera;
+	counter.n++;
+	const credit: DemoCredit = {
+		title: photo.title,
+		author: photo.author,
+		license: photo.license,
+		licenseUrl: photo.licenseUrl,
+		page: photo.page
+	};
 	return {
-		name: `${cam.prefix}${String(counter).padStart(4, '0')}.${cam.ext}`,
-		camera: cam.camera,
-		lens: cam.lens,
-		aperture: [1.8, 2.8, 4, 5.6, 8][Math.floor(rnd() * 5)],
-		exposure: [1 / 60, 1 / 125, 1 / 250, 1 / 500, 1 / 1000][Math.floor(rnd() * 5)],
-		iso: [100, 200, 400, 800, 1600][Math.floor(rnd() * 5)],
-		focal: cam.camera.startsWith('iPhone') ? 24 : [23, 35, 50, 70][Math.floor(rnd() * 4)],
-		width: landscape ? w : h,
-		height: landscape ? h : w,
-		size: Math.round((3 + rnd() * 9) * 1e6)
+		id: `demo-${counter.n}`,
+		name: fileName(camera, 1000 + counter.n),
+		camera,
+		lens: photo.camera ? null : fallback.lens,
+		aperture: photo.aperture,
+		exposure: photo.exposure,
+		iso: photo.iso,
+		focal: photo.focal,
+		width: photo.width,
+		height: photo.height,
+		// Size of a typical JPEG with that many pixels
+		size: Math.round(photo.width * photo.height * 0.35),
+		// 250 px (a standard Wikimedia size) is enough for the grids and loads faster
+		thumbUrl: photo.thumb.replace(/\/\d+px-/, '/250px-'),
+		demo: { url: largeUrl(photo), credit },
+		favorite: rnd() < 0.05,
+		offset: null,
+		area: null
 	};
 }
 
-function tripPhotos(trip: DemoTrip, rnd: () => number, counter: { n: number }): DemoPhoto[] {
+function tripPhotos(
+	trip: DemoTrip,
+	photos: CommonsPhoto[][],
+	rnd: () => number,
+	counter: { n: number }
+): DemoPhoto[] {
 	const start = new Date(...trip.start).getTime();
-	const scenes = SCENE_SETS[trip.scenes];
-	const photos: DemoPhoto[] = [];
+	const result: DemoPhoto[] = [];
 	trip.stops.forEach((stop, stopIndex) => {
 		const country = trip.countryByStop?.[stopIndex] ?? trip.country;
+		const list = photos[stopIndex] ?? [];
 		const nights = stop.nights ?? 1;
-		const perNight = Math.ceil(stop.photos / nights);
+		const perNight = Math.ceil(list.length / nights);
 		// Stops on the same day share it: each one gets its own slot between 9:00 and 21:00
 		const sameDay = trip.stops.filter((s) => s.day === stop.day);
 		const slot = sameDay.indexOf(stop);
 		const slotHours = 12 / sameDay.length;
-		for (let i = 0; i < stop.photos; i++) {
+		list.forEach((photo, i) => {
 			const night = Math.floor(i / perNight);
 			const within = (i % perNight) / perNight;
 			const hour = 9 + (slot + within) * slotHours;
-			const takenAt =
-				start + (stop.day + night) * DAY + hour * 3600 * 1000 + Math.floor(rnd() * 60_000);
-			const place = jitter(stop.lat, stop.lng, stop.spread ?? 2.5, rnd);
-			const scene = scenes[Math.floor(rnd() * scenes.length)];
-			counter.n++;
-			photos.push({
-				id: `demo-${counter.n}`,
-				...place,
-				altitude: Math.round(20 + rnd() * 300),
-				takenAt,
-				offset: null,
+			result.push({
+				...fromCommons(photo, rnd, counter),
+				lat: photo.lat,
+				lng: photo.lng,
+				altitude: null,
+				takenAt: start + (stop.day + night) * DAY + hour * 3600 * 1000 + Math.floor(rnd() * 60_000),
 				country,
-				city: stop.city,
-				area: null,
-				favorite: rnd() < 0.04,
-				scene,
-				label: `${scene} · ${stop.city.toLowerCase()}`,
-				...cameraFields(rnd, 1000 + counter.n)
+				city: stop.city
 			});
-		}
+		});
 	});
-	return photos;
+	return result;
 }
 
 const TRIP_SPANS = TRIPS.map((trip) => {
@@ -89,97 +137,82 @@ function nearTrip(time: number) {
 	return TRIP_SPANS.some(([from, to]) => time >= from && time <= to);
 }
 
-/** Everyday photos around home, a few per month, so Madrid is detected as home */
+/** Everyday photos around home, spread over the years, so Madrid is detected as home */
 function homePhotos(rnd: () => number, counter: { n: number }, now: number): DemoPhoto[] {
-	const photos: DemoPhoto[] = [];
-	const scenes = SCENE_SETS.ciudad;
-	for (let month = 0; month < 93; month++) {
-		const count = 2 + Math.floor(rnd() * 4);
-		for (let i = 0; i < count; i++) {
-			const takenAt = new Date(
-				2019,
-				month,
-				1 + Math.floor(rnd() * 27),
-				10 + Math.floor(rnd() * 10)
-			).getTime();
-			// Random values are always drawn, even for skipped photos, so the rest of
-			// the library doesn't change depending on today's date
-			const scene = scenes[Math.floor(rnd() * scenes.length)];
-			const place = jitter(HOME.lat, HOME.lng, 6, rnd);
-			const camera = cameraFields(rnd, 1000 + counter.n + 1);
-			// Stay away from trip dates, or the photo would join the trip
-			if (takenAt > now || nearTrip(takenAt)) continue;
-			counter.n++;
-			photos.push({
-				id: `demo-${counter.n}`,
-				...place,
-				altitude: 650,
-				takenAt,
-				offset: null,
-				country: HOME.country,
-				city: HOME.city,
-				area: null,
-				favorite: false,
-				scene,
-				label: `${scene} · madrid`,
-				...camera
-			});
-		}
-	}
-	return photos;
+	const result: DemoPhoto[] = [];
+	const months = 93;
+	PHOTOS.home.forEach((photo, i) => {
+		const month = Math.floor((i / PHOTOS.home.length) * months);
+		const day = 1 + Math.floor(rnd() * 27);
+		const hour = 10 + Math.floor(rnd() * 10);
+		const record = fromCommons(photo, rnd, counter);
+		let takenAt = new Date(2019, month, day, hour).getTime();
+		// Stay away from trip dates, or the photo would join the trip
+		while (nearTrip(takenAt)) takenAt += 7 * DAY;
+		if (takenAt > now) return;
+		result.push({
+			...record,
+			lat: photo.lat,
+			lng: photo.lng,
+			altitude: 650,
+			takenAt,
+			country: HOME.country,
+			city: HOME.city
+		});
+	});
+	return result;
 }
 
-/** Screenshots and chat photos: no GPS */
+/** Photos received by chat: real photos, but without GPS */
 function unlocatedPhotos(rnd: () => number, counter: { n: number }, now: number): DemoPhoto[] {
-	const photos: DemoPhoto[] = [];
-	const scenes = Object.values(SCENE_SETS).flat();
-	// Screenshots and chat photos come in bursts: a few months with several each
-	const months: [number, number, number][] = [
-		[2026, 6, 14],
-		[2025, 11, 9],
-		[2025, 3, 5],
-		[2024, 7, 4],
-		[2023, 1, 5]
+	// They come in bursts: a few months with several each
+	const months: [number, number][] = [
+		[2026, 6],
+		[2025, 11],
+		[2025, 3],
+		[2024, 7],
+		[2023, 1]
 	];
-	const dates = months.flatMap(([y, m, count]) =>
-		Array.from({ length: count }, () =>
-			new Date(y, m, 1 + Math.floor(rnd() * 27), 9 + Math.floor(rnd() * 12)).getTime()
-		)
-	);
-	for (const [i, takenAt] of dates.entries()) {
-		const scene = scenes[Math.floor(rnd() * scenes.length)];
-		const camera = cameraFields(rnd, 1000 + counter.n + 1);
-		const cameraName = rnd() > 0.5 ? null : 'iPhone 15 Pro';
-		if (takenAt > now) continue;
-		counter.n++;
-		photos.push({
-			id: `demo-${counter.n}`,
+	const result: DemoPhoto[] = [];
+	PHOTOS.unlocated.forEach((photo, i) => {
+		const [year, month] = months[i % months.length];
+		const takenAt = new Date(
+			year,
+			month,
+			1 + Math.floor(rnd() * 27),
+			9 + Math.floor(rnd() * 12)
+		).getTime();
+		const record = fromCommons(photo, rnd, counter);
+		if (takenAt > now) return;
+		result.push({
+			...record,
+			// Chat apps remove the location and the camera data
+			name: `IMG-${year}${String(1000 + i)}-WA00${i % 10}.jpg`,
+			camera: null,
+			lens: null,
+			aperture: null,
+			exposure: null,
+			iso: null,
+			focal: null,
 			lat: null,
 			lng: null,
 			altitude: null,
 			takenAt,
-			offset: null,
 			country: null,
-			city: null,
-			area: null,
-			favorite: false,
-			scene,
-			label: `${scene} · sin gps`,
-			...camera,
-			camera: cameraName,
-			name: `IMG-2025${String(1000 + i)}-WA00${i % 10}.jpg`
+			city: null
 		});
-	}
-	return photos;
+	});
+	return result;
 }
 
 /** `now` only hides photos "from the future"; tests pass a fixed date */
 export function generateDemo(now = Date.now()) {
 	const rnd = random(42);
 	const counter = { n: 0 };
+	const byTrip = TRIPS.map((trip, i) => tripPhotos(trip, PHOTOS.trips[i] ?? [], rnd, counter));
 	const photos = [
 		...homePhotos(rnd, counter, now),
-		...TRIPS.flatMap((trip) => tripPhotos(trip, rnd, counter)),
+		...byTrip.flat(),
 		...unlocatedPhotos(rnd, counter, now)
 	]
 		.filter((p) => p.takenAt <= now)
@@ -187,11 +220,10 @@ export function generateDemo(now = Date.now()) {
 
 	// Nice names for some trips, as if the user had renamed them.
 	// The edit is anchored to the first photo of the trip.
-	const titles = TRIPS.flatMap((trip) => {
-		if (!trip.title) return [];
-		const start = new Date(...trip.start).getTime();
-		const first = photos.find((p) => p.city === trip.stops[0].city && p.takenAt >= start);
-		return first ? [{ id: `trip-${first.takenAt}`, anchorId: first.id, title: trip.title }] : [];
+	const titles = TRIPS.flatMap((trip, i) => {
+		const first = byTrip[i].find((p) => p.takenAt <= now);
+		if (!trip.title || !first) return [];
+		return [{ id: `trip-${first.takenAt}`, anchorId: first.id, title: trip.title }];
 	});
 	return { photos, titles };
 }

@@ -1,5 +1,4 @@
 import { getPhoto } from './db';
-import { paintDemoImage } from '$lib/demo/paint';
 
 // Full size images are big, so only the last few stay in memory.
 // The Map keeps insertion order: the first entry is the one used longest ago.
@@ -34,9 +33,9 @@ export function fullImageUrl(id: string): Promise<string | null> {
 async function createUrl(id: string) {
 	const photo = await getPhoto(id);
 	if (!photo) return null;
-	const blob = photo.demo
-		? await paintDemoImage(photo.demo.scene, photo.demo.label, photo.height > photo.width)
-		: (photo.display ?? photo.file);
+	// Sample photos are shown straight from Wikimedia Commons
+	if (photo.demo?.url) return photo.demo.url;
+	const blob = photo.display ?? photo.file;
 	return blob ? URL.createObjectURL(blob) : null;
 }
 

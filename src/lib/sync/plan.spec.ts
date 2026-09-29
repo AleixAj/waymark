@@ -31,7 +31,7 @@ describe('planSync', () => {
 			[
 				record('a'),
 				record('b', { driveId: 'd-b' }),
-				record('demo', { demo: { scene: 's', label: 'l' } })
+				record('demo', { demo: { url: 'https://example.org/demo.jpg' } })
 			],
 			[record('b', { driveId: 'd-b' }), record('c', { driveId: 'd-c' })],
 			true

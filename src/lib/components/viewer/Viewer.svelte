@@ -86,9 +86,14 @@
 
 	function download() {
 		if (!image || !photo) return;
+		// Sample photos belong to their authors: their page on Commons has the original
+		if (photo.demo?.credit) {
+			window.open(photo.demo.credit.page, '_blank', 'noopener');
+			return;
+		}
 		const link = document.createElement('a');
 		link.href = image;
-		link.download = photo.demo ? `${photo.name.replace(/\.\w+$/, '')}.webp` : photo.name;
+		link.download = photo.name;
 		link.click();
 	}
 
@@ -325,6 +330,29 @@
 							</span>
 						</div>
 					</div>
+					{#if photo.demo?.credit}
+						{@const credit = photo.demo.credit}
+						<!-- Free licenses ask for the author and the license next to the photo -->
+						<div class="kv credit">
+							<Icon name="camera" size={16} />
+							<div class="col">
+								<span class="t-small">Foto de ejemplo de <b>{credit.author}</b></span>
+								<span class="t-small t3">
+									<a href={credit.page} target="_blank" rel="noopener noreferrer"
+										>Wikimedia Commons</a
+									>
+									·
+									{#if credit.licenseUrl}
+										<a href={credit.licenseUrl} target="_blank" rel="noopener noreferrer"
+											>{credit.license}</a
+										>
+									{:else}
+										{credit.license}
+									{/if}
+								</span>
+							</div>
+						</div>
+					{/if}
 
 					<div class="hr"></div>
 
@@ -767,6 +795,15 @@
 			display: none;
 		}
 	}
+	.credit a {
+		color: var(--acc-text);
+	}
+
+	.credit b {
+		font-weight: 500;
+		color: var(--t1);
+	}
+
 	.estimated {
 		margin-top: 4px;
 		color: var(--warn);

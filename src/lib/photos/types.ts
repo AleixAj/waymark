@@ -20,6 +20,15 @@ export interface PhotoMeta extends CameraInfo {
 	offset: string | null;
 }
 
+/** Author and license of a sample photo (they must be shown with it) */
+export interface DemoCredit {
+	title: string;
+	author: string;
+	license: string;
+	licenseUrl: string;
+	page: string;
+}
+
 export interface Photo extends PhotoMeta {
 	id: string;
 	name: string;
@@ -55,8 +64,8 @@ export interface Photo extends PhotoMeta {
 	driveOriginal?: boolean;
 	/** Last change, so two devices know which version is newer */
 	updatedAt?: number;
-	/** Sample photos have no real image: the viewer paints this scene instead */
-	demo?: { scene: string; label: string };
+	/** Sample photos: a real photo from Wikimedia Commons, shown with its credit */
+	demo?: { url?: string; credit?: DemoCredit };
 }
 
 /** Light version of a photo used by the map, lists and stats (no blobs) */

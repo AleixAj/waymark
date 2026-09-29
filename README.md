@@ -16,7 +16,7 @@
 
 Es un proyecto de portfolio con enfoque de producto real. **No tiene servidor:** las fotos se procesan y se guardan en el navegador, la app funciona sin conexión después de la primera visita y, si quieres, sincroniza tu biblioteca entre dispositivos a través de tu propio Google Drive.
 
-**Pruébalo sin fotos propias:** abre la app y pulsa _"Probar con fotos de ejemplo"_. Genera en el navegador una biblioteca de unas 2.000 fotos repartidas en 15 viajes.
+**Pruébalo sin fotos propias:** abre la app y pulsa _"Probar con fotos de ejemplo"_. Carga una biblioteca de unas 600 fotos reales de [Wikimedia Commons](https://commons.wikimedia.org/), con su ubicación y su cámara auténticas, repartidas en 15 viajes por 18 países, como el álbum de una persona de verdad.
 
 ## Lo más destacado
 
@@ -100,11 +100,13 @@ sync (opcional) ── Google Drive: copias ligeras + library.json
 
 **Sincronización.** El login usa Google Identity Services en el navegador con el permiso `drive.file`: Waymark solo ve los archivos que crea o los que el usuario elige. Drive guarda una copia de cada foto a 2048 px (unas 20 veces más ligera que el original) y un `library.json` con los datos. Cada dispositivo sube lo nuevo y baja lo que añadieron los demás; si una foto cambió en dos sitios, gana el cambio más reciente. Las fotos elegidas desde Drive no se copian: se guarda el enlace al archivo.
 
+**Biblioteca de ejemplo.** Un script (`scripts/build-demo.mjs`) busca en Wikimedia Commons fotos con licencia libre cerca de cada parada de los viajes de ejemplo, prioriza las que Commons marca como fotos de calidad y descarta mapas, retratos y capturas automáticas. La app solo descarga las miniaturas al cargar la demo; la foto grande se pide al abrirla. Cada foto muestra su autor y su licencia en el visor.
+
 **Privacidad.** No hay servidor ni analítica: las fotos no salen del navegador salvo a la carpeta de Drive del propio usuario, si inicia sesión.
 
 ## Rendimiento
 
-Medido con Chrome y la CPU ralentizada 4 veces, con la biblioteca de ejemplo (~2.000 fotos):
+Medido con Chrome y la CPU ralentizada 4 veces, con una biblioteca de ~2.000 fotos:
 
 - **Halo y sombreado del globo** movidos con `transform`: los mueve la tarjeta gráfica, sin repintar degradados en cada fotograma.
 - **Mapa de calles** solo se descarga y se dibuja cuando es visible: arrastrar en la vista de país pasa de ~50 a ~60 fps.
@@ -129,7 +131,7 @@ src/
 │   └── demo/         # Generador de la biblioteca de ejemplo
 ├── routes/           # Globo, país, ciudad, viaje, sin ubicación y estadísticas
 └── service-worker.ts # Funcionamiento sin conexión
-scripts/              # Generación de los datos geográficos
+scripts/              # Generación de los datos geográficos y de la biblioteca de ejemplo
 static/geo/           # Países y ciudades empaquetados
 ```
 
@@ -142,14 +144,15 @@ pnpm dev
 
 La app queda en `http://localhost:5173`. Funciona sin configurar nada; la cuenta de Google es opcional.
 
-| Comando                      | Qué hace                                                                      |
-| ---------------------------- | ----------------------------------------------------------------------------- |
-| `pnpm dev`                   | Servidor de desarrollo                                                        |
-| `pnpm build`                 | Genera la web estática en `build/`                                            |
-| `pnpm test`                  | Tests unitarios (Vitest)                                                      |
-| `pnpm check`                 | Comprobación de tipos (`svelte-check`)                                        |
-| `pnpm lint`                  | Prettier + ESLint                                                             |
-| `node scripts/build-geo.mjs` | Regenera `static/geo` (necesita `scripts/.cache/cities15000.txt` de GeoNames) |
+| Comando                       | Qué hace                                                                      |
+| ----------------------------- | ----------------------------------------------------------------------------- |
+| `pnpm dev`                    | Servidor de desarrollo                                                        |
+| `pnpm build`                  | Genera la web estática en `build/`                                            |
+| `pnpm test`                   | Tests unitarios (Vitest)                                                      |
+| `pnpm check`                  | Comprobación de tipos (`svelte-check`)                                        |
+| `pnpm lint`                   | Prettier + ESLint                                                             |
+| `node scripts/build-demo.mjs` | Regenera las fotos de la biblioteca de ejemplo desde Wikimedia Commons        |
+| `node scripts/build-geo.mjs`  | Regenera `static/geo` (necesita `scripts/.cache/cities15000.txt` de GeoNames) |
 
 ### Cuenta de Google (opcional)
 
@@ -185,6 +188,7 @@ La app queda en `http://localhost:5173`. Funciona sin configurar nada; la cuenta
 - Países: [Natural Earth](https://www.naturalearthdata.com/) vía [world-atlas](https://github.com/topojson/world-atlas) (dominio público)
 - Ciudades: [GeoNames](https://www.geonames.org/) `cities15000` (CC BY 4.0)
 - Mapas de calle y satélite: Esri World Topo Map y World Imagery
+- Fotos de ejemplo: [Wikimedia Commons](https://commons.wikimedia.org/), cada una con su autor y licencia libre (CC0, dominio público, CC BY o CC BY-SA), listadas en [`docs/demo-credits.md`](docs/demo-credits.md)
 - Buscador de lugares: [Nominatim](https://nominatim.org/) (© colaboradores de OpenStreetMap)
 - Banderas: [country-flag-icons](https://gitlab.com/catamphetamine/country-flag-icons)
 - Tipografías: Geist, Geist Mono e Instrument Serif
