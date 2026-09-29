@@ -13,6 +13,7 @@
 	import { paletteColors } from './palette';
 	import { mapView, zoomForGlobe } from './view.svelte';
 	import GlobeShade from './GlobeShade.svelte';
+	import { starfieldUrl } from './stars';
 
 	interface Props {
 		/** Slow spin on the welcome screen */
@@ -25,6 +26,11 @@
 	}
 
 	let { spin = false, showVisited = true, onCountryClick, children }: Props = $props();
+
+	// Stars behind the globe at night (dark theme); the flat map covers the whole screen
+	const stars = $derived(
+		settings.resolvedTheme === 'dark' && !ui.flat ? `url(${starfieldUrl()})` : 'none'
+	);
 
 	// Let Vite bundle MapLibre's worker (with its imports) and tell MapLibre where it is
 	setWorkerUrl(workerUrl);
@@ -236,7 +242,13 @@
 	});
 </script>
 
-<div class="map" bind:this={container} role="application" aria-label="Globo con tus fotos"></div>
+<div
+	class="map"
+	bind:this={container}
+	style:background-image={stars}
+	role="application"
+	aria-label="Globo con tus fotos"
+></div>
 {#if map && loaded}
 	<GlobeShade />
 	{@render children?.()}
