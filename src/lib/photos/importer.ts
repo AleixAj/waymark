@@ -1,6 +1,12 @@
 import { findExistingIds, savePhotos } from './db';
-import type { Photo, PhotoPoint } from './types';
+import { toPoint, type Photo, type PhotoPoint } from './types';
 import type { WorkerRequest, WorkerResponse } from './import.worker';
+
+export interface ImportError {
+	name: string;
+	reason: string;
+	file: File;
+}
 
 export interface ImportProgress {
 	total: number;
@@ -8,17 +14,18 @@ export interface ImportProgress {
 	withLocation: number;
 	withoutLocation: number;
 	duplicates: number;
-	failed: number;
+	errors: ImportError[];
+	startedAt: number;
 }
 
 interface ImportOptions {
 	onProgress: (progress: ImportProgress) => void;
 	/** Called every few photos so the globe fills up while importing */
-	onBatch: (points: PhotoPoint[]) => void;
+	onBatch: (points: PhotoPoint[], thumbs: Blob[]) => void;
 }
 
 const BATCH_SIZE = 24;
-const IMAGE_TYPES = /^image\/(jpeg|png|webp|heic|heif|avif)$/;
+const IMAGE_EXTENSIONS = /\.(jpe?g|png|webp|heic|heif|avif|gif)$/i;
 
 /** Same file imported twice gets the same id, so we can skip it */
 export function photoId(file: File) {
@@ -26,7 +33,7 @@ export function photoId(file: File) {
 }
 
 export function isImage(file: File) {
-	return IMAGE_TYPES.test(file.type);
+	return file.type.startsWith('image/') || IMAGE_EXTENSIONS.test(file.name);
 }
 
 export async function importPhotos(files: File[], { onProgress, onBatch }: ImportOptions) {
@@ -40,7 +47,11 @@ export async function importPhotos(files: File[], { onProgress, onBatch }: Impor
 		withLocation: 0,
 		withoutLocation: 0,
 		duplicates: existing.size,
-		failed: 0
+		// Videos and other files are listed as errors so the user knows they were skipped
+		errors: files
+			.filter((file) => !isImage(file))
+			.map((file) => ({ name: file.name, reason: 'No es una foto', file })),
+		startedAt: Date.now()
 	};
 	onProgress({ ...progress });
 
@@ -50,7 +61,10 @@ export async function importPhotos(files: File[], { onProgress, onBatch }: Impor
 		const saved = batch;
 		batch = [];
 		await savePhotos(saved);
-		onBatch(saved.map(({ id, lat, lng, takenAt }) => ({ id, lat, lng, takenAt })));
+		onBatch(
+			saved.map(toPoint),
+			saved.map((photo) => photo.thumb)
+		);
 	}
 
 	// One worker per CPU core (max 4), each one takes the next file from the queue
@@ -64,12 +78,12 @@ export async function importPhotos(files: File[], { onProgress, onBatch }: Impor
 			while (file) {
 				const result = await processInWorker(worker, file);
 				if (result.ok) {
-					const photo: Photo = { id: photoId(file), file, ...result.photo };
+					const photo: Photo = { id: photoId(file), file, favorite: false, ...result.photo };
 					batch.push(photo);
 					if (photo.lat === null) progress.withoutLocation++;
 					else progress.withLocation++;
 				} else {
-					progress.failed++;
+					progress.errors.push({ name: file.name, reason: result.error, file });
 				}
 				progress.done++;
 				onProgress({ ...progress });
@@ -89,7 +103,7 @@ export async function importPhotos(files: File[], { onProgress, onBatch }: Impor
 function processInWorker(worker: Worker, file: File) {
 	return new Promise<WorkerResponse>((resolve) => {
 		worker.onmessage = (event: MessageEvent<WorkerResponse>) => resolve(event.data);
-		worker.onerror = (event) => resolve({ ok: false, error: event.message });
+		worker.onerror = () => resolve({ ok: false, error: 'No se pudo leer' });
 		worker.postMessage({ file } satisfies WorkerRequest);
 	});
 }

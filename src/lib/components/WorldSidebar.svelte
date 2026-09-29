@@ -1,0 +1,232 @@
+<script lang="ts">
+	import Icon from './ui/Icon.svelte';
+	import { library } from '$lib/state/library.svelte';
+	import { countries } from '$lib/state/countries.svelte';
+	import { thumbUrl } from '$lib/state/thumbs.svelte';
+	import { ui } from '$lib/state/ui.svelte';
+	import { formatNumber, formatRange, formatMonth } from '$lib/library/format';
+
+	let sortBy = $state<'fotos' | 'fecha'>('fotos');
+
+	const importing = $derived(library.progress !== null);
+	const countryRows = $derived(
+		sortBy === 'fotos'
+			? library.countryList
+			: [...library.countryList].sort((a, b) => b.last - a.last)
+	);
+	const maxCount = $derived(Math.max(1, ...library.countryList.map((c) => c.count)));
+</script>
+
+{#if ui.sidebarOpen}
+	<aside class="side panel" aria-label="Biblioteca" aria-busy={importing}>
+		<div class="head">
+			<div class="row between">
+				<span class="t-h3">Tu mundo</span>
+				<button
+					class="btn btn-ghost btn-icon btn-sm"
+					aria-label="Plegar panel"
+					onclick={() => (ui.sidebarOpen = false)}
+				>
+					<Icon name="sidebar" />
+				</button>
+			</div>
+			<div class="row stats">
+				<div class="col">
+					<span class="mono num">{formatNumber(library.countryList.length)}</span>
+					<span class="t-small t3">países</span>
+				</div>
+				<div class="col">
+					<span class="mono num">{formatNumber(library.cityList.length)}</span>
+					<span class="t-small t3">ciudades</span>
+				</div>
+				<div class="col">
+					<span class="mono num">{formatNumber(library.points.length)}</span>
+					<span class="t-small t3">fotos</span>
+				</div>
+			</div>
+		</div>
+
+		<div class="scroll">
+			<div class="sec-h">
+				<h3>Viajes</h3>
+				{#if importing}<span class="t-small t3">Detectando viajes…</span>{/if}
+			</div>
+			{#if importing && library.trips.length === 0}
+				<div class="col skeletons">
+					{#each [0, 1, 2, 3] as i (i)}
+						<div class="row sk-row">
+							<div class="skel sk-img" style:animation-delay="{i * 0.12}s"></div>
+							<div class="col sk-lines">
+								<div class="skel" style:height="10px" style:width="{70 - i * 9}%"></div>
+								<div class="skel" style:height="8px" style:width="40%"></div>
+							</div>
+						</div>
+					{/each}
+				</div>
+			{:else if library.trips.length === 0}
+				<p class="t-small t3 empty-note">
+					Aún no hay viajes. Aparecen solos cuando tienes varias fotos seguidas lejos de casa.
+				</p>
+			{/if}
+			<div class="col list">
+				{#each library.trips as trip (trip.id)}
+					<a class="place" href="/viaje/{trip.id}">
+						<span
+							class="cover"
+							style:background-image={thumbUrl(trip.coverId)
+								? `url(${thumbUrl(trip.coverId)})`
+								: undefined}
+						></span>
+						<div class="col grow">
+							<span class="nm">{trip.title}</span>
+							<span class="mt">{formatRange(trip.start, trip.end)}</span>
+						</div>
+						<span class="ct">{formatNumber(trip.photoIds.length)}</span>
+					</a>
+				{/each}
+			</div>
+
+			{#if library.countryList.length}
+				<div class="sec-h countries-h">
+					<h3>Países</h3>
+					<div class="seg" role="group" aria-label="Ordenar países">
+						<button class:is-on={sortBy === 'fotos'} onclick={() => (sortBy = 'fotos')}
+							>Fotos</button
+						>
+						<button class:is-on={sortBy === 'fecha'} onclick={() => (sortBy = 'fecha')}
+							>Fecha</button
+						>
+					</div>
+				</div>
+				<div class="col list countries">
+					{#each countryRows as row (row.iso3)}
+						<a class="place country" href="/pais/{row.iso3}">
+							<span class="code">{row.iso3}</span>
+							<div class="col grow bar-col">
+								<div class="row between">
+									<span class="nm">{countries.name(row.iso3)}</span>
+									<span class="mono t2">
+										{sortBy === 'fotos' ? formatNumber(row.count) : formatMonth(row.last)}
+									</span>
+								</div>
+								<div class="bar"><i style:width="{(row.count / maxCount) * 100}%"></i></div>
+							</div>
+						</a>
+					{/each}
+				</div>
+			{/if}
+		</div>
+	</aside>
+{/if}
+
+<style>
+	.side {
+		position: absolute;
+		top: 84px;
+		left: 16px;
+		width: 320px;
+		bottom: 112px;
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+		z-index: 10;
+	}
+
+	.head {
+		padding: 16px 16px 14px;
+		border-bottom: 1px solid var(--line);
+	}
+
+	.between {
+		justify-content: space-between;
+	}
+
+	.stats {
+		gap: 16px;
+		margin-top: 10px;
+	}
+
+	.num {
+		font-size: 18px;
+		line-height: 24px;
+		color: var(--t1);
+	}
+
+	.list {
+		padding: 0 8px;
+		gap: 2px;
+	}
+
+	.countries {
+		padding-bottom: 12px;
+		gap: 0;
+	}
+
+	.place {
+		color: inherit;
+		text-decoration: none;
+	}
+
+	.cover {
+		width: 44px;
+		height: 44px;
+		flex: none;
+		border-radius: 8px;
+		background: var(--s3) center / cover;
+	}
+
+	.grow {
+		flex: 1;
+		min-width: 0;
+	}
+
+	.country {
+		padding: 7px 8px;
+		gap: 10px;
+	}
+
+	.bar-col {
+		gap: 5px;
+	}
+
+	.bar {
+		height: 3px;
+		border-radius: 2px;
+		background: color-mix(in oklab, var(--acc) 12%, var(--s2));
+	}
+
+	.bar i {
+		display: block;
+		height: 100%;
+		border-radius: 2px;
+		background: linear-gradient(90deg, color-mix(in oklab, var(--acc) 45%, var(--s2)), var(--acc));
+	}
+
+	.countries-h {
+		padding-top: 20px;
+	}
+
+	.skeletons {
+		padding: 0 16px 8px;
+		gap: 16px;
+	}
+
+	.sk-row {
+		gap: 12px;
+	}
+
+	.sk-img {
+		width: 44px;
+		height: 44px;
+		border-radius: 8px;
+	}
+
+	.sk-lines {
+		gap: 7px;
+		flex: 1;
+	}
+
+	.empty-note {
+		padding: 0 16px 8px;
+	}
+</style>

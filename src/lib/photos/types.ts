@@ -1,20 +1,59 @@
-export interface Photo {
-	id: string;
-	name: string;
+export interface CameraInfo {
+	camera: string | null;
+	lens: string | null;
+	/** e.g. 2.8 */
+	aperture: number | null;
+	/** Exposure time in seconds, e.g. 0.002 */
+	exposure: number | null;
+	iso: number | null;
+	/** Focal length in mm */
+	focal: number | null;
+}
+
+export interface PhotoMeta extends CameraInfo {
 	lat: number | null;
 	lng: number | null;
+	altitude: number | null;
 	/** Unix time in ms, taken from EXIF or the file date */
 	takenAt: number;
+	/** Time zone written by the camera, e.g. "+09:00" */
+	offset: string | null;
+}
+
+export interface Photo extends PhotoMeta {
+	id: string;
+	name: string;
 	width: number;
 	height: number;
+	/** Size of the original file in bytes */
+	size: number;
+	/** ISO 3166 alpha-3 code, e.g. "JPN" */
+	country: string | null;
+	/** Closest city with 15k+ people */
+	city: string | null;
+	favorite: boolean;
 	/** Small WebP preview used in the map and the grids */
 	thumb: Blob;
 	/** The original file, kept only in this browser */
 	file: Blob;
+	/** Sample photos have no real image: the viewer paints this scene instead */
+	demo?: { scene: string; label: string };
 }
 
-/** What the map needs to draw a photo, without the heavy blobs */
-export type PhotoPoint = Pick<Photo, 'id' | 'lat' | 'lng' | 'takenAt'>;
+/** Light version of a photo used by the map, lists and stats (no blobs) */
+export type PhotoPoint = Pick<
+	Photo,
+	'id' | 'lat' | 'lng' | 'takenAt' | 'country' | 'city' | 'favorite'
+>;
 
-/** Result that the import worker sends back for each file */
-export type ProcessedPhoto = Omit<Photo, 'id' | 'file'>;
+/** A photo that has GPS */
+export type LocatedPoint = PhotoPoint & { lat: number; lng: number };
+
+export function isLocated(point: PhotoPoint): point is LocatedPoint {
+	return point.lat !== null && point.lng !== null;
+}
+
+export function toPoint(photo: Photo): PhotoPoint {
+	const { id, lat, lng, takenAt, country, city, favorite } = photo;
+	return { id, lat, lng, takenAt, country, city, favorite };
+}

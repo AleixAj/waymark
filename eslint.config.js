@@ -35,8 +35,18 @@ export default defineConfig(
 		}
 	},
 	{
-		// Override or add rule settings here, such as:
-		// 'svelte/button-has-type': 'error'
-		rules: {}
+		rules: {
+			// resolve() is only needed when the app lives in a sub-folder of the domain.
+			// Waymark is served from the root, so plain links are fine.
+			'svelte/no-navigation-without-resolve': 'off',
+			// Plain Map/Set are used on purpose for local calculations and caches
+			// that must not trigger re-renders (reactive ones are SvelteMap on purpose)
+			'svelte/prefer-svelte-reactivity': 'off',
+			// Allow `_name` for values we destructure on purpose to leave them out
+			'@typescript-eslint/no-unused-vars': [
+				'error',
+				{ varsIgnorePattern: '^_', argsIgnorePattern: '^_' }
+			]
+		}
 	}
 );

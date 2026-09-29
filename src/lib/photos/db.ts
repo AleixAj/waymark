@@ -1,15 +1,24 @@
 import Dexie, { type EntityTable } from 'dexie';
-import type { Photo, PhotoPoint } from './types';
+import { toPoint, type Photo, type PhotoPoint } from './types';
+
+/** Things the user changed on a detected trip */
+export interface TripEdit {
+	id: string;
+	title?: string;
+	coverId?: string;
+	/** Photos added by hand from the viewer */
+	extraPhotoIds?: string[];
+}
 
 // IndexedDB database that lives in the browser.
 const db = new Dexie('waymark') as Dexie & {
 	photos: EntityTable<Photo, 'id'>;
+	trips: EntityTable<TripEdit, 'id'>;
 };
 
 // Only indexed fields go here; blobs are stored but not indexed.
-db.version(1).stores({
-	photos: 'id, takenAt, name'
-});
+db.version(1).stores({ photos: 'id, takenAt, name' });
+db.version(2).stores({ photos: 'id, takenAt, name, country', trips: 'id' });
 
 export async function savePhotos(photos: Photo[]) {
 	await db.photos.bulkPut(photos);
@@ -18,22 +27,63 @@ export async function savePhotos(photos: Photo[]) {
 /** Loads only the light fields, so the map starts fast even with thousands of photos */
 export async function loadPhotoPoints(): Promise<PhotoPoint[]> {
 	const points: PhotoPoint[] = [];
-	await db.photos.orderBy('takenAt').each((photo) => {
-		points.push({ id: photo.id, lat: photo.lat, lng: photo.lng, takenAt: photo.takenAt });
-	});
+	await db.photos.orderBy('takenAt').each((photo) => points.push(toPoint(photo)));
 	return points;
 }
 
-export async function getPhoto(id: string) {
+export function getPhoto(id: string) {
 	return db.photos.get(id);
 }
 
-export async function clearLibrary() {
-	await db.photos.clear();
+export async function getThumbs(ids: string[]) {
+	const photos = await db.photos.bulkGet(ids);
+	return photos.map((p) => p?.thumb);
+}
+
+export async function setFavorite(id: string, favorite: boolean) {
+	await db.photos.update(id, { favorite });
+}
+
+export async function setLocation(
+	ids: string[],
+	place: { lat: number; lng: number; country: string | null; city: string | null }
+) {
+	await db.photos.where('id').anyOf(ids).modify(place);
 }
 
 /** Returns which of these ids are already saved */
 export async function findExistingIds(ids: string[]) {
 	const keys = await db.photos.where('id').anyOf(ids).primaryKeys();
 	return new Set(keys);
+}
+
+export function loadTripEdits() {
+	return db.trips.toArray();
+}
+
+export async function saveTripEdit(edit: TripEdit) {
+	const current = await db.trips.get(edit.id);
+	await db.trips.put({ ...current, ...edit });
+}
+
+/** Sizes of what we keep, for the storage section in Settings */
+export async function measureLibrary() {
+	let thumbs = 0;
+	let originals = 0;
+	await db.photos.each((photo) => {
+		thumbs += photo.thumb.size;
+		originals += photo.file.size;
+	});
+	return { thumbs, originals };
+}
+
+/** Everything except the images: used by "Export library" */
+export async function exportMetadata() {
+	const photos: Omit<Photo, 'thumb' | 'file'>[] = [];
+	await db.photos.each(({ thumb: _thumb, file: _file, ...rest }) => photos.push(rest));
+	return { photos, trips: await db.trips.toArray() };
+}
+
+export async function clearLibrary() {
+	await Promise.all([db.photos.clear(), db.trips.clear()]);
 }
