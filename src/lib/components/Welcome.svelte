@@ -219,64 +219,28 @@
 		z-index: 2;
 	}
 
-	/* The big title: a heavy italic serif outlined like an amber neon sign.
-	   It lights up with a short flicker when the page opens. */
+	/* The big title: white letters with only their outline in amber and a soft glow.
+	   The stroke is painted under the fill, so only its outer half shows and the
+	   lines where the font's shapes overlap stay hidden. */
 	.wordmark {
 		font-family: 'Fraunces Variable', 'Instrument Serif', Georgia, serif;
 		font-style: italic;
-		font-weight: 800;
+		font-weight: 700;
 		font-size: clamp(76px, 15vw, 168px);
 		line-height: 0.9;
-		letter-spacing: -0.035em;
+		letter-spacing: -0.03em;
 		padding: 0 0.08em;
-		color: oklch(0.97 0.03 85);
-		-webkit-text-stroke: 2px oklch(0.8 0.17 58);
+		color: oklch(0.97 0.012 85);
+		-webkit-text-stroke: 3px oklch(0.78 0.18 56);
 		paint-order: stroke fill;
-		text-shadow:
-			0 0 6px oklch(0.8 0.17 58 / 0.9),
-			0 0 22px oklch(0.75 0.19 50 / 0.65),
-			0 0 60px oklch(0.7 0.2 45 / 0.45);
-	}
-
-	/* More specific than the fade-in of the other items, so this one flickers instead */
-	.welcome > .wordmark {
-		animation: neon-on 1.4s 0.2s ease-out both;
+		/* drop-shadow follows the painted letters, so the glow stays at the edge */
+		filter: drop-shadow(0 0 3px oklch(0.78 0.18 55 / 0.7));
 	}
 
 	:global([data-theme='light']) .wordmark {
-		color: oklch(0.99 0.01 85);
-		-webkit-text-stroke-color: oklch(0.68 0.18 50);
-		text-shadow:
-			0 0 4px oklch(0.72 0.18 50 / 0.9),
-			0 0 18px oklch(0.72 0.18 50 / 0.5),
-			0 2px 30px oklch(0.6 0.18 45 / 0.35);
-	}
-
-	@keyframes neon-on {
-		0% {
-			opacity: 0;
-		}
-
-		10% {
-			opacity: 0.8;
-		}
-
-		14% {
-			opacity: 0.15;
-		}
-
-		22% {
-			opacity: 1;
-		}
-
-		26% {
-			opacity: 0.4;
-		}
-
-		34%,
-		100% {
-			opacity: 1;
-		}
+		color: #fff;
+		-webkit-text-stroke-color: oklch(0.66 0.18 50);
+		filter: drop-shadow(0 0 4px oklch(0.72 0.18 50 / 0.4));
 	}
 
 	.tagline {
