@@ -19,8 +19,10 @@
 	--rim: oklch(0.85 0.06 230 / 0.25);
 
 	/* Surfaces */
-	--glass: oklch(0.19 0.02 258 / 0.74);
-	--glass-strong: oklch(0.19 0.02 258 / 0.93);
+	/* Panels are almost solid: over light streets or the grey palette, a see-through
+	   panel turned grey and its secondary text was hard to read */
+	--glass: oklch(0.19 0.02 258 / 0.9);
+	--glass-strong: oklch(0.19 0.02 258 / 0.96);
 	--s1: oklch(0.19 0.02 258);
 	--s2: oklch(0.235 0.018 258);
 	--s3: oklch(0.285 0.018 258);
@@ -32,8 +34,8 @@
 
 	/* Text */
 	--t1: oklch(0.96 0.006 255);
-	--t2: oklch(0.78 0.012 255);
-	--t3: oklch(0.64 0.014 255);
+	--t2: oklch(0.82 0.012 255);
+	--t3: oklch(0.71 0.014 255);
 
 	/* Accent (amber) */
 	--acc: oklch(0.8 0.145 68);
@@ -84,8 +86,8 @@
 	--shade: oklch(0.4 0.05 250 / 0.2);
 	--rim: oklch(0.4 0.05 240 / 0.18);
 
-	--glass: oklch(0.99 0.003 250 / 0.8);
-	--glass-strong: oklch(0.99 0.003 250 / 0.95);
+	--glass: oklch(0.99 0.003 250 / 0.92);
+	--glass-strong: oklch(0.99 0.003 250 / 0.97);
 	--s1: oklch(0.995 0.002 250);
 	--s2: oklch(0.955 0.005 250);
 	--s3: oklch(0.915 0.007 250);
@@ -96,13 +98,13 @@
 	--press: oklch(0.3 0.02 255 / 0.09);
 
 	--t1: oklch(0.22 0.015 258);
-	--t2: oklch(0.42 0.015 258);
-	--t3: oklch(0.52 0.015 258);
+	--t2: oklch(0.4 0.015 258);
+	--t3: oklch(0.47 0.015 258);
 
 	--acc: oklch(0.72 0.155 60);
 	--acc-hover: oklch(0.76 0.145 64);
 	--acc-press: oklch(0.66 0.15 56);
-	--acc-text: oklch(0.5 0.13 55);
+	--acc-text: oklch(0.47 0.13 52);
 	--acc-soft: oklch(0.72 0.155 60 / 0.16);
 	--acc-glow: oklch(0.72 0.155 60 / 0.45);
 	--on-acc: oklch(0.2 0.04 55);

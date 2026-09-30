@@ -482,7 +482,8 @@
 		transition: opacity 0.15s;
 	}
 
-	.bar-col.dim {
+	/* Other years fade only their bar: the number stays readable */
+	.bar-col.dim .bar {
 		opacity: 0.35;
 	}
 
