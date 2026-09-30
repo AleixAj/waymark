@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import Welcome from '$lib/components/Welcome.svelte';
 	import WorldSidebar from '$lib/components/WorldSidebar.svelte';
 	import Timeline from '$lib/components/Timeline.svelte';
@@ -8,6 +9,10 @@
 	import { ui } from '$lib/state/ui.svelte';
 	import { mapView } from '$lib/map/view.svelte';
 	import { demoMode } from '$lib/state/mode';
+	import { canImport } from '$lib/state/importing';
+
+	// Same rule as the layout: no photos, or no Google account, shows the welcome screen
+	const welcome = $derived((library.isEmpty || !canImport()) && !demoMode);
 
 	// World view: every photo, no labels, camera centered next to the sidebar
 	$effect(() => {
@@ -19,9 +24,9 @@
 	});
 
 	// When the first photos arrive the welcome globe moves to make room for the sidebar
-	let wasWelcome = library.isEmpty;
+	let wasWelcome = untrack(() => welcome);
 	$effect(() => {
-		if (wasWelcome && !library.isEmpty) {
+		if (wasWelcome && !welcome) {
 			wasWelcome = false;
 			mapView.world();
 		}
@@ -30,9 +35,10 @@
 
 <svelte:head><title>Waymark</title></svelte:head>
 
-{#if library.isEmpty}
+{#if welcome}
+	<Welcome />
+{:else if library.isEmpty}
 	<!-- In demo mode only the globe shows while the sample library loads -->
-	{#if !demoMode}<Welcome />{/if}
 {:else}
 	<WorldSidebar />
 	{#if !ui.sidebarOpen}

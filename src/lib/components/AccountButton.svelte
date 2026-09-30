@@ -3,12 +3,41 @@
 	import GoogleMark from './ui/GoogleMark.svelte';
 	import { auth } from '$lib/google/auth.svelte';
 	import { googleEnabled } from '$lib/google/config';
-	import { signIn, signOut, sync } from '$lib/sync/sync.svelte';
+	import { signIn, signOut, sync, unsyncedPhotos } from '$lib/sync/sync.svelte';
+	import { goto } from '$app/navigation';
+	import { library } from '$lib/state/library.svelte';
+	import { demoMode } from '$lib/state/mode';
+	import { formatNumber } from '$lib/library/format';
 
 	let open = $state(false);
 	let wrap = $state<HTMLDivElement>();
 	let error = $state<string | null>(null);
 	let busy = $state(false);
+	/** Photos not in Drive yet: signing out asks first, as they would be lost */
+	let pending = $state(0);
+
+	async function leave(force = false) {
+		error = null;
+		busy = true;
+		try {
+			if (!force) {
+				pending = await unsyncedPhotos();
+				if (pending > 0) return;
+			}
+			await signOut();
+			pending = 0;
+			open = false;
+			// The demo keeps its sample photos; otherwise, back to the welcome screen
+			if (!demoMode) {
+				await library.clear();
+				await goto('/');
+			}
+		} catch {
+			error = 'No se pudo cerrar la sesión';
+		} finally {
+			busy = false;
+		}
+	}
 
 	const account = $derived(auth.account);
 
@@ -103,17 +132,26 @@
 					>
 						<Icon name="refresh" />Sincronizar ahora
 					</button>
-					<button
-						class="menu-item"
-						role="menuitem"
-						onclick={() => {
-							open = false;
-							signOut();
-						}}
-					>
-						<Icon name="arrowL" />Cerrar sesión
-					</button>
-					<p class="t-small t3 foot">Tus fotos siguen en este navegador al cerrar sesión.</p>
+					{#if pending > 0}
+						<div class="col confirm" role="alert">
+							<p class="t-small">
+								{formatNumber(pending)}
+								{pending === 1 ? 'foto aún no está' : 'fotos aún no están'} en tu Drive. Si sales ahora,
+								se borrarán de este navegador.
+							</p>
+							<div class="row buttons">
+								<button class="btn btn-ghost btn-sm" onclick={() => (pending = 0)}>Cancelar</button>
+								<button class="btn btn-danger btn-sm" disabled={busy} onclick={() => leave(true)}
+									>Salir igualmente</button
+								>
+							</div>
+						</div>
+					{:else}
+						<button class="menu-item" role="menuitem" disabled={busy} onclick={() => leave()}>
+							<Icon name="arrowL" />{busy ? 'Guardando en Drive…' : 'Cerrar sesión'}
+						</button>
+						<p class="t-small t3 foot">Tu álbum queda guardado en tu Google Drive.</p>
+					{/if}
 				</div>
 			{/if}
 		{/if}
@@ -196,6 +234,16 @@
 
 	.foot {
 		padding: 6px 10px 4px;
+	}
+
+	.confirm {
+		gap: 10px;
+		padding: 8px 10px 6px;
+	}
+
+	.confirm .buttons {
+		justify-content: flex-end;
+		gap: 6px;
 	}
 
 	/* Phones: only the Google mark, so the menu button keeps its space */

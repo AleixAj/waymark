@@ -11,7 +11,9 @@ import {
 } from '$lib/google/drive';
 import {
 	applyRecords,
+	countUnsynced,
 	exportMetadata,
+	forgetUserLibrary,
 	getPhoto,
 	savePhotos,
 	saveTripEdits,
@@ -278,8 +280,18 @@ export async function signIn() {
 	await sync.run(false);
 }
 
-/** Signs out; the photos stay in this browser */
-export function signOut() {
+/**
+ * Photos that only this browser has. Before signing out a last sync is tried,
+ * so usually none are left.
+ */
+export async function unsyncedPhotos() {
+	await sync.run(false);
+	return countUnsynced();
+}
+
+/** Signs out. The album lives in Drive, so this browser forgets it. */
+export async function signOut() {
 	auth.signOut();
 	sync.stop();
+	await forgetUserLibrary();
 }

@@ -165,6 +165,32 @@ export async function clearLibrary() {
 	await Promise.all([db.photos.clear(), db.trips.clear()]);
 }
 
+/** The user's own library, also from the demo (which uses another database) */
+async function userDatabase() {
+	if (!demoMode) return db;
+	if (!(await Dexie.exists('waymark'))) return null;
+	// Opened without a schema: Dexie reads the one the database already has
+	const own = new Dexie('waymark');
+	await own.open();
+	return own;
+}
+
+/** Photos of the user's library that are not in Google Drive yet */
+export async function countUnsynced() {
+	const database = await userDatabase();
+	if (!database?.tables.some((t) => t.name === 'photos')) return 0;
+	return database
+		.table<Photo>('photos')
+		.filter((photo) => !photo.driveId)
+		.count();
+}
+
+/** Signing out from the demo: the user's library (kept in Drive) leaves this browser */
+export async function forgetUserLibrary() {
+	if (demoMode) await Dexie.delete('waymark');
+	else await clearLibrary();
+}
+
 /**
  * Asks the browser not to delete our data when the disk gets full.
  * This library may hold the only copy of the imported photos.

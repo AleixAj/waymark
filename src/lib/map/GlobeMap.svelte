@@ -203,6 +203,14 @@
 		map.setProjection({ type: ui.flat ? 'mercator' : 'globe' });
 	});
 
+	// Back to the welcome screen (after signing out): the big globe again
+	let wasSpinning = untrack(() => spin);
+	$effect(() => {
+		if (!map) return;
+		if (spin && !wasSpinning) mapView.welcome();
+		wasSpinning = spin;
+	});
+
 	// Welcome screen: the planet turns slowly (skipped with reduced motion).
 	// It pauses while the user drags or zooms, so it never fights their hands.
 	$effect(() => {

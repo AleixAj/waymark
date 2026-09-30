@@ -64,8 +64,10 @@
 		}
 	})();
 	ui.webgl = hasWebGL;
-	// In demo mode the globe shows up at once while the sample photos load
-	const welcome = $derived(library.isEmpty && !demoMode);
+	// In demo mode the globe shows up at once while the sample photos load.
+	// Without the Google account the album stays closed: photos left in this browser
+	// from an old session come back (and are synced) when you sign in again.
+	const welcome = $derived((library.isEmpty || !canImport()) && !demoMode);
 	let fileDrag = $state(false);
 
 	// Changes go to Drive, and photos from other devices come back into the library
@@ -84,9 +86,9 @@
 		});
 	});
 
-	// With no photos every page leads to the welcome screen (e.g. an old link to a trip)
+	// With no album every page leads to the welcome screen (e.g. an old link to a trip)
 	$effect(() => {
-		if (library.isEmpty && page.url.pathname !== '/') goto('/', { replaceState: true });
+		if (library.loaded && welcome && page.url.pathname !== '/') goto('/', { replaceState: true });
 	});
 
 	// Pages visited inside the app, so "back" knows whether there is somewhere to go back to
