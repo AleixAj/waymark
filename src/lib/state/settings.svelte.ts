@@ -1,3 +1,4 @@
+import { i18n } from '$lib/i18n/i18n.svelte';
 export type Theme = 'dark' | 'light' | 'system';
 export type MapStyle = 'sobrio' | 'relieve' | 'satelite';
 export type Quality = 'alta' | 'equilibrada' | 'ahorro';
@@ -96,6 +97,8 @@ class Settings {
 		$effect.root(() => {
 			$effect(() => {
 				document.documentElement.dataset.theme = this.resolvedTheme;
+				// Screen readers and the spell checker follow the chosen language
+				document.documentElement.lang = i18n.locale;
 				document.documentElement.dataset.motion = this.reducedMotion ? 'reduced' : 'full';
 				document.documentElement.dataset.quality = this.quality;
 			});

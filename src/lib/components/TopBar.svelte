@@ -7,6 +7,7 @@
 	import { settings } from '$lib/state/settings.svelte';
 	import { ui } from '$lib/state/ui.svelte';
 	import AccountButton from './AccountButton.svelte';
+	import LanguagePicker from './LanguagePicker.svelte';
 	import { demoMode, enterDemo, exitDemo } from '$lib/state/mode';
 	import { canImport } from '$lib/state/importing';
 	import { signIn } from '$lib/sync/sync.svelte';
@@ -107,6 +108,7 @@
 	</button>
 
 	<div class="row actions">
+		<LanguagePicker />
 		<button
 			class="btn btn-ghost btn-icon"
 			aria-label="Cambiar tema"

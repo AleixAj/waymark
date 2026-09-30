@@ -6,6 +6,7 @@
 	import logo from '$lib/assets/logo-hero.webp';
 	import { settings } from '$lib/state/settings.svelte';
 	import AccountButton from './AccountButton.svelte';
+	import LanguagePicker from './LanguagePicker.svelte';
 	import ServiceMark from './ui/ServiceMark.svelte';
 	import { importFromDevice, importFromDrive } from '$lib/state/importing';
 	import { ui } from '$lib/state/ui.svelte';
@@ -62,6 +63,7 @@
 <header class="row top">
 	<div class="logo"><Logo />Waymark</div>
 	<div class="row actions">
+		<LanguagePicker />
 		<button
 			class="btn btn-ghost btn-icon"
 			aria-label="Cambiar tema"

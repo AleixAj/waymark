@@ -1,66 +1,131 @@
-// Spanish formatting helpers used across the UI
+import { i18n, type Locale } from '$lib/i18n/i18n.svelte';
 
-const numberFormat = new Intl.NumberFormat('es-ES', { useGrouping: true });
-const decimalFormat = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 1 });
+// Formatting helpers used across the UI, in the language chosen by the user.
+// They read the language on every call, so the markup updates when it changes.
 
-/** 4912 -> "4.912" (Intl skips the dot for 4-digit numbers in Spanish, the design doesn't) */
+const numberFormats = new Map<string, Intl.NumberFormat>();
+function numberFormat(decimals: boolean) {
+	const key = `${i18n.tag}${decimals}`;
+	let format = numberFormats.get(key);
+	if (!format) {
+		format = new Intl.NumberFormat(
+			i18n.tag,
+			decimals ? { maximumFractionDigits: 1 } : { useGrouping: true }
+		);
+		numberFormats.set(key, format);
+	}
+	return format;
+}
+
+/**
+ * 4912 -> "4.912" / "4,912". Intl skips the separator for 4-digit numbers in
+ * Spanish and Catalan; the design doesn't.
+ */
 export function formatNumber(value: number) {
 	if (!Number.isFinite(value)) return '—';
 	const rounded = Math.round(value);
 	if (Math.abs(rounded) >= 1000 && Math.abs(rounded) < 10000) {
-		return String(rounded).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+		const separator = i18n.locale === 'en' ? ',' : '.';
+		return String(rounded).replace(/\B(?=(\d{3})+(?!\d))/g, separator);
 	}
-	return numberFormat.format(rounded);
+	return numberFormat(false).format(rounded);
 }
 
 export function formatDecimal(value: number) {
-	return decimalFormat.format(value);
+	return numberFormat(true).format(value);
 }
 
-const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-const MONTHS_LONG = [
-	'Enero',
-	'Febrero',
-	'Marzo',
-	'Abril',
-	'Mayo',
-	'Junio',
-	'Julio',
-	'Agosto',
-	'Septiembre',
-	'Octubre',
-	'Noviembre',
-	'Diciembre'
-];
-const DAYS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-const DAYS_LONG = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+const NAMES: Record<
+	Locale,
+	{ months: string[]; monthsLong: string[]; days: string[]; daysLong: string[] }
+> = {
+	es: {
+		months: ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'],
+		monthsLong: [
+			'Enero',
+			'Febrero',
+			'Marzo',
+			'Abril',
+			'Mayo',
+			'Junio',
+			'Julio',
+			'Agosto',
+			'Septiembre',
+			'Octubre',
+			'Noviembre',
+			'Diciembre'
+		],
+		days: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'],
+		daysLong: ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
+	},
+	en: {
+		months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+		monthsLong: [
+			'January',
+			'February',
+			'March',
+			'April',
+			'May',
+			'June',
+			'July',
+			'August',
+			'September',
+			'October',
+			'November',
+			'December'
+		],
+		days: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+		daysLong: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+	},
+	ca: {
+		months: ['gen', 'febr', 'març', 'abr', 'maig', 'juny', 'jul', 'ag', 'set', 'oct', 'nov', 'des'],
+		monthsLong: [
+			'Gener',
+			'Febrer',
+			'Març',
+			'Abril',
+			'Maig',
+			'Juny',
+			'Juliol',
+			'Agost',
+			'Setembre',
+			'Octubre',
+			'Novembre',
+			'Desembre'
+		],
+		days: ['Dg', 'Dl', 'Dt', 'Dc', 'Dj', 'Dv', 'Ds'],
+		daysLong: ['Diumenge', 'Dilluns', 'Dimarts', 'Dimecres', 'Dijous', 'Divendres', 'Dissabte']
+	}
+};
+
+const names = () => NAMES[i18n.locale];
 
 export function monthShort(month: number) {
-	return MONTHS[month];
+	return names().months[month];
 }
 
 /** "nov 2023" */
 export function formatMonth(time: number) {
 	const d = new Date(time);
-	return `${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+	return `${names().months[d.getMonth()]} ${d.getFullYear()}`;
 }
 
 /** "Julio 2026" */
 export function formatMonthLong(time: number) {
 	const d = new Date(time);
-	return `${MONTHS_LONG[d.getMonth()]} ${d.getFullYear()}`;
+	return `${names().monthsLong[d.getMonth()]} ${d.getFullYear()}`;
 }
 
 /** "Sáb 12 abr" */
 export function formatDay(time: number) {
 	const d = new Date(time);
-	return `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+	return `${names().days[d.getDay()]} ${d.getDate()} ${names().months[d.getMonth()]}`;
 }
 
 /** "Sábado, 12 abr 2025" */
 export function formatDayLong(time: number) {
 	const d = new Date(time);
-	return `${DAYS_LONG[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+	return `${names().daysLong[d.getDay()]}, ${d.getDate()} ${names().months[d.getMonth()]} ${d.getFullYear()}`;
 }
 
 /** "17:42:08" */
@@ -81,11 +146,12 @@ export function formatRange(start: number, end: number) {
 	const sameYear = a.getFullYear() === b.getFullYear();
 	const sameMonth = sameYear && a.getMonth() === b.getMonth();
 	if (sameMonth && a.getDate() === b.getDate()) {
-		return `${a.getDate()} ${MONTHS[a.getMonth()]} ${a.getFullYear()}`;
+		return `${a.getDate()} ${names().months[a.getMonth()]} ${a.getFullYear()}`;
 	}
-	if (sameMonth) return `${a.getDate()}–${b.getDate()} ${MONTHS[b.getMonth()]} ${b.getFullYear()}`;
+	if (sameMonth)
+		return `${a.getDate()}–${b.getDate()} ${names().months[b.getMonth()]} ${b.getFullYear()}`;
 	if (sameYear) {
-		return `${a.getDate()} ${MONTHS[a.getMonth()]} – ${b.getDate()} ${MONTHS[b.getMonth()]} ${b.getFullYear()}`;
+		return `${a.getDate()} ${names().months[a.getMonth()]} – ${b.getDate()} ${names().months[b.getMonth()]} ${b.getFullYear()}`;
 	}
 	return `${formatMonth(start)} – ${formatMonth(end)}`;
 }
@@ -124,7 +190,8 @@ export function formatLat(lat: number, digits = 4) {
 
 export function formatLng(lng: number, digits = 4) {
 	const text = Math.abs(lng).toFixed(digits);
-	return `${text}° ${lng < 0 && Number(text) !== 0 ? 'O' : 'E'}`;
+	const west = i18n.locale === 'es' ? 'O' : 'W';
+	return `${text}° ${lng < 0 && Number(text) !== 0 ? west : 'E'}`;
 }
 
 /** 1/500 for fast shutters, 2" for long ones */
@@ -139,9 +206,4 @@ export function formatBytes(bytes: number) {
 	if (bytes >= 999_500_000) return `${formatDecimal(bytes / 1e9)} GB`;
 	if (bytes >= 999_500) return `${formatDecimal(bytes / 1e6)} MB`;
 	return `${formatNumber(bytes / 1e3)} KB`;
-}
-
-/** 1 foto, 2 fotos */
-export function plural(count: number, one: string, many: string) {
-	return `${formatNumber(count)} ${count === 1 ? one : many}`;
 }

@@ -1,4 +1,5 @@
 import { loadCountryInfo, loadMapCountries } from '$lib/geo/data';
+import { i18n } from '$lib/i18n/i18n.svelte';
 import { toCountryFeatures, type CountryFeature, type CountryInfo } from '$lib/geo/countries';
 
 /**
@@ -32,7 +33,31 @@ class Countries {
 		return iso3 ? this.byIso3.get(iso3) : undefined;
 	}
 
-	name = (iso3: string | null | undefined) => this.info(iso3)?.name ?? iso3 ?? '';
+	/** The country name in the user's language (the data files have it in Spanish) */
+	name = (iso3: string | null | undefined) => {
+		const info = this.info(iso3);
+		if (!info) return iso3 ?? '';
+		if (i18n.locale === 'es') return info.name;
+		try {
+			const name = regionNames(i18n.tag)?.of(info.iso2);
+			// Unknown codes come back as the code itself
+			return name && name !== info.iso2 ? name : info.name;
+		} catch {
+			return info.name;
+		}
+	};
+}
+
+const displayNames = new Map<string, Intl.DisplayNames | null>();
+function regionNames(tag: string) {
+	if (!displayNames.has(tag)) {
+		try {
+			displayNames.set(tag, new Intl.DisplayNames([tag], { type: 'region' }));
+		} catch {
+			displayNames.set(tag, null);
+		}
+	}
+	return displayNames.get(tag);
 }
 
 export const countries = new Countries();
