@@ -44,9 +44,14 @@
 			<Icon name="sidebar" />
 		</button>
 	{/if}
-	<MapControls style={library.progress ? 'bottom: 320px' : ''} />
+	<!-- The zone panel takes the right side: the controls move to its left -->
+	<MapControls
+		style={[library.progress && 'bottom: 320px', ui.zone && 'right: 452px']
+			.filter(Boolean)
+			.join(';')}
+	/>
 	{#if !library.progress}
-		<Timeline />
+		<Timeline style={ui.zone ? 'right: 452px' : ''} />
 	{/if}
 {/if}
 

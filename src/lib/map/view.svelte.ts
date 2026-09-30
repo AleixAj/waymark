@@ -1,4 +1,5 @@
-import type { LngLatBoundsLike, MapLibreMap, PaddingOptions } from 'maplibre-gl';
+import { LngLatBounds } from 'maplibre-gl';
+import type { LngLatBoundsLike, LngLatLike, MapLibreMap, PaddingOptions } from 'maplibre-gl';
 import { settings } from '$lib/state/settings.svelte';
 import { ui } from '$lib/state/ui.svelte';
 import { countries } from '$lib/state/countries.svelte';
@@ -11,6 +12,8 @@ import { pointsBounds } from './bounds';
 const WORLD_CENTER: [number, number] = [-24, 36];
 const WELCOME_CENTER: [number, number] = [-20, 18];
 const FLIGHT_MS = 1200;
+// Space left around the photos when the camera frames them
+const MARGIN = 24;
 
 /** Zoom that makes the globe outline a share of the window height, like in the design */
 export function zoomForGlobe(heightShare: number, lat: number) {
@@ -53,12 +56,31 @@ class MapView {
 		return settings.reducedMotion ? 0 : FLIGHT_MS;
 	}
 
-	/** Padding really used by the camera: on phones the panels are bottom sheets */
-	get cameraPadding(): PaddingOptions {
+	/**
+	 * Padding really used by the camera: on phones the panels are bottom sheets.
+	 * The same object is kept while the numbers don't change, so pages that
+	 * re-frame the map when it changes don't move the camera for nothing
+	 * (e.g. when the zone panel opens over a panel of the same width).
+	 */
+	private lastPadding: PaddingOptions = { top: -1, bottom: -1, left: -1, right: -1 };
+	private paddingNow = $derived.by(() => {
+		let next: PaddingOptions;
 		if (ui.viewportWidth < 768) {
-			return { top: 80, bottom: ui.sheetHeight + 16, left: 16, right: 16 };
+			next = { top: 80, bottom: ui.sheetHeight + 16, left: 16, right: 16 };
+		} else if (ui.zone) {
+			// The zone panel covers the right side of the map
+			next = { ...this.padding, right: Math.max(this.padding.right ?? 0, 470) };
+		} else {
+			next = this.padding;
 		}
-		return this.padding;
+		const keys = ['top', 'bottom', 'left', 'right'] as const;
+		if (keys.every((k) => next[k] === this.lastPadding[k])) return this.lastPadding;
+		this.lastPadding = next;
+		return next;
+	});
+
+	get cameraPadding(): PaddingOptions {
+		return this.paddingNow;
 	}
 
 	flyTo(center: [number, number], zoom: number) {
@@ -82,7 +104,47 @@ class MapView {
 			(k) => current[k] === padding[k]
 		);
 		if (!same) this.map.setPadding(padding);
-		this.map.fitBounds(bounds, { padding: 24, maxZoom, duration: this.duration });
+		const camera = this.map.cameraForBounds(bounds, { padding: MARGIN, maxZoom });
+		if (!camera?.center || camera.zoom === undefined) return;
+		this.map.flyTo({
+			center: camera.center,
+			zoom: this.checkedZoom(camera.center, camera.zoom, LngLatBounds.convert(bounds)),
+			duration: this.duration,
+			essential: true
+		});
+	}
+
+	/**
+	 * On the globe MapLibre's fitting zoom can be too close (a trip from Zürich to
+	 * Rome ended under the timeline). The camera is tried for a moment, without
+	 * drawing, and zoomed out until the bounds really fit between the panels.
+	 */
+	private checkedZoom(center: LngLatLike, zoom: number, bounds: LngLatBounds) {
+		const map = this.map!;
+		const saved = { center: map.getCenter(), zoom: map.getZoom() };
+		const { top = 0, bottom = 0, left = 0, right = 0 } = map.getPadding();
+		const width = map.getCanvas().clientWidth - left - right - 2 * MARGIN;
+		const height = map.getCanvas().clientHeight - top - bottom - 2 * MARGIN;
+		const corners = [
+			bounds.getSouthWest(),
+			bounds.getNorthEast(),
+			bounds.getNorthWest(),
+			bounds.getSouthEast()
+		];
+		for (let attempt = 0; attempt < 3 && width > 0 && height > 0; attempt++) {
+			map.jumpTo({ center, zoom });
+			const pixels = corners.map((c) => map.project(c));
+			const xs = pixels.map((p) => p.x);
+			const ys = pixels.map((p) => p.y);
+			const ratio = Math.max(
+				(Math.max(...xs) - Math.min(...xs)) / width,
+				(Math.max(...ys) - Math.min(...ys)) / height
+			);
+			if (ratio <= 1.02) break;
+			zoom -= Math.log2(ratio);
+		}
+		map.jumpTo(saved);
+		return zoom;
 	}
 
 	fitPoints(points: { lat: number; lng: number }[], maxZoom = 12) {

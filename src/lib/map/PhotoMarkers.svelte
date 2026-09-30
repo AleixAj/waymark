@@ -20,7 +20,14 @@
 
 	let { points, labels = true, context = '' }: Props = $props();
 
-	type Props_ = { id: string; city: string | null; country: string | null; takenAt: number };
+	type Props_ = {
+		id: string;
+		city: string | null;
+		country: string | null;
+		takenAt: number;
+		lat: number;
+		lng: number;
+	};
 	type ClusterProps = { cluster: true; cluster_id: number; point_count: number };
 	type ClusterItem = Feature<Point, ClusterProps>;
 	type Item = Feature<Point, Props_> | ClusterItem;
@@ -52,7 +59,14 @@
 			points.map((p) => ({
 				type: 'Feature',
 				geometry: { type: 'Point', coordinates: [p.lng, p.lat] },
-				properties: { id: p.id, city: p.city, country: p.country, takenAt: p.takenAt }
+				properties: {
+					id: p.id,
+					city: p.city,
+					country: p.country,
+					takenAt: p.takenAt,
+					lat: p.lat,
+					lng: p.lng
+				}
 			}))
 		);
 		return sc;
@@ -289,8 +303,15 @@
 	function open(item: Item) {
 		const zoom = map.getZoom();
 		if (isCluster(item) && zoom < 15) {
+			// The panel lists every photo of the circle while the map zooms into it;
+			// clicking a smaller circle there narrows the list down
+			const photos = leaves(item);
+			ui.zone = { ids: photos.map((p) => p.id), title: placeLabel(photos) || 'Fotos' };
+			// Frame all the photos of the circle, at least one zoom step closer so it splits
 			const target = Math.min(index.getClusterExpansionZoom(item.properties.cluster_id), 17);
-			mapView.flyTo(item.geometry.coordinates as [number, number], target);
+			const spread = photos.some((p) => p.lat !== photos[0].lat || p.lng !== photos[0].lng);
+			if (spread) mapView.fitPoints(photos, Math.max(target, 15));
+			else mapView.flyTo(item.geometry.coordinates as [number, number], target);
 			return;
 		}
 		// Single photo, or photos taken at the same spot: open the viewer

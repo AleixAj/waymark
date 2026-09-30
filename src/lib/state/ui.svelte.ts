@@ -50,6 +50,11 @@ class Ui {
 	/** Photos being dragged from "Sin ubicación" onto the globe */
 	dragging = $state<string[] | null>(null);
 
+	/** Photo lists of a place: grouped by city (or neighbourhood) or by day */
+	photoOrder = $state<'place' | 'date'>('place');
+	/** Photos of the circle clicked on the map, listed in the zone panel */
+	zone = $state.raw<{ ids: string[]; title: string } | null>(null);
+
 	/** "Asignar ubicación": next click on the map places these photos */
 	placing = $state<string[] | null>(null);
 	/** Pages opened inside the app; 0 means the app was opened from a link */

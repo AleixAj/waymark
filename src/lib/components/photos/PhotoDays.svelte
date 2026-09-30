@@ -2,7 +2,7 @@
 	import Thumb from './Thumb.svelte';
 	import { growingLimit } from './growing.svelte';
 	import type { PhotoPoint } from '$lib/photos/types';
-	import { dayKey, formatDay, formatNumber } from '$lib/library/format';
+	import { dayKey, formatDay, formatNumber, formatRange } from '$lib/library/format';
 	import { groupBy, ranked } from '$lib/library/trips';
 	import { ui } from '$lib/state/ui.svelte';
 
@@ -15,23 +15,40 @@
 
 	let { photos, columns = 4, context = '' }: Props = $props();
 
-	// One section per day, with the main city of that day as subtitle
-	const days = $derived(
-		[...groupBy(photos, (p) => dayKey(p.takenAt)).values()].map((items) => ({
-			key: dayKey(items[0].takenAt),
-			title: formatDay(items[0].takenAt),
-			place: ranked(items, (p) => p.city)[0] ?? '',
-			items
-		}))
-	);
-	const ids = $derived(photos.map((p) => p.id));
+	// By place (the default): one section per city, the biggest first. When all the
+	// photos are in one city its neighbourhoods are used instead. By date: one per day.
+	const groups = $derived.by(() => {
+		if (ui.photoOrder === 'date') {
+			return [...groupBy(photos, (p) => dayKey(p.takenAt)).values()].map((items) => ({
+				key: dayKey(items[0].takenAt),
+				title: formatDay(items[0].takenAt),
+				place: ranked(items, (p) => p.city)[0] ?? '',
+				items
+			}));
+		}
+		const oneCity = new Set(photos.map((p) => p.city)).size === 1;
+		const placeOf = (p: PhotoPoint) => (oneCity ? (p.area ?? p.city) : p.city) ?? '';
+		return [...groupBy(photos, placeOf).entries()]
+			.map(([name, items]) => {
+				const sorted = [...items].sort((a, b) => a.takenAt - b.takenAt);
+				return {
+					key: name || '-',
+					title: name || 'Otros lugares',
+					place: formatRange(sorted[0].takenAt, sorted[sorted.length - 1].takenAt),
+					items: sorted
+				};
+			})
+			.sort((a, b) => (a.key === '-' ? 1 : b.key === '-' ? -1 : b.items.length - a.items.length));
+	});
+	// The viewer goes through the photos in the same order as the list
+	const ids = $derived(groups.flatMap((g) => g.items.map((p) => p.id)));
 
 	// Long lists appear in steps (see growing.svelte.ts): whole days, until the limit
 	const shown = growingLimit(() => photos.length);
 	const shownDays = $derived.by(() => {
 		let count = 0;
 		const result = [];
-		for (const day of days) {
+		for (const day of groups) {
 			if (count >= shown.value) break;
 			result.push(day);
 			count += day.items.length;
@@ -39,6 +56,24 @@
 		return result;
 	});
 </script>
+
+<div class="row order">
+	<span class="t-small t3">Ordenar</span>
+	<div class="seg" role="radiogroup" aria-label="Ordenar fotos">
+		<button
+			role="radio"
+			aria-checked={ui.photoOrder === 'place'}
+			class:is-on={ui.photoOrder === 'place'}
+			onclick={() => (ui.photoOrder = 'place')}>Por lugar</button
+		>
+		<button
+			role="radio"
+			aria-checked={ui.photoOrder === 'date'}
+			class:is-on={ui.photoOrder === 'date'}
+			onclick={() => (ui.photoOrder = 'date')}>Por fecha</button
+		>
+	</div>
+</div>
 
 {#each shownDays as day (day.key)}
 	<section
@@ -65,6 +100,12 @@
 {/each}
 
 <style>
+	.order {
+		justify-content: space-between;
+		gap: 12px;
+		padding: 12px 20px 4px;
+	}
+
 	/* Sections far from the screen are skipped by the browser until needed */
 	.day {
 		content-visibility: auto;
@@ -79,6 +120,10 @@
 	}
 
 	@media (max-width: 767px) {
+		.order {
+			padding: 10px 16px 4px;
+		}
+
 		.pgrid {
 			padding: 0 16px 12px;
 			grid-template-columns: repeat(3, 1fr) !important;

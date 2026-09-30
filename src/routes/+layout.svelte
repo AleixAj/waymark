@@ -35,6 +35,7 @@
 	import { droppedFiles, pickFiles } from '$lib/photos/pick';
 	import ImportChooser from '$lib/components/ImportChooser.svelte';
 	import DemoLoading from '$lib/components/DemoLoading.svelte';
+	import ZonePanel from '$lib/components/ZonePanel.svelte';
 	import TakeoutAlbums from '$lib/components/TakeoutAlbums.svelte';
 	import { importFiles } from '$lib/state/importing';
 	import { auth } from '$lib/google/auth.svelte';
@@ -98,6 +99,8 @@
 		}
 		if (type !== 'enter') ui.inAppNavigations++;
 		ui.searchOpen = false;
+		// The zone panel belongs to the map view it was opened on
+		ui.zone = null;
 	});
 
 	function openCountry(iso3: string, lngLat: { lng: number; lat: number }) {
@@ -166,6 +169,7 @@
 			<TopBar />
 		{/if}
 		{@render children()}
+		{#if ui.zone && !welcome}<ZonePanel zone={ui.zone} />{/if}
 
 		<div class="globe" class:hidden={onStats}>
 			{#if !hasWebGL}
