@@ -1,4 +1,6 @@
 <script lang="ts">
+	// Display face only for the big title (the font file downloads only on this screen)
+	import '@fontsource-variable/fraunces/wght-italic.css';
 	import Icon from './ui/Icon.svelte';
 	import Logo from './Logo.svelte';
 	import { settings } from '$lib/state/settings.svelte';
@@ -217,15 +219,70 @@
 		z-index: 2;
 	}
 
+	/* The big title: a heavy italic serif outlined like an amber neon sign.
+	   It lights up with a short flicker when the page opens. */
 	.wordmark {
-		font-size: clamp(64px, 12vw, 112px);
-		line-height: 0.93;
+		font-family: 'Fraunces Variable', 'Instrument Serif', Georgia, serif;
+		font-style: italic;
+		font-weight: 800;
+		font-size: clamp(76px, 15vw, 168px);
+		line-height: 0.9;
+		letter-spacing: -0.035em;
+		padding: 0 0.08em;
+		color: oklch(0.97 0.03 85);
+		-webkit-text-stroke: 2px oklch(0.8 0.17 58);
+		paint-order: stroke fill;
+		text-shadow:
+			0 0 6px oklch(0.8 0.17 58 / 0.9),
+			0 0 22px oklch(0.75 0.19 50 / 0.65),
+			0 0 60px oklch(0.7 0.2 45 / 0.45);
+	}
+
+	/* More specific than the fade-in of the other items, so this one flickers instead */
+	.welcome > .wordmark {
+		animation: neon-on 1.4s 0.2s ease-out both;
+	}
+
+	:global([data-theme='light']) .wordmark {
+		color: oklch(0.99 0.01 85);
+		-webkit-text-stroke-color: oklch(0.68 0.18 50);
+		text-shadow:
+			0 0 4px oklch(0.72 0.18 50 / 0.9),
+			0 0 18px oklch(0.72 0.18 50 / 0.5),
+			0 2px 30px oklch(0.6 0.18 45 / 0.35);
+	}
+
+	@keyframes neon-on {
+		0% {
+			opacity: 0;
+		}
+
+		10% {
+			opacity: 0.8;
+		}
+
+		14% {
+			opacity: 0.15;
+		}
+
+		22% {
+			opacity: 1;
+		}
+
+		26% {
+			opacity: 0.4;
+		}
+
+		34%,
+		100% {
+			opacity: 1;
+		}
 	}
 
 	.tagline {
 		font-size: 18px;
 		line-height: 26px;
-		margin-top: 10px;
+		margin-top: clamp(14px, 2.4vw, 28px);
 	}
 
 	.drop {
