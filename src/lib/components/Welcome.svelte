@@ -90,7 +90,6 @@
 </script>
 
 <div class="shade" aria-hidden="true"></div>
-<div class="flash" class:on={phase !== 'idle'} aria-hidden="true"></div>
 <div class="curtain" class:on={phase === 'leave'} aria-hidden="true"></div>
 
 <header class="row top">
@@ -539,8 +538,7 @@
 		transform: scale(0.97);
 	}
 
-	/* The photo being taken: the camera is pressed, its lens bursts with light and
-	   the whole screen flashes white for a moment */
+	/* The photo being taken: the camera is pressed and its flash goes off */
 	.camera {
 		position: relative;
 		display: grid;
@@ -561,59 +559,56 @@
 		}
 	}
 
+	/* The flash fires from the camera's top left corner: a short burst of light
+	   with a small cross of rays, like a flash going off in the dark */
 	.burst {
 		position: absolute;
-		left: 50%;
-		top: 58%;
-		width: 18px;
-		height: 18px;
-		margin: -9px 0 0 -9px;
+		left: 15%;
+		top: 13%;
+		width: 22px;
+		height: 22px;
+		margin: -11px 0 0 -11px;
 		border-radius: 50%;
-		background: radial-gradient(circle, #fff 0%, #fff8e8 35%, oklch(0.85 0.12 70 / 0) 70%);
+		background: radial-gradient(circle, #fff 0%, #fff4dc 30%, oklch(0.88 0.12 75 / 0) 70%);
 		opacity: 0;
 		pointer-events: none;
 	}
 
+	.burst::before,
+	.burst::after {
+		content: '';
+		position: absolute;
+		left: 50%;
+		top: 50%;
+		width: 260%;
+		height: 2px;
+		margin: -1px 0 0 -130%;
+		border-radius: 2px;
+		background: linear-gradient(90deg, transparent, #fff 50%, transparent);
+	}
+
+	.burst::after {
+		transform: rotate(90deg);
+	}
+
 	.snap .burst {
-		animation: burst 0.6s 0.08s ease-out;
+		animation: burst 0.55s 0.1s ease-out;
 	}
 
 	@keyframes burst {
 		0% {
+			opacity: 0;
+			transform: scale(0.3) rotate(0deg);
+		}
+
+		15% {
 			opacity: 1;
-			transform: scale(0.2);
+			transform: scale(2.4) rotate(20deg);
 		}
 
 		100% {
 			opacity: 0;
-			transform: scale(28);
-		}
-	}
-
-	.flash {
-		position: fixed;
-		inset: 0;
-		z-index: 50;
-		background: radial-gradient(circle at 50% 30%, #fff 0%, #fff6e6 45%, #ffe9c4 100%);
-		opacity: 0;
-		pointer-events: none;
-	}
-
-	.flash.on {
-		animation: flash 0.55s 0.1s ease-out;
-	}
-
-	@keyframes flash {
-		0% {
-			opacity: 0;
-		}
-
-		12% {
-			opacity: 0.92;
-		}
-
-		100% {
-			opacity: 0;
+			transform: scale(4) rotate(45deg);
 		}
 	}
 
