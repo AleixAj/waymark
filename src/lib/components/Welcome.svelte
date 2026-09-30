@@ -3,6 +3,7 @@
 	import '@fontsource-variable/fraunces/wght-italic.css';
 	import Icon from './ui/Icon.svelte';
 	import Logo from './Logo.svelte';
+	import logo from '$lib/assets/logo-hero.webp';
 	import { settings } from '$lib/state/settings.svelte';
 	import AccountButton from './AccountButton.svelte';
 	import ServiceMark from './ui/ServiceMark.svelte';
@@ -73,6 +74,7 @@
 </header>
 
 <main class="col welcome">
+	<img class="hero-logo" src={logo} alt="" width="118" height="96" />
 	<h1 class="wordmark">Waymark</h1>
 	<p class="tagline">Tu vuelta al mundo, foto a foto</p>
 
@@ -219,6 +221,18 @@
 		z-index: 2;
 	}
 
+	/* The logo above the title, with the same soft amber glow as its letters */
+	.hero-logo {
+		width: clamp(56px, min(9vw, 11vh), 104px);
+		height: auto;
+		margin-bottom: clamp(10px, 1.6vw, 18px);
+		filter: drop-shadow(0 0 1px #ffe9c4) drop-shadow(0 6px 18px oklch(0.75 0.17 55 / 0.35));
+	}
+
+	:global([data-theme='light']) .hero-logo {
+		filter: drop-shadow(0 6px 16px oklch(0.7 0.15 55 / 0.3));
+	}
+
 	/* The big title: white letters with only their outline in amber and a soft glow.
 	   The stroke is painted under the fill, so only its outer half shows and the
 	   lines where the font's shapes overlap stay hidden. */
@@ -226,7 +240,7 @@
 		font-family: 'Fraunces Variable', 'Instrument Serif', Georgia, serif;
 		font-style: italic;
 		font-weight: 700;
-		font-size: clamp(76px, 15vw, 168px);
+		font-size: clamp(64px, min(15vw, 17vh), 168px);
 		line-height: 0.9;
 		letter-spacing: -0.03em;
 		padding: 0 0.08em;
@@ -485,6 +499,13 @@
 
 	.legal a:hover {
 		color: var(--t1);
+	}
+
+	/* Short windows (small laptops): the three highlights make room for the rest */
+	@media (max-height: 760px) and (min-width: 641px) {
+		.features {
+			display: none;
+		}
 	}
 
 	@media (max-width: 640px) {

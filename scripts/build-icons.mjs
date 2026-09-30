@@ -1,5 +1,6 @@
 // Makes every size of the logo from the original drawing (docs/brand/logo.png):
 //   src/lib/assets/logo.webp   -> the logo next to the name in the app
+//   src/lib/assets/logo-hero.webp -> the big one on the welcome screen (sharp on retina)
 //   static/favicon.png         -> browser tab
 //   static/apple-touch-icon.png, static/icons/*.png -> home screen when installed
 // Run with: node scripts/build-icons.mjs
@@ -25,6 +26,10 @@ async function square(size, share, background) {
 }
 
 await sharp(logo).resize({ height: 96 }).webp({ quality: 90 }).toFile('src/lib/assets/logo.webp');
+await sharp(logo)
+	.resize({ height: 240 })
+	.webp({ quality: 88 })
+	.toFile('src/lib/assets/logo-hero.webp');
 await (
 	await square(64, 1, CLEAR)
 )
