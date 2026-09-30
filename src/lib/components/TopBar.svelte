@@ -392,8 +392,10 @@
 			display: inline-flex;
 		}
 
+		/* It may shrink below its text: otherwise it pushes the menu out of the bar */
 		.search {
 			width: 100%;
+			min-width: 0;
 		}
 
 		.search .placeholder {

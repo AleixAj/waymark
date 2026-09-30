@@ -1,6 +1,9 @@
 <div align="center">
 
-<img src="static/icons/maskable-512.png" alt="Waymark logo" width="120">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/readme/logo-dark.png">
+  <img src="docs/readme/logo-light.png" alt="Waymark logo" width="150">
+</picture>
 
 # Waymark
 
@@ -24,15 +27,38 @@ Your travel photos placed on an interactive 3D globe, with no server and your ow
 
 </div>
 
+<p align="center">
+  <img src="docs/screenshots/en/globe.webp" alt="The Waymark globe with the demo photos">
+</p>
+
 ## What it is
 
 Drop your photos in and Waymark reads where each one was taken to place it on the planet. Spin the globe, click a circle to see the photos of that area, fly into a country or a city, replay a trip along its route and check your statistics. Like Google Photos, but with a world map instead of albums.
 
 A portfolio project built like a real product. **There is no server of its own:** photos are processed in the browser, the app works offline after the first visit and your album is stored in your own Google Drive, so it looks the same on all your devices.
 
-**Try it without signing up:** click [_Ver la demo_](https://waymark.aleixaj.com/?demo). It loads about 600 real photos from [Wikimedia Commons](https://commons.wikimedia.org/), with their real location and camera, across 15 trips in 18 countries, like the album of a real person.
+**Try it without signing up:** click [_See the demo_](https://waymark.aleixaj.com/?demo). It loads about 600 real photos from [Wikimedia Commons](https://commons.wikimedia.org/), with their real location and camera, across 15 trips in 18 countries, like the album of a real person.
 
-The interface is in Spanish.
+The interface is available in English, Spanish and Catalan.
+
+## Screenshots
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/en/country.webp" alt="Country"><br><sub><b>Country</b> · cities, days, kilometres and photos sorted by place</sub></td>
+    <td width="50%"><img src="docs/screenshots/en/trip.webp" alt="Trip"><br><sub><b>Trip</b> · the route is drawn stop by stop, with its photos</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/en/city.webp" alt="City"><br><sub><b>City</b> · street-level thumbnails and neighbourhoods to filter by</sub></td>
+    <td width="50%"><img src="docs/screenshots/en/viewer.webp" alt="Viewer"><br><sub><b>Viewer</b> · EXIF, location map and credits for every photo</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/en/stats.webp" alt="Statistics"><br><sub><b>Statistics</b> · countries, distance, photos per year and extreme points</sub></td>
+    <td width="50%"><img src="docs/screenshots/en/welcome.webp" alt="Welcome"><br><sub><b>Welcome</b> · sign in with Google or open the demo without an account</sub></td>
+  </tr>
+</table>
+
+<p align="center"><img src="docs/screenshots/en/mobile.webp" alt="Mobile" width="100%"><br><sub><b>Mobile</b> · panels become draggable bottom sheets</sub></p>
 
 ## Highlights
 
@@ -43,6 +69,8 @@ The interface is in Spanish.
 - **Trips detected automatically** from dates and places, with an animated route, stages and GPX export.
 - **Estimated locations** for photos without GPS (WhatsApp, cameras with location off) from photos taken around the same time or in the same album.
 - **Google Drive sync** without a backend: Google sign-in in the browser, light copies in a folder of the user's Drive and change merging across devices.
+- **Three languages:** English, Spanish and Catalan, with a flag picker; dates, numbers, countries and trip titles switch instantly.
+- **Purposeful animation:** the logo's camera fires a flash on the way in, the theme is revealed in a circle, each trip's route draws itself and photos slide in the viewer.
 - **Accessible:** WCAG AA contrast checked with axe, full keyboard navigation, screen reader labels, high contrast mode and support for _reduced motion_.
 - **Quality:** strict TypeScript, 66 unit tests of the core logic, ESLint, Prettier and `svelte-check` with no errors.
 
@@ -58,26 +86,28 @@ The interface is in Spanish.
 - **Statistics:** countries, continents, distance travelled, photos per year, top cities and extreme points.
 - **Search** (Ctrl/⌘ K) for countries, cities, trips or pasted coordinates.
 - **Globe color styles:** natural, grey (the world in grey and your countries in color), night and atlas, with a preview and saved choice.
+- **Languages:** English, Spanish and Catalan, chosen with flags in the top bar or in settings (the first time it follows the browser language).
 - **Settings:** dark/light/system theme, km/mi, map style, reduced motion, globe quality, storage and export.
 - **Responsive and installable:** on phones the panels become draggable bottom sheets, and the app can be added to the home screen.
 
 ## Tech stack
 
-| Layer      | Choice                                    | Why                                                                                                                       |
-| ---------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| Framework  | SvelteKit 2 + Svelte 5 (runes)            | Fine-grained reactivity without a virtual DOM: with thousands of photos only what changes updates. Built as a static SPA. |
-| Language   | TypeScript 6 (`strict`)                   | Data models shared between workers, database and views.                                                                   |
-| Build      | Vite 8                                    | Workers as modules, code splitting per route and lazy loading of heavy libraries.                                         |
-| Map        | MapLibre GL 6                             | Open source WebGL 3D globe, no keys or usage limits.                                                                      |
-| Clustering | Supercluster                              | Clusters thousands of points per zoom level in milliseconds.                                                              |
-| Geometry   | d3-geo                                    | Point in country, bounds and the flat map in Statistics.                                                                  |
-| Metadata   | exifr                                     | Fast EXIF and GPS reading, also for TIFF-based RAW formats.                                                               |
-| Storage    | Dexie (IndexedDB)                         | Stores photos, thumbnails and data in the browser, with indexes and migrations.                                           |
-| Takeout    | zip.js                                    | Reads multi-GB zips without unzipping them: each photo is opened only when its turn comes.                                |
-| Account    | Google Identity Services + Drive REST API | Sign-in and sync without a server of our own, with the minimal `drive.file` permission.                                   |
-| Quality    | Vitest, ESLint, Prettier, svelte-check    | Tests of the domain logic and type checking of components.                                                                |
-| Deployment | Cloudflare Workers (static assets)        | Static site on the edge network, with its own cache headers and SPA routes resolved by Cloudflare.                        |
-| Scripts    | Node + sharp                              | Build the geo data, the sample library and every size of the logo.                                                        |
+| Layer      | Choice                                    | Why                                                                                                                          |
+| ---------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Framework  | SvelteKit 2 + Svelte 5 (runes)            | Fine-grained reactivity without a virtual DOM: with thousands of photos only what changes updates. Built as a static SPA.    |
+| Language   | TypeScript 6 (`strict`)                   | Data models shared between workers, database and views.                                                                      |
+| Build      | Vite 8                                    | Workers as modules, code splitting per route and lazy loading of heavy libraries.                                            |
+| Map        | MapLibre GL 6                             | Open source WebGL 3D globe, no keys or usage limits.                                                                         |
+| Clustering | Supercluster                              | Clusters thousands of points per zoom level in milliseconds.                                                                 |
+| Geometry   | d3-geo                                    | Point in country, bounds and the flat map in Statistics.                                                                     |
+| Metadata   | exifr                                     | Fast EXIF and GPS reading, also for TIFF-based RAW formats.                                                                  |
+| Storage    | Dexie (IndexedDB)                         | Stores photos, thumbnails and data in the browser, with indexes and migrations.                                              |
+| Takeout    | zip.js                                    | Reads multi-GB zips without unzipping them: each photo is opened only when its turn comes.                                   |
+| Account    | Google Identity Services + Drive REST API | Sign-in and sync without a server of our own, with the minimal `drive.file` permission.                                      |
+| Languages  | Own translator (no library)               | Small dictionaries per screen, with plurals and placeholders; TypeScript checks that the three languages have the same keys. |
+| Quality    | Vitest, ESLint, Prettier, svelte-check    | Tests of the domain logic and type checking of components.                                                                   |
+| Deployment | Cloudflare Workers (static assets)        | Static site on the edge network, with its own cache headers and SPA routes resolved by Cloudflare.                           |
+| Scripts    | Node + sharp                              | Build the geo data, the sample library and every size of the logo.                                                           |
 
 ## Architecture
 
@@ -124,6 +154,8 @@ sync ── your Google Drive: light copies + library.json
 
 **Account and privacy.** The album belongs to a Google account: without signing in you can only open the demo. Signing out runs a last sync, warns if any photo is not uploaded yet and makes the browser forget the album. No server and no analytics; photos only leave the browser to the user's own Drive folder. The [privacy policy](https://waymark.aleixaj.com/privacidad) has the details.
 
+**Languages.** Each screen has its own dictionary, Spanish as the source with English and Catalan next to it; a missing key does not compile. Dates and numbers come from `Intl` plus a small month table, country names from `Intl.DisplayNames`, and the place search asks for results in the chosen language. Language and theme changes use the View Transitions API.
+
 **Accessibility.** Keyboard order follows the screen (top bar, panel, map), map markers tell screen readers their place and panels are almost opaque so text stays readable over any part of the map. Every screen passes axe with no errors in light and dark themes, with styles for `prefers-contrast` and Windows forced colors.
 
 ## Performance
@@ -150,6 +182,7 @@ src/
 │   ├── library/      # Trips, estimates, statistics, timeline and formatting
 │   ├── sync/         # Sync plan and light copy for Google Drive
 │   ├── google/       # Google sign-in, Drive API and Drive picker
+│   ├── i18n/         # Translator and dictionaries in Spanish, English and Catalan
 │   ├── state/        # App state: library, settings, UI and import
 │   ├── components/   # Panels, zone panel, viewer, search, settings, import...
 │   └── demo/         # Sample library generator
@@ -207,7 +240,9 @@ The site is published on Cloudflare Workers as static assets (`wrangler.jsonc`):
 - [x] Accessibility review (WCAG AA) and interface animations.
 - [x] Logo, installable icons and deployment on Cloudflare Workers with a custom domain.
 - [ ] Continuous integration with GitHub Actions (tests and types on every `push`).
-- [ ] Screenshots and a demo video in this README.
+- [x] Interface in English, Spanish and Catalan.
+- [x] App screenshots in this README.
+- [ ] Short demo video.
 
 ## Why this project matters
 
