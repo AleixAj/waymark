@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Logo from './Logo.svelte';
+	import logo from '$lib/assets/logo.webp';
 	import { formatDecimal } from '$lib/library/format';
 	import type { DemoStatus } from '$lib/demo/load';
 	import t from '$lib/i18n/messages/demo';
@@ -22,7 +22,11 @@
 <!-- The sample library appears all at once when it is ready, not bit by bit -->
 <div class="backdrop">
 	<div class="card panel" role="dialog" aria-modal="true" aria-labelledby="demo-title">
-		<div class="row brand"><Logo />Waymark</div>
+		<!-- While it loads, the camera of the logo keeps taking photos -->
+		<div class="row brand">
+			<span class="camera" aria-hidden="true"><img src={logo} alt="" width="59" height="48" /></span
+			>Waymark
+		</div>
 		<h1 id="demo-title" class="t-h2">{t('title')}</h1>
 		<p class="t-small t2">
 			{t('lead')}
@@ -68,6 +72,7 @@
 	}
 
 	.card {
+		animation: rise var(--dur-slow) var(--ease-out);
 		width: min(420px, 100%);
 		padding: 28px 28px 22px;
 		background: var(--glass-strong);
@@ -99,6 +104,84 @@
 	}
 
 	/* Scaled, not resized: it follows every update and the GPU draws it */
+	/* A light that runs along the bar, so it looks alive even between updates */
+	.fill::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(90deg, transparent, oklch(1 0 0 / 0.45), transparent);
+		transform: translateX(-100%);
+		animation: sweep 1.4s ease-in-out infinite;
+	}
+
+	@keyframes sweep {
+		to {
+			transform: translateX(100%);
+		}
+	}
+
+	.camera {
+		position: relative;
+		display: grid;
+		animation: shoot 2.2s var(--ease-out) infinite;
+	}
+
+	.camera img {
+		width: 36px;
+		height: auto;
+		filter: drop-shadow(0 0 1px oklch(0.78 0.18 56));
+	}
+
+	/* The flash on the camera's top left corner */
+	.camera::after {
+		content: '';
+		position: absolute;
+		left: 15%;
+		top: 13%;
+		width: 10px;
+		height: 10px;
+		margin: -5px 0 0 -5px;
+		border-radius: 50%;
+		background: radial-gradient(circle, #fff 0%, #fff4dc 35%, transparent 70%);
+		opacity: 0;
+		animation: flash 2.2s ease-out infinite;
+	}
+
+	@keyframes shoot {
+		0%,
+		70%,
+		100% {
+			transform: none;
+		}
+
+		76% {
+			transform: scale(0.9) translateY(1px);
+		}
+
+		84% {
+			transform: scale(1.05);
+		}
+	}
+
+	@keyframes flash {
+		0%,
+		76%,
+		100% {
+			opacity: 0;
+			transform: scale(0.4);
+		}
+
+		80% {
+			opacity: 1;
+			transform: scale(2.6);
+		}
+
+		92% {
+			opacity: 0;
+			transform: scale(4);
+		}
+	}
+
 	.fill {
 		position: absolute;
 		inset: 0;

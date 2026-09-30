@@ -70,7 +70,7 @@
 				</button>
 			</div>
 		</div>
-		<h1 class="t-h1 title">{zone.title}</h1>
+		{#key zone}<h1 class="t-h1 title">{zone.title}</h1>{/key}
 		<p class="mono t2 sub">
 			{range} · {tc('photos', { n: photos.length })}
 		</p>
@@ -109,7 +109,12 @@
 	</div>
 	<div class="hr"></div>
 	<div class="scroll">
-		<PhotoDays photos={shown} context={city ?? zone.title} />
+		<!-- A smaller circle clicked on the map: its photos come in fresh -->
+		{#key zone}
+			<div class="list">
+				<PhotoDays photos={shown} context={city ?? zone.title} />
+			</div>
+		{/key}
 	</div>
 </aside>
 
@@ -164,5 +169,10 @@
 	.hint {
 		gap: 6px;
 		margin-top: 14px;
+	}
+
+	.title,
+	.list {
+		animation: item-in var(--dur-slow) var(--ease-out);
 	}
 </style>

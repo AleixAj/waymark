@@ -1,3 +1,8 @@
+<script module lang="ts">
+	// The bars grow from the bottom the first time the timeline appears, not on every page
+	let grown = false;
+</script>
+
 <script lang="ts">
 	import { library } from '$lib/state/library.svelte';
 	import { ui } from '$lib/state/ui.svelte';
@@ -7,6 +12,9 @@
 	import t from '$lib/i18n/messages/sidebar';
 
 	let { style = '' }: { style?: string } = $props();
+
+	const firstShow = !grown;
+	grown = true;
 
 	const bars = $derived(buildMonths(library.located));
 	const max = $derived(Math.max(1, ...bars.map((b) => b.count)));
@@ -133,11 +141,12 @@
 						></b>
 					</div>
 				{/if}
-				<div class="bars">
+				<div class="bars" class:grow={firstShow}>
 					{#each bars as bar, i (bar.key)}
 						{@const on = !library.range || (i >= fromIndex && i <= toIndex)}
 						<i
 							class:on
+							style:--i={i}
 							style:height="{Math.max(2, Math.pow(bar.count / max, 0.55) * 34)}px"
 							title={t('month', { month: formatMonth(monthStart(bar.key)), n: bar.count })}
 						></i>
@@ -217,9 +226,21 @@
 		border-radius: 1.5px 1.5px 0 0;
 		background: var(--t3);
 		opacity: 0.35;
+		transform-origin: bottom;
 		transition:
 			background-color 0.15s,
 			opacity 0.15s;
+	}
+
+	.bars.grow i {
+		animation: bar-in 0.6s var(--ease-out) both;
+		animation-delay: calc(0.3s + var(--i) * 6ms);
+	}
+
+	@keyframes bar-in {
+		from {
+			transform: scaleY(0);
+		}
 	}
 
 	.bars i.on {

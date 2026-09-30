@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { crossfade } from './ui/reveal';
 	import Flag from './ui/Flag.svelte';
 	import Icon from './ui/Icon.svelte';
 	import { i18n, LOCALES, translator, type Locale } from '$lib/i18n/i18n.svelte';
@@ -17,7 +18,7 @@
 	const FLAG: Record<Locale, string> = { es: 'ES', en: 'GB', ca: '' };
 
 	function choose(locale: Locale) {
-		i18n.set(locale);
+		crossfade(() => i18n.set(locale));
 		open = false;
 	}
 

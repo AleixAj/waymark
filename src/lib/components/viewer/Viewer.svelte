@@ -66,9 +66,17 @@
 		return viewer.ids.slice(from, from + 13).map((sid, i) => ({ id: sid, index: from + i }));
 	});
 
+	// Which way the photos move: the next one comes in from the right
+	let direction = $state(0);
+
+	function show(index: number) {
+		if (index < 0 || index >= viewer.ids.length || index === viewer.index) return;
+		direction = Math.sign(index - viewer.index);
+		ui.viewer = { ...viewer, index };
+	}
+
 	function go(step: number) {
-		const index = viewer.index + step;
-		if (index >= 0 && index < viewer.ids.length) ui.viewer = { ...viewer, index };
+		show(viewer.index + step);
 	}
 
 	function onKey(event: KeyboardEvent) {
@@ -207,17 +215,23 @@
 		</header>
 
 		<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-		<div class="picture" onclick={closeOnEmpty}>
-			{#if photo && photo.previewable === false}
-				<div class="cannot-show empty">
-					<h3>{t('cannotShow')}</h3>
-					<p>{t('cannotShowText')}</p>
+		<div class="picture" onclick={closeOnEmpty} style:--dir={direction}>
+			<!-- Each photo slides in from the side it comes from -->
+			{#key id}
+				<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+				<div class="frame" onclick={closeOnEmpty}>
+					{#if photo && photo.previewable === false}
+						<div class="cannot-show empty">
+							<h3>{t('cannotShow')}</h3>
+							<p>{t('cannotShowText')}</p>
+						</div>
+					{:else if image}
+						<img src={image} alt={title} class="sharp" />
+					{:else if thumbUrl(id)}
+						<img src={thumbUrl(id)} alt="" class="loading" />
+					{/if}
 				</div>
-			{:else if image}
-				<img src={image} alt={title} class="sharp" />
-			{:else if thumbUrl(id)}
-				<img src={thumbUrl(id)} alt="" class="loading" />
-			{/if}
+			{/key}
 		</div>
 
 		<button
@@ -272,7 +286,7 @@
 					class:on={item.index === viewer.index}
 					style:background-image={thumbUrl(item.id) ? `url(${thumbUrl(item.id)})` : undefined}
 					aria-label={t('photoNumber', { n: item.index + 1 })}
-					onclick={() => (ui.viewer = { ...viewer, index: item.index })}
+					onclick={() => show(item.index)}
 				></button>
 			{/each}
 		</div>
@@ -556,9 +570,26 @@
 		justify-content: center;
 	}
 
+	/* Box of the current photo, keyed by photo: it slides in on every change */
+	.frame {
+		position: absolute;
+		inset: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		animation: photo-in 0.42s var(--ease-out);
+	}
+
+	@keyframes photo-in {
+		from {
+			opacity: 0;
+			transform: translateX(calc(var(--dir) * 48px)) scale(0.96);
+		}
+	}
+
 	/* The full photo fades in over its blurred thumbnail */
 	.picture img.sharp {
-		animation: fade-in var(--dur-slow) var(--ease-out);
+		animation: fade-in var(--dur) var(--ease-out);
 	}
 
 	.picture img {

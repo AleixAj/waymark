@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { crossfade, revealTheme } from './ui/reveal';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import Icon from './ui/Icon.svelte';
@@ -134,7 +135,7 @@
 								class:is-on={settings.theme === 'dark'}
 								role="radio"
 								aria-checked={settings.theme === 'dark'}
-								onclick={() => (settings.theme = 'dark')}
+								onclick={(e) => revealTheme(() => (settings.theme = 'dark'), e)}
 							>
 								<Icon name="moon" />{t('dark')}
 							</button>
@@ -142,7 +143,7 @@
 								class:is-on={settings.theme === 'light'}
 								role="radio"
 								aria-checked={settings.theme === 'light'}
-								onclick={() => (settings.theme = 'light')}
+								onclick={(e) => revealTheme(() => (settings.theme = 'light'), e)}
 							>
 								<Icon name="sun" />{t('light')}
 							</button>
@@ -150,7 +151,7 @@
 								class:is-on={settings.theme === 'system'}
 								role="radio"
 								aria-checked={settings.theme === 'system'}
-								onclick={() => (settings.theme = 'system')}
+								onclick={(e) => revealTheme(() => (settings.theme = 'system'), e)}
 							>
 								{t('system')}
 							</button>
@@ -165,7 +166,7 @@
 									role="radio"
 									aria-checked={i18n.locale === locale.id}
 									lang={locale.id}
-									onclick={() => i18n.set(locale.id)}>{locale.name}</button
+									onclick={() => crossfade(() => i18n.set(locale.id))}>{locale.name}</button
 								>
 							{/each}
 						</div>

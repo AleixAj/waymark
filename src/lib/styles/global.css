@@ -646,7 +646,7 @@ input {
 	border-radius: 50%;
 	background: var(--t2);
 	transition:
-		transform 0.18s,
+		transform 0.3s var(--ease-spring),
 		background-color 0.15s;
 }
 
@@ -880,6 +880,19 @@ input {
 
 .stagger > :nth-child(n + 8) {
 	animation-delay: 210ms;
+}
+
+/* Theme change: the new page is revealed by a growing circle (see ui/reveal.ts),
+   so the default crossfade of the view transition is turned off */
+.reveal::view-transition-old(root),
+.reveal::view-transition-new(root) {
+	animation: none;
+	mix-blend-mode: normal;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+	animation-duration: 0.28s;
 }
 
 /* Reduced motion: from the system or from the app settings */

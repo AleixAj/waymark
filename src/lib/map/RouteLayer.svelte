@@ -56,6 +56,8 @@
 			el.className = 'wm-stop';
 			const badge = document.createElement('span');
 			badge.className = 'stop';
+			// The stops appear one after another, following the line being drawn
+			badge.style.animationDelay = `${Math.round((i / Math.max(1, stops.length - 1)) * 1100)}ms`;
 			badge.textContent = String(stop.index);
 			el.append(badge);
 			if (i === 0 || i === stops.length - 1 || i % labelEvery === 0) {
@@ -107,17 +109,50 @@
 		});
 	}
 
+	// A new trip draws its route from the first stop to the last, like a pen
+	const DRAW_MS = 1400;
+	let drawing = 0;
+	let drawnRoute: Stop[] | null = null;
+
+	function drawLine(stops: Stop[] | null) {
+		cancelAnimationFrame(drawing);
+		const source = map.getSource<GeoJSONSource>(SOURCE);
+		if (!source) return;
+		if (!stops || stops.length < 2) {
+			source.setData({ type: 'FeatureCollection', features: [] });
+			return;
+		}
+		const full = line(stops);
+		// Same trip again (a new map style): no need to draw it again
+		const animate = stops !== drawnRoute && document.documentElement.dataset.motion !== 'reduced';
+		drawnRoute = stops;
+		if (!animate) {
+			source.setData(full);
+			return;
+		}
+		const points = full.geometry.coordinates;
+		const start = performance.now();
+		const step = (now: number) => {
+			const progress = Math.min(1, (now - start) / DRAW_MS);
+			// Ease out: fast at the start, gentle at the end
+			const eased = 1 - Math.pow(1 - progress, 3);
+			const count = Math.max(2, Math.ceil(points.length * eased));
+			source.setData({
+				...full,
+				geometry: { ...full.geometry, coordinates: points.slice(0, count) }
+			});
+			if (progress < 1) drawing = requestAnimationFrame(step);
+		};
+		drawing = requestAnimationFrame(step);
+	}
+
 	// Line: drawn again when the route changes or a new map style removed it
 	$effect(() => {
 		const stops = mapView.route;
 		void mapView.styleVersion;
 		untrack(() => {
 			ensureLayers();
-			map
-				.getSource<GeoJSONSource>(SOURCE)
-				?.setData(
-					stops && stops.length > 1 ? line(stops) : { type: 'FeatureCollection', features: [] }
-				);
+			drawLine(stops);
 		});
 	});
 
@@ -133,6 +168,7 @@
 	});
 
 	onMount(() => () => {
+		cancelAnimationFrame(drawing);
 		for (const m of markers) m.remove();
 		if (map.getLayer('route-line')) map.removeLayer('route-line');
 		if (map.getLayer('route-glow')) map.removeLayer('route-glow');
@@ -146,6 +182,24 @@
 		background: none;
 		border: 0;
 		cursor: pointer;
+	}
+
+	:global(.wm-stop .stop) {
+		animation: stop-in 0.45s var(--ease-spring) both;
+		transition:
+			transform var(--dur) var(--ease-spring),
+			background-color var(--dur-fast);
+	}
+
+	:global(.wm-stop:hover .stop) {
+		transform: scale(1.15);
+	}
+
+	@keyframes -global-stop-in {
+		from {
+			opacity: 0;
+			transform: scale(0.3);
+		}
 	}
 
 	:global(.wm-stop .mk-label) {

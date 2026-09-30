@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { revealTheme } from './ui/reveal';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import Icon from './ui/Icon.svelte';
@@ -116,7 +117,7 @@
 		<button
 			class="btn btn-ghost btn-icon"
 			aria-label={t('theme')}
-			onclick={() => settings.toggleTheme()}
+			onclick={(e) => revealTheme(() => settings.toggleTheme(), e)}
 		>
 			<Icon name={settings.resolvedTheme === 'dark' ? 'sun' : 'moon'} />
 		</button>
@@ -196,7 +197,11 @@
 						ui.settingsOpen = true;
 					}}><Icon name="sliders" />{t('settings')}</button
 				>
-				<button class="menu-item" role="menuitem" onclick={() => settings.toggleTheme()}>
+				<button
+					class="menu-item"
+					role="menuitem"
+					onclick={(e) => revealTheme(() => settings.toggleTheme(), e)}
+				>
 					<Icon name={settings.resolvedTheme === 'dark' ? 'sun' : 'moon'} />
 					{settings.resolvedTheme === 'dark' ? t('lightTheme') : t('darkTheme')}
 				</button>

@@ -328,4 +328,9 @@
 		gap: 8px;
 		margin-top: 18px;
 	}
+
+	/* New results slide in as you type (the ones that stay don't move) */
+	.results > li {
+		animation: item-in 0.24s var(--ease-out);
+	}
 </style>

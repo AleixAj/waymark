@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { revealTheme } from './ui/reveal';
 	// Display face only for the big title (the font file downloads only on this screen)
 	import '@fontsource-variable/fraunces/wght-italic.css';
 	import Icon from './ui/Icon.svelte';
@@ -99,7 +100,7 @@
 		<button
 			class="btn btn-ghost btn-icon"
 			aria-label={t('theme')}
-			onclick={() => settings.toggleTheme()}
+			onclick={(e) => revealTheme(() => settings.toggleTheme(), e)}
 		>
 			<Icon name={settings.resolvedTheme === 'dark' ? 'sun' : 'moon'} />
 		</button>

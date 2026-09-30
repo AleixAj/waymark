@@ -238,6 +238,10 @@
 				// Stop the click here, or the map would also open the country below
 				e.stopPropagation();
 				preview = null;
+				// A ring spreads from the marker to confirm the click
+				el.classList.remove('tap');
+				void el.offsetWidth;
+				el.classList.add('tap');
 				open(entry.item);
 			});
 			el.addEventListener('mouseenter', () => showPreview(entry.item, key));
@@ -424,17 +428,53 @@
 	/* New markers fade in instead of popping up (the root is moved by MapLibre,
 	   so the animation is on its content; the city label keeps its own transform) */
 	:global(.wm-marker > :is(.pm, .dot, .place, .cluster)) {
-		animation: mk-in 0.2s ease-out;
+		animation: mk-in 0.38s var(--ease-out);
 	}
 
 	:global([data-motion='reduced'] .wm-marker > *) {
 		animation: none;
 	}
 
+	/* New markers pop in with a small bounce */
 	@keyframes -global-mk-in {
-		from {
+		0% {
 			opacity: 0;
-			transform: scale(0.85);
+			transform: scale(0.4);
+		}
+
+		60% {
+			opacity: 1;
+			transform: scale(1.1);
+		}
+
+		100% {
+			transform: scale(1);
+		}
+	}
+
+	:global(.wm-marker.tap::after) {
+		content: '';
+		position: absolute;
+		left: 50%;
+		top: 50%;
+		width: 36px;
+		height: 36px;
+		margin: -18px 0 0 -18px;
+		border-radius: 50%;
+		border: 2px solid var(--pin);
+		pointer-events: none;
+		animation: mk-tap 0.6s var(--ease-out) forwards;
+	}
+
+	@keyframes -global-mk-tap {
+		from {
+			opacity: 0.9;
+			transform: scale(0.5);
+		}
+
+		to {
+			opacity: 0;
+			transform: scale(2.4);
 		}
 	}
 

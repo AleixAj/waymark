@@ -1,10 +1,18 @@
+<script module lang="ts">
+	// The totals count up only the first time the panel appears
+	let counted = false;
+</script>
+
 <script lang="ts">
+	import { Tween } from 'svelte/motion';
+	import { cubicOut } from 'svelte/easing';
 	import Icon from './ui/Icon.svelte';
 	import { sheet } from './ui/sheet';
 	import { library } from '$lib/state/library.svelte';
 	import { countries } from '$lib/state/countries.svelte';
 	import { thumbUrl } from '$lib/state/thumbs.svelte';
 	import { ui } from '$lib/state/ui.svelte';
+	import { settings } from '$lib/state/settings.svelte';
 	import { formatNumber, formatRange, formatMonth } from '$lib/library/format';
 	import tc from '$lib/i18n/messages/common';
 	import t from '$lib/i18n/messages/sidebar';
@@ -12,6 +20,23 @@
 	let sortBy = $state<'fotos' | 'fecha'>('fotos');
 
 	const importing = $derived(library.progress !== null);
+
+	// The three totals count up from zero when the panel first appears
+	const fromZero = !counted;
+	counted = true;
+	function countUp(value: () => number) {
+		const tween = new Tween(fromZero ? 0 : value(), {
+			duration: settings.reducedMotion ? 0 : 1100,
+			easing: cubicOut
+		});
+		$effect(() => {
+			tween.target = value();
+		});
+		return tween;
+	}
+	const shownCountries = countUp(() => library.countryList.length);
+	const shownCities = countUp(() => library.cityList.length);
+	const shownPhotos = countUp(() => library.points.length);
 	const countryRows = $derived(
 		sortBy === 'fotos'
 			? library.countryList
@@ -40,15 +65,15 @@
 			</span>
 			<div class="row stats">
 				<div class="col">
-					<span class="mono num">{formatNumber(library.countryList.length)}</span>
+					<span class="mono num">{formatNumber(shownCountries.current)}</span>
 					<span class="t-small t3">{tc('countriesWord', { n: library.countryList.length })}</span>
 				</div>
 				<div class="col">
-					<span class="mono num">{formatNumber(library.cityList.length)}</span>
+					<span class="mono num">{formatNumber(shownCities.current)}</span>
 					<span class="t-small t3">{tc('citiesWord', { n: library.cityList.length })}</span>
 				</div>
 				<div class="col">
-					<span class="mono num">{formatNumber(library.points.length)}</span>
+					<span class="mono num">{formatNumber(shownPhotos.current)}</span>
 					<span class="t-small t3">{tc('photosWord', { n: library.points.length })}</span>
 				</div>
 			</div>
@@ -201,6 +226,8 @@
 		display: block;
 		height: 100%;
 		border-radius: 2px;
+		transform-origin: left;
+		animation: fill 0.8s 0.25s var(--ease-out) both;
 		background: linear-gradient(90deg, color-mix(in oklab, var(--acc) 45%, var(--s2)), var(--acc));
 	}
 
@@ -289,6 +316,12 @@
 
 		.trips .ct {
 			display: none;
+		}
+	}
+
+	@keyframes fill {
+		from {
+			transform: scaleX(0);
 		}
 	}
 </style>
