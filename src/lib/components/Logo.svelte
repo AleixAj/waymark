@@ -1,9 +1,20 @@
 <script lang="ts">
-	let { size = 22 }: { size?: number } = $props();
+	import logo from '$lib/assets/logo.webp';
+
+	// Height in px; the drawing is a bit wider than tall
+	let { size = 24 }: { size?: number } = $props();
 </script>
 
-<svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-	<circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5" />
-	<ellipse cx="12" cy="12" rx="3.6" ry="9" stroke="currentColor" stroke-width="1.5" opacity=".55" />
-	<circle cx="15.2" cy="8.4" r="2.1" fill="var(--acc)" />
-</svg>
+<img class="logo-mark" src={logo} alt="" height={size} width={Math.round(size * 1.23)} />
+
+<style>
+	.logo-mark {
+		display: block;
+		flex: none;
+	}
+
+	/* On the dark theme the navy outline disappears: a thin cream line brings it back */
+	:global([data-theme='dark']) .logo-mark {
+		filter: drop-shadow(0 0 0.6px #ffe9c4) drop-shadow(0 0 0.6px #ffe9c4);
+	}
+</style>

@@ -15,7 +15,6 @@
 	import '@fontsource/geist-mono/latin-600.css';
 	import '@fontsource/instrument-serif/latin-400-italic.css';
 	import '$lib/styles/global.css';
-	import favicon from '$lib/assets/favicon.svg';
 	import GlobeMap from '$lib/map/GlobeMap.svelte';
 	import PhotoMarkers from '$lib/map/PhotoMarkers.svelte';
 	import RouteLayer from '$lib/map/RouteLayer.svelte';
@@ -155,7 +154,6 @@
 </script>
 
 <svelte:head>
-	<link rel="icon" href={favicon} />
 	<title>Waymark</title>
 </svelte:head>
 

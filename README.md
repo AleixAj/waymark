@@ -1,3 +1,5 @@
+<img src="static/icons/maskable-512.png" alt="" width="96" align="right">
+
 # Waymark
 
 ![SvelteKit](https://img.shields.io/badge/SvelteKit-2-ff3e00?logo=svelte&logoColor=fff)
