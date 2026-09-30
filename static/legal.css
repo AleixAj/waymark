@@ -1,0 +1,83 @@
+/* Shared look of the legal pages: plain HTML, readable without the app */
+:root {
+	--bg: #0b0f17;
+	--text: #eef1f6;
+	--muted: #b7bfcc;
+	--line: #242b38;
+	--acc: #f2b25c;
+	color-scheme: dark;
+}
+
+@media (prefers-color-scheme: light) {
+	:root {
+		--bg: #f6f7f9;
+		--text: #1a1f29;
+		--muted: #4a5261;
+		--line: #dde1e7;
+		--acc: #9a5a12;
+		color-scheme: light;
+	}
+}
+
+* {
+	box-sizing: border-box;
+}
+
+body {
+	margin: 0;
+	background: var(--bg);
+	color: var(--text);
+	font:
+		16px/1.65 system-ui,
+		-apple-system,
+		'Segoe UI',
+		sans-serif;
+}
+
+main {
+	max-width: 720px;
+	margin: 0 auto;
+	padding: 48px 20px 64px;
+}
+
+.brand {
+	font: italic 26px/1 Georgia, serif;
+	color: var(--text);
+	text-decoration: none;
+}
+
+h1 {
+	margin: 32px 0 4px;
+	font-size: 32px;
+	line-height: 1.2;
+	letter-spacing: -0.02em;
+}
+
+h2 {
+	margin: 36px 0 8px;
+	font-size: 19px;
+}
+
+p,
+li {
+	color: var(--muted);
+}
+
+strong {
+	color: var(--text);
+}
+
+a {
+	color: var(--acc);
+}
+
+.date {
+	font-size: 14px;
+}
+
+footer {
+	margin-top: 48px;
+	padding-top: 20px;
+	border-top: 1px solid var(--line);
+	font-size: 14px;
+}

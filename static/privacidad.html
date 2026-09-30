@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="es">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Política de privacidad · Waymark</title>
+		<meta name="description" content="Cómo trata Waymark tus fotos y tu cuenta de Google." />
+		<link rel="stylesheet" href="/legal.css" />
+	</head>
+	<body>
+		<main>
+			<a class="brand" href="/">Waymark</a>
+			<h1>Política de privacidad</h1>
+			<p class="date">Última actualización: 30 de septiembre de 2026</p>
+
+			<p>
+				Waymark es una aplicación web que coloca tus fotos de viaje sobre un globo. Está pensada
+				para que tus fotos sigan siendo tuyas: <strong>no tiene servidores propios ni base de
+				datos</strong>, y todo el trabajo con las fotos se hace en tu navegador.
+			</p>
+
+			<h2>Qué datos se usan</h2>
+			<ul>
+				<li>
+					<strong>Tus fotos</strong>: la app lee la fecha, la ubicación GPS y otros datos de cada
+					foto (EXIF) y crea miniaturas. Todo ocurre en tu dispositivo.
+				</li>
+				<li>
+					<strong>Tu cuenta de Google</strong>: al entrar, Google nos da tu nombre, tu correo y tu
+					foto de perfil, solo para mostrar con qué cuenta has entrado.
+				</li>
+			</ul>
+
+			<h2>Dónde se guardan</h2>
+			<ul>
+				<li>
+					En <strong>tu navegador</strong> (IndexedDB), para que la app funcione incluso sin
+					conexión.
+				</li>
+				<li>
+					En <strong>tu propio Google Drive</strong>, dentro de una carpeta llamada «Waymark»:
+					una copia ligera de cada foto y un archivo con la información de tu álbum. Así puedes
+					verlo en todos tus dispositivos. Nadie más tiene acceso a esa carpeta.
+				</li>
+			</ul>
+			<p>No guardamos ninguna copia de tus fotos ni de tus datos fuera de estos dos sitios.</p>
+
+			<h2>Permisos de Google</h2>
+			<p>
+				Waymark pide el permiso <strong>drive.file</strong>, el más limitado de Google Drive: la
+				app solo puede ver y modificar los archivos que ella misma crea o los que tú eliges con el
+				selector de Google. No puede ver el resto de tu Drive ni tu Google Fotos.
+			</p>
+			<p>
+				El uso y la transferencia de la información recibida de las API de Google cumplen la
+				<a href="https://developers.google.com/terms/api-services-user-data-policy"
+					>Política de datos de usuario de los servicios de API de Google</a
+				>, incluidos los requisitos de uso limitado. Tus datos de Google no se venden, no se usan
+				para publicidad y no se comparten con nadie.
+			</p>
+
+			<h2>Servicios externos</h2>
+			<p>Para funcionar, la app se conecta a estos servicios:</p>
+			<ul>
+				<li>
+					<strong>Google</strong> (inicio de sesión, Drive y selector de archivos), cuando tú lo
+					usas.
+				</li>
+				<li>
+					<strong>Esri / ArcGIS</strong>, para las imágenes del mapa de calles y satélite. Reciben
+					qué zona del mapa estás viendo, como cualquier mapa web.
+				</li>
+				<li>
+					<strong>OpenStreetMap Nominatim</strong>, solo cuando buscas un lugar para ubicar fotos
+					sin GPS. Recibe el texto que escribes.
+				</li>
+				<li>
+					<strong>Wikimedia Commons</strong>, solo en la demo, para las fotos de ejemplo.
+				</li>
+				<li><strong>Cloudflare</strong>, que aloja la web.</li>
+			</ul>
+			<p>Waymark no usa cookies de seguimiento, publicidad ni herramientas de analítica.</p>
+
+			<h2>Cómo borrar tus datos</h2>
+			<ul>
+				<li>Borra la carpeta «Waymark» de tu Google Drive.</li>
+				<li>
+					Quita el acceso de Waymark a tu cuenta en
+					<a href="https://myaccount.google.com/connections">myaccount.google.com/connections</a>.
+				</li>
+				<li>
+					Borra los datos del sitio en tu navegador, o usa «Borrar biblioteca» en los ajustes de la
+					app.
+				</li>
+			</ul>
+
+			<h2>Contacto</h2>
+			<p>
+				Para cualquier duda sobre privacidad, abre una consulta en
+				<a href="https://github.com/AleixAj/waymark/issues">github.com/AleixAj/waymark</a>.
+			</p>
+
+			<footer><a href="/terminos">Condiciones del servicio</a> · <a href="/">Volver a Waymark</a></footer>
+		</main>
+	</body>
+</html>

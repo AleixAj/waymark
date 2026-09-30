@@ -150,7 +150,10 @@
 </main>
 
 <footer class="row mono t3 bottom">
-	<span>v1.0 · funciona sin conexión</span>
+	<span class="row legal"
+		>v1.0 · <a href="/privacidad" data-sveltekit-reload>Privacidad</a> ·
+		<a href="/terminos" data-sveltekit-reload>Condiciones</a></span
+	>
 	{#if !gate}<span class="row hint">
 			<span class="kbds"
 				><span class="kbd">{isMac ? '⌘' : 'Ctrl'}</span><span class="kbd">O</span></span
@@ -444,6 +447,18 @@
 
 	.hint {
 		gap: 6px;
+	}
+
+	.legal {
+		gap: 6px;
+	}
+
+	.legal a {
+		color: var(--t3);
+	}
+
+	.legal a:hover {
+		color: var(--t1);
 	}
 
 	@media (max-width: 640px) {
