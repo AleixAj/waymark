@@ -4,6 +4,7 @@ import type { LocatedPoint } from '$lib/photos/types';
 import { i18n } from '$lib/i18n/i18n.svelte';
 import t from '$lib/i18n/messages/trip';
 import { daysBetween, formatMonthLong, monthKey } from './format';
+import { localTitle } from '$lib/demo/titles';
 
 export interface Stop {
 	/** 1-based position in the trip */
@@ -139,7 +140,7 @@ function applyEdits(trips: Trip[], edits: TripEdit[]) {
 			}
 		}
 		if (!edit) continue;
-		if (edit.title) trip.title = edit.title;
+		if (edit.title) trip.title = localTitle(edit.title);
 		// A cover from another trip (after photos moved) is ignored
 		if (edit.coverId && trip.photoIds.includes(edit.coverId)) trip.coverId = edit.coverId;
 	}

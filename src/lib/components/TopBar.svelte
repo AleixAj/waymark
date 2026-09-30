@@ -284,8 +284,14 @@
 		border-color: var(--line-strong);
 	}
 
+	/* Always one line: longer languages end in "…" instead of wrapping */
 	.placeholder {
 		flex: 1;
+		min-width: 0;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		text-align: left;
 	}
 
 	.actions {

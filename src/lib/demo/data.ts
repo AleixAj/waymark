@@ -208,7 +208,7 @@ export const CAMERAS = [
 	},
 	{
 		camera: 'iPhone 15 Pro',
-		lens: 'Cámara trasera 6,86 mm f/1.78',
+		lens: 'iPhone 15 Pro back camera 6.86mm f/1.78',
 		ext: 'HEIC',
 		prefix: 'IMG_',
 		size: [4032, 3024]
