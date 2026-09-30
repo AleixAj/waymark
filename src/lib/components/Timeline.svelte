@@ -1,6 +1,6 @@
 <script module lang="ts">
 	// The bars grow from the bottom the first time the timeline appears, not on every page
-	let grown = false;
+	const history = { grown: false };
 </script>
 
 <script lang="ts">
@@ -13,8 +13,8 @@
 
 	let { style = '' }: { style?: string } = $props();
 
-	const firstShow = !grown;
-	grown = true;
+	const firstShow = !history.grown;
+	history.grown = true;
 
 	const bars = $derived(buildMonths(library.located));
 	const max = $derived(Math.max(1, ...bars.map((b) => b.count)));

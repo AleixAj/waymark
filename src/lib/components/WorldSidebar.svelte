@@ -1,6 +1,6 @@
 <script module lang="ts">
 	// The totals count up only the first time the panel appears
-	let counted = false;
+	const history = { counted: false };
 </script>
 
 <script lang="ts">
@@ -22,8 +22,8 @@
 	const importing = $derived(library.progress !== null);
 
 	// The three totals count up from zero when the panel first appears
-	const fromZero = !counted;
-	counted = true;
+	const fromZero = !history.counted;
+	history.counted = true;
 	function countUp(value: () => number) {
 		const tween = new Tween(fromZero ? 0 : value(), {
 			duration: settings.reducedMotion ? 0 : 1100,
