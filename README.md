@@ -1,6 +1,13 @@
-<img src="static/icons/maskable-512.png" alt="" width="96" align="right">
+<div align="center">
+
+<img src="static/icons/maskable-512.png" alt="Logo de Waymark" width="120">
 
 # Waymark
+
+**Tu vuelta al mundo, foto a foto.**<br>
+Tus fotos de viaje colocadas sobre un globo terráqueo en 3D, sin servidor y con tu propio Google Drive como almacenamiento.
+
+[**Abrir la app**](https://waymark.aleixaj.com) · [**Ver la demo**](https://waymark.aleixaj.com/?demo) · [English](README.en.md)
 
 ![SvelteKit](https://img.shields.io/badge/SvelteKit-2-ff3e00?logo=svelte&logoColor=fff)
 ![Svelte](https://img.shields.io/badge/Svelte-5_runes-ff3e00?logo=svelte&logoColor=fff)
@@ -8,17 +15,22 @@
 ![Vite](https://img.shields.io/badge/Vite-8-646cff?logo=vite&logoColor=fff)
 ![MapLibre GL](https://img.shields.io/badge/MapLibre_GL-6-396cb2?logo=maplibre&logoColor=fff)
 ![Vitest](https://img.shields.io/badge/tests-66_Vitest-6e9f18?logo=vitest&logoColor=fff)
+![Cloudflare](https://img.shields.io/badge/Cloudflare-Workers-f38020?logo=cloudflare&logoColor=fff)
 
 <p>
   <img src="docs/readme/lang-es-active.svg" alt="Español" width="170">
   <a href="README.en.md"><img src="docs/readme/lang-en.svg" alt="English" width="170"></a>
 </p>
 
-**Tus fotos de viaje sobre un globo terráqueo en 3D.** Arrastras tus fotos, Waymark lee dónde se hizo cada una y las coloca en el planeta. Giras el globo, entras en un país o una ciudad, revives un viaje siguiendo su ruta y ves las fotos que hiciste en cada sitio. Como Google Fotos, pero con un mapa del mundo en lugar de álbumes.
+</div>
 
-Es un proyecto de portfolio con enfoque de producto real. **No tiene servidor:** las fotos se procesan y se guardan en el navegador, la app funciona sin conexión después de la primera visita y, si quieres, sincroniza tu biblioteca entre dispositivos a través de tu propio Google Drive.
+## Qué es
 
-**Pruébalo sin fotos propias:** abre la app y pulsa _"Probar con fotos de ejemplo"_. Carga una biblioteca de unas 600 fotos reales de [Wikimedia Commons](https://commons.wikimedia.org/), con su ubicación y su cámara auténticas, repartidas en 15 viajes por 18 países, como el álbum de una persona de verdad.
+Arrastras tus fotos y Waymark lee dónde se hizo cada una para colocarla en el planeta. Giras el globo, pulsas un círculo para ver las fotos de esa zona, entras en un país o una ciudad, revives un viaje siguiendo su ruta y consultas tus estadísticas. Como Google Fotos, pero con el mapa del mundo en lugar de álbumes.
+
+Es un proyecto de portfolio con enfoque de producto real. **No tiene servidor propio:** las fotos se procesan en el navegador, la app funciona sin conexión después de la primera visita y tu álbum se guarda en tu propio Google Drive, así que lo ves igual en todos tus dispositivos.
+
+**Pruébalo sin registrarte:** pulsa [_Ver la demo_](https://waymark.aleixaj.com/?demo). Carga unas 600 fotos reales de [Wikimedia Commons](https://commons.wikimedia.org/), con su ubicación y su cámara auténticas, repartidas en 15 viajes por 18 países, como el álbum de una persona de verdad.
 
 ## Lo más destacado
 
@@ -29,12 +41,14 @@ Es un proyecto de portfolio con enfoque de producto real. **No tiene servidor:**
 - **Viajes detectados solos** a partir de fechas y lugares, con ruta animada, etapas y exportación a GPX.
 - **Ubicaciones estimadas** para fotos sin GPS (WhatsApp, cámaras sin ubicación) a partir de las fotos cercanas en el tiempo o del mismo álbum.
 - **Sincronización con Google Drive** sin backend: login con Google en el navegador, copias ligeras en una carpeta del usuario y fusión de cambios entre dispositivos.
+- **Accesible:** contraste WCAG AA comprobado con axe, navegación completa con teclado, lectores de pantalla, modo de alto contraste y respeto a _reducir movimiento_.
 - **Calidad:** TypeScript estricto, 66 tests unitarios de la lógica clave, ESLint, Prettier y `svelte-check` sin errores.
 
 ## Funcionalidades
 
 - **Vista de globo** con grupos de fotos, países visitados resaltados y línea de tiempo para filtrar por fechas.
-- **Vista de país** con ciudades, días, distancia recorrida y fotos agrupadas por día.
+- **Panel de zona:** al pulsar un círculo del mapa, la cámara encuadra sus fotos y un panel las lista agrupadas por ciudad; cada círculo más pequeño afina la selección hasta la calle.
+- **Vista de país** con ciudades, días y distancia recorrida; las fotos se ordenan por lugar o por fecha.
 - **Vista de ciudad** a nivel de calle: miniaturas sobre el mapa, lista sincronizada con lo que se ve y **barrios** marcados en el mapa (Shinjuku dentro de Tokio, Kópavogur dentro de Reikiavik) para filtrar por zona.
 - **Viajes automáticos** con ruta, etapas, vuelo de cámara _"Reproducir viaje"_, título y portada editables y exportación GPX.
 - **Visor de fotos** con datos EXIF (cámara, objetivo, ajustes), mapa de ubicación, favoritos y corrección de la ubicación.
@@ -43,7 +57,7 @@ Es un proyecto de portfolio con enfoque de producto real. **No tiene servidor:**
 - **Búsqueda** (Ctrl/⌘ K) de países, ciudades, viajes o coordenadas pegadas.
 - **Estilos de color del globo:** natural, gris (el mundo en grises y tus países a color), noche y atlas, con vista previa y guardado.
 - **Ajustes:** tema oscuro/claro/sistema, km/mi, estilo de mapa, movimiento reducido, calidad del globo, almacenamiento y exportación.
-- **Responsive:** en el móvil los paneles pasan a ser hojas inferiores que se arrastran.
+- **Responsive e instalable:** en el móvil los paneles pasan a ser hojas inferiores que se arrastran, y la app se puede añadir a la pantalla de inicio.
 
 ## Stack técnico
 
@@ -60,6 +74,8 @@ Es un proyecto de portfolio con enfoque de producto real. **No tiene servidor:**
 | Takeout        | zip.js                                    | Lee zips de varios GB sin descomprimirlos: cada foto se abre solo cuando le toca.                                   |
 | Cuenta         | Google Identity Services + Drive REST API | Login y sincronización sin servidor propio, con el permiso mínimo `drive.file`.                                     |
 | Calidad        | Vitest, ESLint, Prettier, svelte-check    | Tests de la lógica de dominio y comprobación de tipos en componentes.                                               |
+| Despliegue     | Cloudflare Workers (archivos estáticos)   | Web estática en el borde de la red, con cabeceras de caché propias y las rutas de la SPA resueltas por Cloudflare.  |
+| Scripts        | Node + sharp                              | Generan los datos geográficos, la biblioteca de ejemplo y todos los tamaños del logo.                               |
 
 ## Arquitectura
 
@@ -80,7 +96,7 @@ library.svelte.ts ── puntos ligeros (id, posición, fecha) + estado derivado
       |
 Vistas (globo, país, ciudad, viaje) · MapLibre + Supercluster
       |
-sync (opcional) ── Google Drive: copias ligeras + library.json
+sync ── tu Google Drive: copias ligeras + library.json
 ```
 
 - **El mapa solo recibe datos ligeros.** Las imágenes se cargan cuando una miniatura se acerca a la pantalla y se guardan en una caché con límite de memoria.
@@ -104,7 +120,9 @@ sync (opcional) ── Google Drive: copias ligeras + library.json
 
 **Biblioteca de ejemplo.** Un script (`scripts/build-demo.mjs`) busca en Wikimedia Commons fotos con licencia libre cerca de cada parada de los viajes de ejemplo, prioriza las que Commons marca como fotos de calidad y descarta mapas, retratos y capturas automáticas. Las 605 miniaturas se empaquetan en WebP en un único archivo de 6 MB servido por la propia web: la demo carga con una sola descarga y una ventana con barra de progreso, y el globo se llena de golpe al terminar. La foto grande se pide a Commons al abrirla. Cada foto muestra su autor y su licencia en el visor.
 
-**Privacidad.** No hay servidor ni analítica: las fotos no salen del navegador salvo a la carpeta de Drive del propio usuario, si inicia sesión.
+**Cuenta y privacidad.** El álbum pertenece a una cuenta de Google: sin sesión solo se puede ver la demo. Al cerrar sesión se hace una última sincronización, se avisa si queda alguna foto sin subir y el navegador olvida el álbum. No hay servidor ni analítica; las fotos solo salen del navegador hacia la carpeta de Drive del propio usuario. La [política de privacidad](https://waymark.aleixaj.com/privacidad) lo detalla.
+
+**Accesibilidad.** El orden del teclado sigue la pantalla (barra, panel, mapa), los marcadores del mapa dicen su lugar a los lectores de pantalla y los paneles son casi opacos para que el texto se lea sobre cualquier zona del mapa. Todas las pantallas pasan axe sin errores en tema claro y oscuro, y hay estilos para `prefers-contrast` y los colores forzados de Windows.
 
 ## Rendimiento
 
@@ -116,6 +134,8 @@ Medido con Chrome y la CPU ralentizada 4 veces, con una biblioteca de ~2.000 fot
 - **Listas largas** (un viaje de 300 fotos) se pintan por partes cuando el navegador está libre: el bloqueo al abrir un viaje baja de 480 a 235 ms.
 - **Carga diferida:** el lector de zip (128 KB) solo se descarga al importar un Takeout, y el lector de EXIF solo vive en los workers.
 - **Sin conexión:** un service worker guarda la app y los datos geográficos; IndexedDB se marca como almacenamiento persistente.
+- **Encuadres fiables en el globo:** el zoom que calcula MapLibre al encuadrar puede quedarse corto en proyección de globo; la cámara se prueba sin dibujar y se corrige antes de volar.
+- **Animaciones baratas:** entradas de paneles, contadores y barras solo con `opacity` y `transform`, y desactivadas con _reducir movimiento_.
 
 ## Estructura del proyecto
 
@@ -129,12 +149,13 @@ src/
 │   ├── sync/         # Plan de sincronización y copia ligera para Google Drive
 │   ├── google/       # Login de Google, API de Drive y selector de Drive
 │   ├── state/        # Estado de la app: biblioteca, ajustes, interfaz e importación
-│   ├── components/   # Paneles, visor, buscador, ajustes, importación...
+│   ├── components/   # Paneles, panel de zona, visor, buscador, ajustes, importación...
 │   └── demo/         # Generador de la biblioteca de ejemplo
 ├── routes/           # Globo, país, ciudad, viaje, sin ubicación y estadísticas
 └── service-worker.ts # Funcionamiento sin conexión
-scripts/              # Generación de los datos geográficos y de la biblioteca de ejemplo
-static/geo/           # Países y ciudades empaquetados
+scripts/              # Datos geográficos, biblioteca de ejemplo y tamaños del logo
+static/               # Países y ciudades, miniaturas de la demo, iconos y páginas legales
+wrangler.jsonc        # Despliegue en Cloudflare Workers
 ```
 
 ## Puesta en marcha
@@ -146,23 +167,28 @@ pnpm dev
 
 La app queda en `http://localhost:5173`. Funciona sin configurar nada: sin claves de Google se importa directamente. Con las claves puestas, para crear tu álbum hay que entrar con Google (o ver la demo).
 
-| Comando                       | Qué hace                                                                      |
-| ----------------------------- | ----------------------------------------------------------------------------- |
-| `pnpm dev`                    | Servidor de desarrollo                                                        |
-| `pnpm build`                  | Genera la web estática en `build/`                                            |
-| `pnpm test`                   | Tests unitarios (Vitest)                                                      |
-| `pnpm check`                  | Comprobación de tipos (`svelte-check`)                                        |
-| `pnpm lint`                   | Prettier + ESLint                                                             |
-| `node scripts/build-demo.mjs` | Regenera las fotos de la biblioteca de ejemplo desde Wikimedia Commons        |
-| `node scripts/build-geo.mjs`  | Regenera `static/geo` (necesita `scripts/.cache/cities15000.txt` de GeoNames) |
+| Comando                        | Qué hace                                                                      |
+| ------------------------------ | ----------------------------------------------------------------------------- |
+| `pnpm dev`                     | Servidor de desarrollo                                                        |
+| `pnpm build`                   | Genera la web estática en `build/`                                            |
+| `pnpm test`                    | Tests unitarios (Vitest)                                                      |
+| `pnpm check`                   | Comprobación de tipos (`svelte-check`)                                        |
+| `pnpm lint`                    | Prettier + ESLint                                                             |
+| `node scripts/build-demo.mjs`  | Regenera las fotos de la biblioteca de ejemplo desde Wikimedia Commons        |
+| `node scripts/build-geo.mjs`   | Regenera `static/geo` (necesita `scripts/.cache/cities15000.txt` de GeoNames) |
+| `node scripts/build-icons.mjs` | Genera el favicon, los iconos de la app y el logo desde `docs/brand/logo.png` |
 
-### Cuenta de Google (opcional)
+### Login de Google
 
 1. En [Google Cloud Console](https://console.cloud.google.com/), crea un proyecto y activa **Google Drive API** y **Google Picker API**.
 2. En _Google Auth Platform_, configura la pantalla de consentimiento (externa), añade usuarios de prueba y el permiso `drive.file`.
-3. Crea un **ID de cliente OAuth** de tipo _Aplicación web_ con tus orígenes (`http://localhost:5173` y la URL de producción).
+3. Crea un **ID de cliente OAuth** de tipo _Aplicación web_ con tus orígenes (`http://localhost:5173` y la URL de producción). Para publicar la app, enlaza las páginas `/privacidad` y `/terminos` en la pantalla de consentimiento.
 4. Para importar desde Drive, crea una **clave de API** restringida a Picker API y a tus orígenes, y copia el **número de proyecto**.
 5. Copia `.env.example` a `.env` y rellena `VITE_GOOGLE_CLIENT_ID`, `VITE_GOOGLE_API_KEY` y `VITE_GOOGLE_APP_ID`.
+
+### Despliegue
+
+La web se publica en Cloudflare Workers como archivos estáticos (`wrangler.jsonc`): cada `push` a `main` construye con `pnpm run build` y despliega con `npx wrangler deploy`. Las tres variables `VITE_GOOGLE_*` van en las variables de compilación del proyecto, porque se incluyen en la web al construirla.
 
 ## Hoja de ruta
 
@@ -175,7 +201,10 @@ La app queda en `http://localhost:5173`. Funciona sin configurar nada: sin clave
 - [x] Ubicaciones estimadas y ubicación de álbumes enteros con buscador de lugares.
 - [x] Revisión de rendimiento medida con perfiles de Chrome.
 - [x] Estilos de color del globo a elegir (natural, gris, noche y atlas).
-- [ ] Despliegue en Cloudflare Pages e integración continua con GitHub Actions.
+- [x] Panel de zona al pulsar el mapa y fotos ordenadas por lugar.
+- [x] Revisión de accesibilidad (WCAG AA) y animaciones de interfaz.
+- [x] Logo, iconos instalables y despliegue en Cloudflare Workers con dominio propio.
+- [ ] Integración continua con GitHub Actions (tests y tipos en cada `push`).
 - [ ] Capturas y vídeo de demostración en este README.
 
 ## Por qué importa este proyecto
@@ -183,6 +212,7 @@ La app queda en `http://localhost:5173`. Funciona sin configurar nada: sin clave
 - **Producto completo sin backend:** importación, almacenamiento, sincronización y funcionamiento sin conexión resueltos en el cliente, con decisiones de privacidad claras.
 - **Problemas reales de datos:** fotos sin GPS, formatos RAW, exportaciones de Google con nombres inconsistentes, zonas horarias del EXIF, duplicados y barrios que no son ciudades.
 - **Rendimiento con criterio:** cada optimización parte de una medición, y las que no mejoraban se descartaron.
+- **Cuidado del detalle:** accesibilidad comprobada, animaciones que respetan al usuario y una experiencia pensada también para el móvil.
 - **Código mantenible:** lógica de dominio en módulos puros y testeados, separada de la interfaz y del mapa.
 
 ## Datos y créditos
@@ -193,7 +223,7 @@ La app queda en `http://localhost:5173`. Funciona sin configurar nada: sin clave
 - Fotos de ejemplo: [Wikimedia Commons](https://commons.wikimedia.org/), cada una con su autor y licencia libre (CC0, dominio público, CC BY o CC BY-SA), listadas en [`docs/demo-credits.md`](docs/demo-credits.md)
 - Buscador de lugares: [Nominatim](https://nominatim.org/) (© colaboradores de OpenStreetMap)
 - Banderas: [country-flag-icons](https://gitlab.com/catamphetamine/country-flag-icons)
-- Tipografías: Geist, Geist Mono e Instrument Serif
+- Tipografías: Geist, Geist Mono, Instrument Serif y Fraunces
 
 ---
 
