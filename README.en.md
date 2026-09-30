@@ -144,7 +144,7 @@ pnpm install
 pnpm dev
 ```
 
-The app runs at `http://localhost:5173`. It works with no configuration; the Google account is optional.
+The app runs at `http://localhost:5173`. It works with no configuration: without Google keys you import directly. With the keys set, creating your album requires signing in with Google (or you can open the demo).
 
 | Command                       | What it does                                                                 |
 | ----------------------------- | ---------------------------------------------------------------------------- |

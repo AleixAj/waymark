@@ -1,4 +1,5 @@
 import { auth } from '$lib/google/auth.svelte';
+import { googleEnabled } from '$lib/google/config';
 import { downloadFile } from '$lib/google/drive';
 import { pickFromDrive } from '$lib/google/picker';
 import { fileItem, type ImportItem } from '$lib/photos/importer';
@@ -9,6 +10,14 @@ import { library } from './library.svelte';
 import { ui } from './ui.svelte';
 
 // The three ways to add photos: this device, Google Drive and Google Takeout
+
+/**
+ * Your album lives in your Google account, so photos are added once you are
+ * signed in (without Google set up, e.g. a local copy of the project, anyone can)
+ */
+export function canImport() {
+	return !googleEnabled || auth.signedIn;
+}
 
 export async function importFromDevice(folder = false) {
 	const files = await pickFiles(folder);

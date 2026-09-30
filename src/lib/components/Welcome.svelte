@@ -8,13 +8,32 @@
 	import { ui } from '$lib/state/ui.svelte';
 	import { auth } from '$lib/google/auth.svelte';
 	import { drivePickerEnabled, googleEnabled } from '$lib/google/config';
-	import { signIn } from '$lib/sync/sync.svelte';
+	import { signIn, sync } from '$lib/sync/sync.svelte';
+	import GoogleMark from './ui/GoogleMark.svelte';
 	import { enterDemo } from '$lib/state/mode';
 
 	const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent);
 
 	let busy = $state(false);
 	let error = $state<string | null>(null);
+
+	// Without an account there are two ways in: your own album (Google) or the demo
+	const gate = $derived(googleEnabled && !auth.signedIn);
+	// Right after signing in, the album is looked for in Drive before offering to import
+	const looking = $derived(auth.signedIn && sync.status === 'syncing');
+	const firstName = $derived(auth.account?.name.split(' ')[0] ?? '');
+
+	async function enter() {
+		error = null;
+		busy = true;
+		try {
+			await signIn();
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'No se pudo entrar con Google';
+		} finally {
+			busy = false;
+		}
+	}
 
 	function choose(folder: boolean) {
 		importFromDevice(folder);
@@ -47,7 +66,7 @@
 		>
 			<Icon name={settings.resolvedTheme === 'dark' ? 'sun' : 'moon'} />
 		</button>
-		<AccountButton />
+		{#if auth.signedIn}<AccountButton />{/if}
 	</div>
 </header>
 
@@ -55,58 +74,88 @@
 	<h1 class="wordmark">Waymark</h1>
 	<p class="t2 tagline">Tus fotos, donde las hiciste</p>
 
-	<div class="drop panel col">
-		<div class="dashed" aria-hidden="true"></div>
-		<div class="icon"><Icon name="upload" /></div>
-		<p class="t-h3 title">Arrastra aquí tus fotos o carpetas</p>
-		<p class="t-small t3">
-			JPG, HEIC, RAW y más. Leemos la ubicación GPS de cada foto para colocarla en el globo.
-		</p>
-		<div class="choices">
-			<button class="btn btn-primary btn-lg" onclick={() => choose(false)}
-				><Icon name="image" />Elegir fotos</button
-			>
-			<button class="btn btn-secondary btn-lg" onclick={() => choose(true)}
-				><Icon name="folder" />Elegir carpeta</button
-			>
-			<div class="row t-small t3 or" aria-hidden="true">o importa desde</div>
-			{#if drivePickerEnabled}
-				<button class="btn btn-secondary btn-lg" disabled={busy} onclick={fromDrive}
-					><ServiceMark service="drive" />Google Drive</button
+	{#if gate}
+		<div class="gate panel col">
+			<p class="t-h3 title">Tu álbum de viajes, sobre el globo</p>
+			<p class="t-small t2 lead">
+				Entra con tu cuenta de Google para crear tu álbum y verlo en todos tus dispositivos.
+			</p>
+			<div class="col ways">
+				<button class="btn btn-lg google" disabled={busy} onclick={enter}
+					><GoogleMark />{busy ? 'Abriendo Google…' : 'Continuar con Google'}</button
 				>
-			{/if}
-			<button
-				class="btn btn-secondary btn-lg"
-				class:wide={!drivePickerEnabled}
-				onclick={() => ui.openImport('takeout')}
-				><ServiceMark service="photos" />Google Fotos</button
-			>
+				<div class="row t-small t3 or" aria-hidden="true">o</div>
+				<button class="btn btn-secondary btn-lg" onclick={enterDemo}
+					><Icon name="play" />Ver la demo</button
+				>
+				<p class="t-small t3">600 fotos reales de 15 viajes, sin registrarte.</p>
+			</div>
+			{#if error}<p class="t-small err" role="alert">{error}</p>{/if}
 		</div>
-		{#if error}<p class="t-small err" role="alert">{error}</p>{/if}
-	</div>
-
-	<p class="row t2 privacy">
-		<Icon name="lock" size={16} />
-		{#if auth.signedIn}
-			Todo se procesa en este navegador y se guarda una copia ligera en tu Drive.
-		{:else if googleEnabled}
-			Todo se procesa en este navegador. Entra con Google para verlas en todos tus dispositivos.
-		{:else}
-			Tus fotos no salen de tu dispositivo. Todo se procesa en este navegador.
-		{/if}
-	</p>
-	<button class="demo" onclick={enterDemo}
-		><Icon name="play" size={14} />Probar con fotos de ejemplo</button
-	>
+		<ul class="row features">
+			<li class="row"><Icon name="globe" size={16} />Cada foto en su lugar</li>
+			<li class="row"><Icon name="route" size={16} />Viajes detectados solos</li>
+			<li class="row"><Icon name="chart" size={16} />Tus estadísticas</li>
+		</ul>
+	{:else if looking}
+		<div class="gate panel col" role="status">
+			<span class="spinner" aria-hidden="true"></span>
+			<p class="t-h3 title">Buscando tu álbum…</p>
+			<p class="t-small t2 lead">Miramos si ya tienes fotos guardadas en tu Google Drive.</p>
+		</div>
+	{:else}
+		<div class="drop panel col">
+			<div class="dashed" aria-hidden="true"></div>
+			<div class="icon"><Icon name="upload" /></div>
+			<p class="t-h3 title">
+				{firstName ? `Hola, ${firstName}. ` : ''}Arrastra aquí tus fotos o carpetas
+			</p>
+			<p class="t-small t3">
+				JPG, HEIC, RAW y más. Leemos la ubicación GPS de cada foto para colocarla en el globo.
+			</p>
+			<div class="choices">
+				<button class="btn btn-primary btn-lg" onclick={() => choose(false)}
+					><Icon name="image" />Elegir fotos</button
+				>
+				<button class="btn btn-secondary btn-lg" onclick={() => choose(true)}
+					><Icon name="folder" />Elegir carpeta</button
+				>
+				<div class="row t-small t3 or" aria-hidden="true">o importa desde</div>
+				{#if drivePickerEnabled}
+					<button class="btn btn-secondary btn-lg" disabled={busy} onclick={fromDrive}
+						><ServiceMark service="drive" />Google Drive</button
+					>
+				{/if}
+				<button
+					class="btn btn-secondary btn-lg"
+					class:wide={!drivePickerEnabled}
+					onclick={() => ui.openImport('takeout')}
+					><ServiceMark service="photos" />Google Fotos</button
+				>
+			</div>
+			{#if error}<p class="t-small err" role="alert">{error}</p>{/if}
+		</div>
+		<p class="row t2 privacy">
+			<Icon name="lock" size={16} />
+			{#if auth.signedIn}
+				Todo se procesa en este navegador y se guarda una copia ligera en tu Drive.
+			{:else}
+				Tus fotos no salen de tu dispositivo. Todo se procesa en este navegador.
+			{/if}
+		</p>
+		<button class="demo" onclick={enterDemo}
+			><Icon name="play" size={14} />Probar con fotos de ejemplo</button
+		>
+	{/if}
 </main>
 
 <footer class="row mono t3 bottom">
 	<span>v1.0 · funciona sin conexión</span>
-	<span class="row hint">
-		<span class="kbds"
-			><span class="kbd">{isMac ? '⌘' : 'Ctrl'}</span><span class="kbd">O</span></span
-		> abrir fotos
-	</span>
+	{#if !gate}<span class="row hint">
+			<span class="kbds"
+				><span class="kbd">{isMac ? '⌘' : 'Ctrl'}</span><span class="kbd">O</span></span
+			> abrir fotos
+		</span>{/if}
 </footer>
 
 <style>
@@ -241,6 +290,84 @@
 		flex: 1;
 		height: 1px;
 		background: var(--line-strong);
+	}
+
+	/* Sign in or demo: the two ways in, one above the other */
+	.gate {
+		margin-top: 40px;
+		width: min(440px, 100%);
+		padding: 32px 32px 28px;
+		align-items: center;
+	}
+
+	.gate .title {
+		margin-top: 0;
+	}
+
+	.lead {
+		max-width: 320px;
+		text-wrap: pretty;
+	}
+
+	.ways {
+		width: min(320px, 100%);
+		gap: 10px;
+		margin-top: 24px;
+	}
+
+	.ways .btn {
+		width: 100%;
+	}
+
+	.ways .or {
+		gap: 12px;
+		margin: 2px 0;
+	}
+
+	/* Google's own look: white button with the coloured G */
+	.google {
+		background: #fff;
+		color: #1f1f1f;
+		border-color: oklch(0.3 0.02 255 / 0.18);
+		box-shadow: 0 1px 2px oklch(0 0 0 / 0.12);
+	}
+
+	.google:hover {
+		background: #f3f5f8;
+	}
+
+	.features {
+		list-style: none;
+		gap: 20px;
+		margin-top: 22px;
+		flex-wrap: wrap;
+		justify-content: center;
+		font-size: 13px;
+		color: var(--t2);
+	}
+
+	.features li {
+		gap: 7px;
+	}
+
+	.features :global(.i) {
+		color: var(--acc-text);
+	}
+
+	.spinner {
+		width: 28px;
+		height: 28px;
+		margin-bottom: 14px;
+		border-radius: 50%;
+		border: 2.5px solid var(--acc-soft);
+		border-top-color: var(--acc);
+		animation: spin 0.8s linear infinite;
+	}
+
+	@keyframes spin {
+		to {
+			transform: rotate(360deg);
+		}
 	}
 
 	.err {

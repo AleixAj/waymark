@@ -142,7 +142,7 @@ pnpm install
 pnpm dev
 ```
 
-La app queda en `http://localhost:5173`. Funciona sin configurar nada; la cuenta de Google es opcional.
+La app queda en `http://localhost:5173`. Funciona sin configurar nada: sin claves de Google se importa directamente. Con las claves puestas, para crear tu álbum hay que entrar con Google (o ver la demo).
 
 | Comando                       | Qué hace                                                                      |
 | ----------------------------- | ----------------------------------------------------------------------------- |

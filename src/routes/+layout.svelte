@@ -37,7 +37,7 @@
 	import DemoLoading from '$lib/components/DemoLoading.svelte';
 	import ZonePanel from '$lib/components/ZonePanel.svelte';
 	import TakeoutAlbums from '$lib/components/TakeoutAlbums.svelte';
-	import { importFiles } from '$lib/state/importing';
+	import { canImport, importFiles } from '$lib/state/importing';
 	import { auth } from '$lib/google/auth.svelte';
 	import { sync } from '$lib/sync/sync.svelte';
 	import { demoMode } from '$lib/state/mode';
@@ -123,7 +123,7 @@
 			ui.searchOpen = true;
 		} else if (event.key.toLowerCase() === 'o') {
 			event.preventDefault();
-			pickFiles().then((files) => library.import(files));
+			if (importAllowed()) pickFiles().then((files) => library.import(files));
 		}
 	}
 
@@ -133,10 +133,19 @@
 		return !ui.dragging && !!event.dataTransfer?.types.includes('Files');
 	}
 
+	/** Your photos go in your own album: not in the demo, and only with Google */
+	function importAllowed() {
+		if (demoMode) ui.importNote = 'Sal de la demo y entra con Google para añadir tus fotos';
+		else if (!canImport()) ui.importNote = 'Entra con Google para añadir tus fotos';
+		else return true;
+		return false;
+	}
+
 	function onDrop(event: DragEvent) {
 		if (!isFileDrag(event)) return;
 		event.preventDefault();
 		fileDrag = false;
+		if (!importAllowed()) return;
 		// Folders are opened too, so dropping a DCIM folder imports its photos
 		// A Google Takeout export (zip files) opens the album chooser
 		if (event.dataTransfer) droppedFiles(event.dataTransfer).then(importFiles);
@@ -212,7 +221,7 @@
 		{/if}
 	{/if}
 
-	{#if fileDrag}
+	{#if fileDrag && !demoMode && canImport()}
 		<div class="file-drop">
 			<div class="col">
 				<span class="t-h3">Suelta las fotos para colocarlas en el globo</span>

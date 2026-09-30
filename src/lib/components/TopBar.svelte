@@ -8,6 +8,8 @@
 	import { ui } from '$lib/state/ui.svelte';
 	import AccountButton from './AccountButton.svelte';
 	import { demoMode, enterDemo, exitDemo } from '$lib/state/mode';
+	import { canImport } from '$lib/state/importing';
+	import { signIn } from '$lib/sync/sync.svelte';
 
 	const path = $derived(page.url.pathname);
 	const tab = $derived(
@@ -35,8 +37,16 @@
 		if (menuOpen && !menuWrap?.contains(event.target as Node)) menuOpen = false;
 	}
 
-	function importPhotos() {
+	// Importing needs the Google account: signing in comes first when there is none
+	async function importPhotos() {
 		menuOpen = false;
+		if (!canImport()) {
+			try {
+				await signIn();
+			} catch {
+				return;
+			}
+		}
 		ui.openImport();
 	}
 </script>
@@ -127,9 +137,12 @@
 				><Icon name="play" /><span class="label">Ver demo</span></button
 			>
 		{/if}
-		<button class="btn btn-secondary" onclick={importPhotos} title="Importar fotos"
-			><Icon name="upload" /><span class="label">Importar</span></button
-		>
+		<!-- The demo is only for looking: your own photos go in your own album -->
+		{#if !demoMode}
+			<button class="btn btn-secondary" onclick={importPhotos} title="Importar fotos"
+				><Icon name="upload" /><span class="label">Importar</span></button
+			>
+		{/if}
 		<AccountButton />
 	</div>
 
@@ -167,9 +180,11 @@
 					<Icon name="chart" />Estadísticas
 				</a>
 				<div class="hr"></div>
-				<button class="menu-item" role="menuitem" onclick={importPhotos}
-					><Icon name="upload" />Importar fotos</button
-				>
+				{#if !demoMode}
+					<button class="menu-item" role="menuitem" onclick={importPhotos}
+						><Icon name="upload" />Importar fotos</button
+					>
+				{/if}
 				<button class="menu-item" role="menuitem" onclick={demoMode ? exitDemo : enterDemo}
 					><Icon name="play" />{demoMode ? 'Salir de la demo' : 'Ver demo'}</button
 				>
