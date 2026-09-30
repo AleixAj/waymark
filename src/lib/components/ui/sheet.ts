@@ -1,4 +1,11 @@
 import { ui } from '$lib/state/ui.svelte';
+import { translator } from '$lib/i18n/i18n.svelte';
+
+const t = translator({
+	es: { resize: 'Cambiar el tamaño del panel' },
+	en: { resize: 'Resize the panel' },
+	ca: { resize: 'Canviar la mida del panell' }
+});
 
 type Snap = 'peek' | 'half' | 'full';
 
@@ -26,7 +33,7 @@ export function sheet(node: HTMLElement, initial: Snap = 'half') {
 
 	const handle = document.createElement('button');
 	handle.className = 'sheet-handle';
-	handle.setAttribute('aria-label', 'Cambiar el tamaño del panel');
+	handle.setAttribute('aria-label', t('resize'));
 	node.prepend(handle);
 
 	function apply(height: number) {

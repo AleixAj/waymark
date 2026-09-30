@@ -3,6 +3,7 @@ import { findPlace } from './placeFinder';
 import { isRaw } from './formats';
 import { toPoint, type Photo, type PhotoPoint } from './types';
 import type { ImportHint, ProcessedPhoto, WorkerRequest, WorkerResponse } from './import.worker';
+import t from '$lib/i18n/messages/importing';
 
 export type { ImportHint };
 
@@ -74,7 +75,7 @@ export async function importPhotos(
 		// Videos and other files are listed so the user knows they were skipped
 		errors: items
 			.filter((item) => !isImage(item))
-			.map((item) => ({ name: item.name, reason: 'No es una foto', retryable: false, item })),
+			.map((item) => ({ name: item.name, reason: t('notPhoto'), retryable: false, item })),
 		startedAt: Date.now()
 	};
 	onProgress({ ...progress });
@@ -122,7 +123,7 @@ export async function importPhotos(
 			for (const { file } of fresh) {
 				progress.errors.push({
 					name: file.name,
-					reason: 'Sin espacio en el navegador',
+					reason: t('noSpace'),
 					retryable: false,
 					item: fileItem(file)
 				});
@@ -172,7 +173,7 @@ export async function importPhotos(
 				file = await item.open();
 			} catch {
 				// A broken zip entry, or Drive didn't answer
-				fail('No se pudo abrir', true);
+				fail(t('cantOpen'), true);
 				return;
 			}
 			const result = await processInWorker(worker, file, item.hint);
@@ -180,9 +181,9 @@ export async function importPhotos(
 				// A stuck worker (huge or broken file) is replaced by a fresh one
 				worker.terminate();
 				worker = createWorker();
-				fail('Tardó demasiado', true);
+				fail(t('tooSlow'), true);
 			} else if (!result.ok) {
-				fail(result.error, result.retryable);
+				fail(t(result.error), result.retryable);
 			} else if (seen.has(result.photo.id)) {
 				progress.duplicates++;
 			} else {
@@ -206,7 +207,7 @@ export function processInWorker(worker: Worker, file: File, hint?: ImportHint) {
 			resolve(value);
 		};
 		worker.onmessage = (event: MessageEvent<WorkerResponse>) => done(event.data);
-		const fail = () => done({ ok: false, error: 'No se pudo leer', retryable: true });
+		const fail = () => done({ ok: false, error: 'unreadable', retryable: true });
 		worker.onerror = fail;
 		worker.onmessageerror = fail;
 		worker.postMessage({ file, hint } satisfies WorkerRequest);

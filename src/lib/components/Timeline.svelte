@@ -2,7 +2,9 @@
 	import { library } from '$lib/state/library.svelte';
 	import { ui } from '$lib/state/ui.svelte';
 	import { buildMonths, monthStart, rangeIndexes } from '$lib/library/timeline';
-	import { formatMonth, formatNumber } from '$lib/library/format';
+	import { formatMonth } from '$lib/library/format';
+	import tc from '$lib/i18n/messages/common';
+	import t from '$lib/i18n/messages/sidebar';
 
 	let { style = '' }: { style?: string } = $props();
 
@@ -68,18 +70,18 @@
 
 {#if bars.length}
 	<section
-		aria-label="Línea de tiempo"
+		aria-label={t('timeline')}
 		class="timeline panel"
 		class:open={ui.timelineOpen}
 		{style}
 		style:--sheet="{ui.sheetHeight}px"
 	>
 		<div class="col info">
-			<span class="t-label">Línea de tiempo</span>
+			<span class="t-label">{t('timeline')}</span>
 			<span class="mono range">{label}</span>
-			<span class="mono t3 small">{formatNumber(count)} fotos</span>
+			<span class="mono t3 small">{tc('photos', { n: count })}</span>
 			{#if library.range}
-				<button class="reset mono" onclick={() => (library.range = null)}>ver todo</button>
+				<button class="reset mono" onclick={() => (library.range = null)}>{t('seeAll')}</button>
 			{/if}
 		</div>
 		<div class="chart">
@@ -103,7 +105,7 @@
 							class="handle left"
 							role="slider"
 							tabindex="0"
-							aria-label="Inicio del rango"
+							aria-label={t('rangeStart')}
 							aria-valuenow={fromIndex}
 							aria-valuemin={0}
 							aria-valuemax={bars.length - 1}
@@ -118,7 +120,7 @@
 							class="handle right"
 							role="slider"
 							tabindex="0"
-							aria-label="Fin del rango"
+							aria-label={t('rangeEnd')}
 							aria-valuenow={toIndex}
 							aria-valuemin={0}
 							aria-valuemax={bars.length - 1}
@@ -137,7 +139,7 @@
 						<i
 							class:on
 							style:height="{Math.max(2, Math.pow(bar.count / max, 0.55) * 34)}px"
-							title="{formatMonth(monthStart(bar.key))}: {bar.count} fotos"
+							title={t('month', { month: formatMonth(monthStart(bar.key)), n: bar.count })}
 						></i>
 					{/each}
 				</div>

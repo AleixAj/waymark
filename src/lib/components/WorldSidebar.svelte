@@ -6,6 +6,8 @@
 	import { thumbUrl } from '$lib/state/thumbs.svelte';
 	import { ui } from '$lib/state/ui.svelte';
 	import { formatNumber, formatRange, formatMonth } from '$lib/library/format';
+	import tc from '$lib/i18n/messages/common';
+	import t from '$lib/i18n/messages/sidebar';
 
 	let sortBy = $state<'fotos' | 'fecha'>('fotos');
 
@@ -19,41 +21,43 @@
 </script>
 
 {#if ui.sidebarOpen}
-	<aside class="side panel" aria-label="Biblioteca" aria-busy={importing} use:sheet={'peek'}>
+	<aside class="side panel" aria-label={t('library')} aria-busy={importing} use:sheet={'peek'}>
 		<div class="head">
 			<div class="row between">
-				<span class="t-h3">Tu mundo</span>
+				<span class="t-h3">{t('yourWorld')}</span>
 				<button
 					class="btn btn-ghost btn-icon btn-sm"
-					aria-label="Plegar panel"
+					aria-label={t('collapse')}
 					onclick={() => (ui.sidebarOpen = false)}
 				>
 					<Icon name="sidebar" />
 				</button>
 			</div>
 			<span class="mono t3 summary">
-				{formatNumber(library.countryList.length)} países · {formatNumber(library.points.length)} fotos
+				{tc('countries', { n: library.countryList.length })} · {tc('photos', {
+					n: library.points.length
+				})}
 			</span>
 			<div class="row stats">
 				<div class="col">
 					<span class="mono num">{formatNumber(library.countryList.length)}</span>
-					<span class="t-small t3">países</span>
+					<span class="t-small t3">{tc('countriesWord', { n: library.countryList.length })}</span>
 				</div>
 				<div class="col">
 					<span class="mono num">{formatNumber(library.cityList.length)}</span>
-					<span class="t-small t3">ciudades</span>
+					<span class="t-small t3">{tc('citiesWord', { n: library.cityList.length })}</span>
 				</div>
 				<div class="col">
 					<span class="mono num">{formatNumber(library.points.length)}</span>
-					<span class="t-small t3">fotos</span>
+					<span class="t-small t3">{tc('photosWord', { n: library.points.length })}</span>
 				</div>
 			</div>
 		</div>
 
 		<div class="scroll">
 			<div class="sec-h trips-h">
-				<h3>Viajes</h3>
-				{#if importing}<span class="t-small t3">Detectando viajes…</span>{/if}
+				<h3>{t('trips')}</h3>
+				{#if importing}<span class="t-small t3">{t('detecting')}</span>{/if}
 			</div>
 			{#if importing && library.trips.length === 0}
 				<div class="col skeletons">
@@ -69,7 +73,7 @@
 				</div>
 			{:else if library.trips.length === 0}
 				<p class="t-small t3 empty-note">
-					Aún no hay viajes. Aparecen solos cuando tienes varias fotos seguidas lejos de casa.
+					{t('noTrips')}
 				</p>
 			{/if}
 			<div class="col list trips stagger">
@@ -92,13 +96,13 @@
 
 			{#if library.countryList.length}
 				<div class="sec-h countries-h">
-					<h3>Países</h3>
-					<div class="seg" role="group" aria-label="Ordenar países">
+					<h3>{t('countries')}</h3>
+					<div class="seg" role="group" aria-label={t('sortCountries')}>
 						<button class:is-on={sortBy === 'fotos'} onclick={() => (sortBy = 'fotos')}
-							>Fotos</button
+							>{t('byPhotos')}</button
 						>
 						<button class:is-on={sortBy === 'fecha'} onclick={() => (sortBy = 'fecha')}
-							>Fecha</button
+							>{t('byDate')}</button
 						>
 					</div>
 				</div>

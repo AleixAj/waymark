@@ -1,4 +1,12 @@
 <script lang="ts">
+	import { translator } from '$lib/i18n/i18n.svelte';
+
+	const t = translator({
+		es: { alt: 'Bandera de {name}' },
+		en: { alt: 'Flag of {name}' },
+		ca: { alt: 'Bandera: {name}' }
+	});
+
 	// Every flag is its own small file; Vite only downloads the ones we show
 	const flags = import.meta.glob('/node_modules/country-flag-icons/3x2/*.svg', {
 		query: '?url',
@@ -16,7 +24,7 @@
 </script>
 
 <span class="flag" style:width="{width}px" style:height="{(width * 2) / 3}px">
-	{#if url}<img src={url} alt={name ? `Bandera de ${name}` : ''} />{/if}
+	{#if url}<img src={url} alt={name ? t('alt', { name }) : ''} />{/if}
 </span>
 
 <style>

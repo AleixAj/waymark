@@ -8,6 +8,8 @@
 	import { mapView } from '$lib/map/view.svelte';
 	import { groupBy } from '$lib/library/trips';
 	import { formatNumber, formatRange } from '$lib/library/format';
+	import tc from '$lib/i18n/messages/common';
+	import t from '$lib/i18n/messages/zone';
 
 	let { zone }: { zone: { ids: string[]; title: string } } = $props();
 
@@ -49,34 +51,34 @@
 
 <svelte:window onkeydown={onKey} />
 
-<aside use:sheet={'half'} class="rpanel panel zone" aria-label="Fotos de la zona seleccionada">
+<aside use:sheet={'half'} class="rpanel panel zone" aria-label={t('label')}>
 	<div class="head">
 		<div class="row between">
 			<span class="t-label">
-				{countryList.map((iso) => countries.name(iso!)).join(' · ') || 'Zona seleccionada'}
+				{countryList.map((iso) => countries.name(iso!)).join(' · ') || t('zone')}
 			</span>
 			<div class="row tools">
 				<button
 					class="btn btn-ghost btn-icon btn-sm"
-					aria-label="Centrar en el mapa"
+					aria-label={tc('centerMap')}
 					onclick={() => mapView.fitPoints(shown, 15)}
 				>
 					<Icon name="target" />
 				</button>
-				<button class="btn btn-ghost btn-icon btn-sm" aria-label="Cerrar" onclick={close}>
+				<button class="btn btn-ghost btn-icon btn-sm" aria-label={tc('close')} onclick={close}>
 					<Icon name="x" />
 				</button>
 			</div>
 		</div>
 		<h1 class="t-h1 title">{zone.title}</h1>
 		<p class="mono t2 sub">
-			{range} · {formatNumber(photos.length)} fotos
+			{range} · {tc('photos', { n: photos.length })}
 		</p>
 
 		{#if cities.length > 1}
-			<div class="row chips" role="group" aria-label="Ciudades de la zona">
+			<div class="row chips" role="group" aria-label={t('cities')}>
 				<button class="chip" class:is-on={!city} aria-pressed={!city} onclick={() => (city = null)}
-					>Todas <span class="mono">{formatNumber(photos.length)}</span></button
+					>{t('all')} <span class="mono">{formatNumber(photos.length)}</span></button
 				>
 				{#each cities.slice(0, 12) as c (c.name)}
 					<button
@@ -97,11 +99,11 @@
 				class="btn btn-secondary btn-sm explore"
 				href="/lugar/{target.country}/{encodeURIComponent(target.name)}"
 			>
-				<Icon name="pin" />Explorar {target.name} por zonas
+				<Icon name="pin" />{t('explore', { name: target.name })}
 			</a>
 		{:else}
 			<p class="row t-small t3 hint">
-				<Icon name="info" size={14} />Pulsa un círculo más pequeño en el mapa para acercarte más.
+				<Icon name="info" size={14} />{t('hint')}
 			</p>
 		{/if}
 	</div>

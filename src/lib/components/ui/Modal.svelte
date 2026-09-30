@@ -2,6 +2,7 @@
 	import type { Snippet } from 'svelte';
 	import Icon from './Icon.svelte';
 	import { focusTrap } from './focusTrap';
+	import tc from '$lib/i18n/messages/common';
 
 	let {
 		title,
@@ -47,7 +48,7 @@
 				<h1 class="t-h2">{title}</h1>
 				{#if subtitle}<p class="t-small t3 sub">{subtitle}</p>{/if}
 			</div>
-			<button class="btn btn-ghost btn-icon" aria-label="Cerrar" onclick={onclose}>
+			<button class="btn btn-ghost btn-icon" aria-label={tc('close')} onclick={onclose}>
 				<Icon name="x" />
 			</button>
 		</div>

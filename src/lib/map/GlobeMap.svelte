@@ -14,6 +14,7 @@
 	import { mapView, zoomForGlobe } from './view.svelte';
 	import GlobeShade from './GlobeShade.svelte';
 	import { starfieldUrl } from './stars';
+	import t from '$lib/i18n/messages/map';
 
 	interface Props {
 		/** Slow spin on the welcome screen */
@@ -255,7 +256,7 @@
 	bind:this={container}
 	style:background-image={stars}
 	role="application"
-	aria-label="Globo con tus fotos"
+	aria-label={t('globeLabel')}
 ></div>
 {#if map && loaded}
 	<GlobeShade />

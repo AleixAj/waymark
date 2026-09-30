@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import Icon from './ui/Icon.svelte';
 	import { searchPlaces, type FoundPlace } from '$lib/geo/geocode';
+	import t from '$lib/i18n/messages/search';
 
 	let { onchoose }: { onchoose: (place: FoundPlace) => void } = $props();
 
@@ -59,13 +60,13 @@
 			bind:this={input}
 			bind:value={text}
 			onkeydown={onKey}
-			placeholder="Busca un lugar: Grandvalira, Lisboa…"
-			aria-label="Buscar un lugar"
+			placeholder={t('placePlaceholder')}
+			aria-label={t('placeLabel')}
 		/>
 		{#if searching}<span class="spinner" aria-hidden="true"></span>{/if}
 	</label>
 	{#if results.length}
-		<ul class="results panel" role="listbox" aria-label="Lugares encontrados">
+		<ul class="results panel" role="listbox" aria-label={t('found')}>
 			{#each results as place, i (i)}
 				<li role="option" aria-selected={i === active}>
 					<button class:is-on={i === active} onclick={() => onchoose(place)}>
@@ -77,7 +78,7 @@
 					</button>
 				</li>
 			{/each}
-			<li class="credit t3">Búsqueda de © OpenStreetMap</li>
+			<li class="credit t3">{t('credit')}</li>
 		</ul>
 	{/if}
 </div>

@@ -27,7 +27,7 @@ async function square(size, share, background) {
 
 await sharp(logo).resize({ height: 96 }).webp({ quality: 90 }).toFile('src/lib/assets/logo.webp');
 await sharp(logo)
-	.resize({ height: 240 })
+	.resize({ height: 360 })
 	.webp({ quality: 88 })
 	.toFile('src/lib/assets/logo-hero.webp');
 await (

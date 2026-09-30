@@ -8,6 +8,7 @@ import { looksLikeTakeout } from '$lib/photos/formats';
 import type { TakeoutAlbum } from '$lib/photos/takeout';
 import { library } from './library.svelte';
 import { ui } from './ui.svelte';
+import t from '$lib/i18n/messages/importing';
 
 // The three ways to add photos: this device, Google Drive and Google Takeout
 
@@ -28,7 +29,8 @@ export async function importFromDevice(folder = false) {
 export async function importFiles(files: File[]) {
 	ui.closeImport();
 	if (looksLikeTakeout(files)) {
-		ui.importNote = 'Leyendo tu exportación de Google Fotos…';
+		const reading = t('readingTakeout');
+		ui.importNote = reading;
 		try {
 			// The zip reader is only downloaded when a Takeout export arrives
 			const { readTakeout } = await import('$lib/photos/takeout');
@@ -38,10 +40,10 @@ export async function importFiles(files: File[]) {
 				return;
 			}
 		} catch {
-			ui.importNote = 'No se pudo leer el archivo. ¿Es un .zip de Google Takeout completo?';
+			ui.importNote = t('takeoutFailed');
 			return;
 		} finally {
-			if (ui.importNote?.startsWith('Leyendo')) ui.importNote = null;
+			if (ui.importNote === reading) ui.importNote = null;
 		}
 	}
 	await library.import(files.map(withFolder));

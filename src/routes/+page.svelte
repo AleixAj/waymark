@@ -10,6 +10,7 @@
 	import { mapView } from '$lib/map/view.svelte';
 	import { demoMode } from '$lib/state/mode';
 	import { canImport } from '$lib/state/importing';
+	import t from '$lib/i18n/messages/layout';
 
 	// Same rule as the layout: no photos, or no Google account, shows the welcome screen
 	const welcome = $derived((library.isEmpty || !canImport()) && !demoMode);
@@ -44,7 +45,7 @@
 	{#if !ui.sidebarOpen}
 		<button
 			class="open-side panel btn btn-ghost btn-icon"
-			aria-label="Mostrar panel"
+			aria-label={t('showPanel')}
 			onclick={() => (ui.sidebarOpen = true)}
 		>
 			<Icon name="sidebar" />

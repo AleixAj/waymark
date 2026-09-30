@@ -2,6 +2,7 @@
 	import { geoNaturalEarth1, geoPath } from 'd3-geo';
 	import { loadCountriesLight } from '$lib/geo/data';
 	import { toCountryFeatures, type CountryFeature } from '$lib/geo/countries';
+	import t from '$lib/i18n/messages/stats';
 
 	interface Props {
 		visited: string[];
@@ -36,7 +37,7 @@
 
 <div class="world" bind:clientWidth={width} bind:clientHeight={height}>
 	{#if width && height}
-		<svg {width} {height} role="img" aria-label="Mapa con {visited.length} países visitados">
+		<svg {width} {height} role="img" aria-label={t('mapLabel', { n: visited.length })}>
 			<path class="sphere" d={path({ type: 'Sphere' })} />
 			{#each outlines as outline (outline.iso3)}
 				<path class="country" class:visited={visitedSet.has(outline.iso3)} d={outline.d} />

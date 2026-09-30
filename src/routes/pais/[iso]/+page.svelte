@@ -15,9 +15,13 @@
 	import { mapView } from '$lib/map/view.svelte';
 	import { countryDetail } from '$lib/library/stats';
 	import { formatNumber, formatRange } from '$lib/library/format';
+	import t from '$lib/i18n/messages/country';
+	import tc from '$lib/i18n/messages/common';
 
 	const iso = $derived(page.params.iso ?? '');
 	const info = $derived(countries.info(iso));
+	// In the user's language (the code itself for an unknown country)
+	const name = $derived(countries.name(iso));
 	const detail = $derived(countryDetail(library.located, iso, library.trips));
 	let city = $state<string | null>(null);
 
@@ -69,55 +73,60 @@
 	const unit = $derived(settings.units);
 </script>
 
-<svelte:head><title>{info?.name ?? 'País'} · Waymark</title></svelte:head>
+<svelte:head><title>{info ? name : t('country')} · Waymark</title></svelte:head>
 
-<Breadcrumb items={[{ label: 'Mundo', href: '/' }, { label: info?.name ?? iso }]} />
+<Breadcrumb items={[{ label: tc('world'), href: '/' }, { label: name }]} />
 <MapControls style="right: 452px" />
 {#if detail}
 	<Timeline style="right: 452px" />
 {/if}
 
-<aside use:sheet={'half'} class="rpanel panel" aria-label={info?.name}>
+<aside use:sheet={'half'} class="rpanel panel" aria-label={info ? name : undefined}>
 	<div class="head">
 		<div class="row between">
 			{#if info?.iso2}
-				<Flag iso2={info.iso2} name={info.name} />
+				<Flag iso2={info.iso2} {name} />
 			{:else}
 				<span class="code">{iso}</span>
 			{/if}
 			<div class="row tools">
 				<button
 					class="btn btn-ghost btn-icon btn-sm"
-					aria-label="Centrar en el mapa"
+					aria-label={tc('centerMap')}
 					onclick={() => mapView.fitCountry(iso)}
 				>
 					<Icon name="target" />
 				</button>
-				<button class="btn btn-ghost btn-icon btn-sm" aria-label="Cerrar" onclick={() => goto('/')}>
+				<button
+					class="btn btn-ghost btn-icon btn-sm"
+					aria-label={tc('close')}
+					onclick={() => goto('/')}
+				>
 					<Icon name="x" />
 				</button>
 			</div>
 		</div>
-		<h1 class="t-h1 title">{info?.name ?? iso}</h1>
+		<h1 class="t-h1 title">{name}</h1>
 
 		{#if detail}
 			<p class="mono t2 sub">
-				{formatRange(detail.first, detail.last)} · {detail.visits || 1}
-				{detail.visits === 1 || !detail.visits ? 'visita' : 'visitas'}
+				{formatRange(detail.first, detail.last)} · {t('visits', { n: detail.visits || 1 })}
 			</p>
 			<div class="row stats">
 				<div class="col">
 					<span class="mono num">{formatNumber(detail.count)}</span><span class="t-small t3"
-						>fotos</span
+						>{tc('photosWord', { n: detail.count })}</span
 					>
 				</div>
 				<div class="col">
 					<span class="mono num">{detail.cities.length}</span><span class="t-small t3"
-						>ciudades</span
+						>{tc('citiesWord', { n: detail.cities.length })}</span
 					>
 				</div>
 				<div class="col">
-					<span class="mono num">{detail.days}</span><span class="t-small t3">días</span>
+					<span class="mono num">{detail.days}</span><span class="t-small t3"
+						>{tc('daysWord', { n: detail.days })}</span
+					>
 				</div>
 				<div class="col">
 					<span class="mono num">{formatNumber(settings.distance(detail.km))}</span><span
@@ -126,7 +135,7 @@
 				</div>
 			</div>
 			<div class="row chips">
-				<button class="chip" class:is-on={!city} onclick={() => (city = null)}>Todas</button>
+				<button class="chip" class:is-on={!city} onclick={() => (city = null)}>{t('all')}</button>
 				{#each detail.cities.slice(0, 12) as c (c.city)}
 					<button class="chip" class:is-on={city === c.city} onclick={() => (city = c.city)}>
 						{c.city} <span class="mono">{formatNumber(c.count)}</span>
@@ -135,18 +144,18 @@
 			</div>
 			{#if city}
 				<a class="btn btn-secondary btn-sm explore" href="/lugar/{iso}/{encodeURIComponent(city)}">
-					<Icon name="pin" />Explorar {city} en el mapa
+					<Icon name="pin" />{t('explore', { city })}
 				</a>
 			{/if}
 		{:else}
-			<p class="mono t3 sub">0 fotos · sin visitas</p>
+			<p class="mono t3 sub">{t('noVisits')}</p>
 		{/if}
 	</div>
 
 	{#if detail}
 		<div class="hr"></div>
 		<div class="scroll">
-			<PhotoDays {photos} context={city ?? info?.name ?? ''} />
+			<PhotoDays {photos} context={city ?? (info ? name : '')} />
 		</div>
 	{:else}
 		<div class="empty none">
@@ -157,13 +166,13 @@
 				<circle class="a" cx="52" cy="18" r="4" stroke-dasharray="2.5 2.5" />
 			</svg>
 			{#if unknown}
-				<h3>No encontramos este país</h3>
+				<h3>{t('notFound')}</h3>
 			{:else}
-				<h3>Aún no tienes fotos en {info?.name ?? iso}</h3>
+				<h3>{t('noPhotos', { country: name })}</h3>
 			{/if}
-			<p>Si hiciste fotos allí y no tienen GPS, puedes ubicarlas desde Sin ubicación.</p>
+			<p>{t('noGps')}</p>
 			<a class="btn btn-secondary btn-sm" href="/sin-ubicacion">
-				Revisar fotos sin ubicación <span class="mono t3">{library.unlocated.length}</span>
+				{t('review')} <span class="mono t3">{library.unlocated.length}</span>
 			</a>
 		</div>
 	{/if}

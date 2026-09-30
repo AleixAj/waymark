@@ -14,7 +14,9 @@
 	import { getCameras } from '$lib/photos/db';
 	import { placeAt } from '$lib/photos/placeFinder';
 	import { groupBy } from '$lib/library/trips';
-	import { formatMonthLong, formatNumber, monthKey } from '$lib/library/format';
+	import { formatMonthLong, monthKey } from '$lib/library/format';
+	import t from '$lib/i18n/messages/unlocated';
+	import tc from '$lib/i18n/messages/common';
 
 	// Photos from Google Takeout or folders are grouped by album first
 	let groupMode = $state<'album' | 'fecha' | 'camara'>(
@@ -49,7 +51,8 @@
 		let current = true;
 		getCameras(ids).then((found) => {
 			if (!current) return;
-			cameras = new Map(ids.map((id) => [id, found.get(id) ?? 'Cámara desconocida']));
+			// Unknown cameras are an empty name, shown in the current language
+			cameras = new Map(ids.map((id) => [id, found.get(id) ?? '']));
 		});
 		return () => (current = false);
 	});
@@ -58,13 +61,13 @@
 		const newestFirst = [...photos].reverse();
 		if (groupMode === 'album') {
 			return [...groupBy(newestFirst, (p) => p.album ?? '').entries()]
-				.map(([name, items]) => ({ key: name, title: name || 'Sin álbum', items }))
+				.map(([name, items]) => ({ key: name, title: name || t('noAlbum'), items }))
 				.sort((a, b) => (a.key ? 0 : 1) - (b.key ? 0 : 1));
 		}
 		if (groupMode === 'camara') {
-			return [
-				...groupBy(newestFirst, (p) => cameras.get(p.id) ?? 'Cámara desconocida').entries()
-			].map(([name, items]) => ({ key: name, title: name, items }));
+			return [...groupBy(newestFirst, (p) => cameras.get(p.id) ?? '').entries()].map(
+				([name, items]) => ({ key: name, title: name || t('unknownCamera'), items })
+			);
 		}
 		return [...groupBy(newestFirst, (p) => monthKey(p.takenAt)).values()].map((items) => ({
 			key: monthKey(items[0].takenAt),
@@ -89,9 +92,11 @@
 		const spot = await placeAt(lat, lng, iso2);
 		await library.assignLocation(ids, spot);
 		selected = selected.filter((id) => !ids.includes(id));
-		const where = [spot.city, countries.name(spot.country)].filter(Boolean).join(', ') || 'el mapa';
+		const where = [spot.city, countries.name(spot.country)].filter(Boolean).join(', ');
 		toast = {
-			text: `${ids.length === 1 ? '1 foto ubicada' : `${ids.length} fotos ubicadas`} en ${where}`,
+			text: where
+				? t('placedIn', { n: ids.length, place: where })
+				: t('placedOnMap', { n: ids.length }),
 			href: spot.country ? `/pais/${spot.country}` : '/'
 		};
 		setTimeout(() => (toast = null), 5000);
@@ -136,7 +141,7 @@
 				dropLabel = {
 					x: event.clientX,
 					y: event.clientY,
-					text: name ? `Soltar en ${name}` : 'Soltar aquí'
+					text: name ? t('dropIn', { place: name }) : t('dropHere')
 				};
 			});
 		};
@@ -194,7 +199,7 @@
 	}
 
 	function photoCount(n: number) {
-		return n === 1 ? '1 foto' : `${formatNumber(n)} fotos`;
+		return tc('photos', { n });
 	}
 
 	function onKey(event: KeyboardEvent) {
@@ -204,54 +209,58 @@
 	const dragIds = $derived((ui.dragging ?? selected).slice(0, 3));
 </script>
 
-<svelte:head><title>Sin ubicación · Waymark</title></svelte:head>
+<svelte:head><title>{tc('unlocated')} · Waymark</title></svelte:head>
 <svelte:window onkeydown={onKey} ondragend={endDrag} />
 
-<section class="unlocated panel" aria-label="Fotos sin ubicación" use:sheet={'half'}>
+<section class="unlocated panel" aria-label={t('title')} use:sheet={'half'}>
 	<div class="head">
 		<div class="row between top">
 			<div>
-				<h1 class="t-h2">Fotos sin ubicación</h1>
+				<h1 class="t-h2">{t('title')}</h1>
 				<p class="mono t3 sub">{photoCount(photos.length)}{years ? ` · ${years}` : ''}</p>
 			</div>
-			<div class="seg" role="radiogroup" aria-label="Agrupar">
+			<div class="seg" role="radiogroup" aria-label={t('groupBy')}>
 				<button
 					class:is-on={groupMode === 'album'}
 					role="radio"
 					aria-checked={groupMode === 'album'}
-					onclick={() => (groupMode = 'album')}>Por álbum</button
+					onclick={() => (groupMode = 'album')}>{t('byAlbum')}</button
 				>
 				<button
 					class:is-on={groupMode === 'fecha'}
 					role="radio"
 					aria-checked={groupMode === 'fecha'}
-					onclick={() => (groupMode = 'fecha')}>Por fecha</button
+					onclick={() => (groupMode = 'fecha')}>{t('byDate')}</button
 				>
 				<button
 					class:is-on={groupMode === 'camara'}
 					role="radio"
 					aria-checked={groupMode === 'camara'}
-					onclick={() => (groupMode = 'camara')}>Por cámara</button
+					onclick={() => (groupMode = 'camara')}>{t('byCamera')}</button
 				>
 			</div>
 		</div>
 		<div class="row note">
 			<span class="t2 note-icon"><Icon name="info" /></span>
 			<p class="t2">
-				Estas fotos no guardan datos GPS, y tampoco hay fotos con GPS de la misma hora para
-				estimarlo. Es normal en fotos de WhatsApp o de cámaras con la ubicación desactivada. Usa
-				<b>Ubicar todas</b> en un álbum, o arrastra las fotos al globo.
+				{t('noteStart')} <b>{t('placeAll')}</b>
+				{t('noteEnd')}
 			</p>
 		</div>
 	</div>
 
 	{#if selected.length}
 		<div class="row selection">
-			<span class="row count"><span class="mono acc">{selected.length}</span>seleccionadas</span>
+			<span class="row count"
+				><span class="mono acc">{selected.length}</span>{t('selected', {
+					n: selected.length
+				})}</span
+			>
 			<div class="row sel-actions">
-				<button class="btn btn-ghost btn-sm" onclick={() => (selected = [])}>Deseleccionar</button>
+				<button class="btn btn-ghost btn-sm" onclick={() => (selected = [])}>{t('deselect')}</button
+				>
 				<button class="btn btn-secondary btn-sm" onclick={() => (ui.placing = [...selected])}>
-					<Icon name="pin" />Asignar ubicación…
+					<Icon name="pin" />{t('assign')}
 				</button>
 			</div>
 		</div>
@@ -290,7 +299,7 @@
 					<button
 						class="btn btn-ghost btn-sm place-all"
 						onclick={() => (ui.placing = group.items.map((p) => p.id))}
-						><Icon name="pin" />Ubicar todas</button
+						><Icon name="pin" />{t('placeAll')}</button
 					>
 				</div>
 				{#if open}
@@ -300,7 +309,7 @@
 								id={photo.id}
 								checkable
 								selected={selected.includes(photo.id)}
-								label="Seleccionar foto"
+								label={t('selectPhoto')}
 								onclick={() => toggle(photo.id)}
 								ondragstart={(e) => onDragStart(e, photo.id)}
 							/>
@@ -313,8 +322,8 @@
 				<svg class="ill" viewBox="0 0 72 72" aria-hidden="true">
 					<circle cx="36" cy="36" r="22" /><path class="a" d="M26 36l7 7 13-14" />
 				</svg>
-				<h3>Todas tus fotos tienen ubicación</h3>
-				<p>Cuando importes fotos sin GPS aparecerán aquí para que las coloques en el globo.</p>
+				<h3>{t('allLocated')}</h3>
+				<p>{t('allLocatedText')}</p>
 			</div>
 		{/each}
 	</div>
@@ -326,13 +335,9 @@
 	<div class="placing panel col" role="status">
 		<div class="row placing-head">
 			<span class="dot sm ringed"></span>
-			<span class="placing-text"
-				>Busca dónde se hicieron {ui.placing.length === 1
-					? 'la foto'
-					: `las ${ui.placing.length} fotos`}, o haz clic en el globo</span
-			>
+			<span class="placing-text">{t('placing', { n: ui.placing.length })}</span>
 			<button class="btn btn-ghost btn-sm" onclick={() => (ui.placing = null)}
-				>Cancelar <span class="kbd">Esc</span></button
+				>{tc('cancel')} <span class="kbd">Esc</span></button
 			>
 		</div>
 		<PlaceSearch onchoose={placeFound} />
@@ -349,7 +354,7 @@
 	<div class="toast" role="status">
 		<span class="ok"><Icon name="checkCircle" /></span>
 		{toast.text}
-		<a class="btn btn-ghost btn-sm" href={toast.href}>Ver</a>
+		<a class="btn btn-ghost btn-sm" href={toast.href}>{t('view')}</a>
 	</div>
 {/if}
 

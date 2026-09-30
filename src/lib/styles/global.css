@@ -65,6 +65,12 @@ input {
 	outline-offset: 2px;
 }
 
+/* Dialogs take the focus themselves when they open (tabindex="-1"): no ring around
+   the whole window, the ring is for the controls inside */
+[tabindex='-1']:focus-visible {
+	outline: none;
+}
+
 ::selection {
 	background: var(--acc-soft);
 	color: var(--t1);

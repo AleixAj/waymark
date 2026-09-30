@@ -19,6 +19,8 @@
 		formatNumber,
 		formatTime
 	} from '$lib/library/format';
+	import t from '$lib/i18n/messages/viewer';
+	import tc from '$lib/i18n/messages/common';
 
 	const viewer = $derived(ui.viewer!);
 	const id = $derived(viewer.ids[viewer.index]);
@@ -55,7 +57,7 @@
 			.filter(Boolean)
 			.join(', ') ||
 			photo?.name ||
-			'Foto'
+			t('photo')
 	);
 
 	// A window of thumbnails around the current photo
@@ -130,7 +132,7 @@
 	class="viewer"
 	role="dialog"
 	aria-modal="true"
-	aria-label="Visor de fotos"
+	aria-label={t('viewer')}
 	tabindex="-1"
 	use:focusTrap
 >
@@ -153,7 +155,7 @@
 				<button
 					class="btn btn-ghost btn-icon"
 					class:fav={point?.favorite}
-					aria-label={point?.favorite ? 'Quitar de favoritos (F)' : 'Añadir a favoritos (F)'}
+					aria-label={point?.favorite ? t('unfavorite') : t('favorite')}
 					aria-pressed={point?.favorite}
 					onclick={() => library.toggleFavorite(id)}
 				>
@@ -162,8 +164,8 @@
 				{#if trips[0]}
 					<button
 						class="btn btn-ghost btn-icon"
-						aria-label="Usar como portada de «{trips[0].title}»"
-						title="Usar como portada del viaje"
+						aria-label={t('coverOf', { trip: trips[0].title })}
+						title={t('coverTitle')}
 						onclick={() => library.setTripCover(trips[0], id)}
 					>
 						<Icon name="folderPlus" />
@@ -171,8 +173,8 @@
 				{/if}
 				<button
 					class="btn btn-ghost btn-icon"
-					aria-label="Corregir ubicación"
-					title="Corregir ubicación"
+					aria-label={t('fixLocation')}
+					title={t('fixLocation')}
 					onclick={() => {
 						showInfo = true;
 						fixing = true;
@@ -182,8 +184,8 @@
 				</button>
 				<button
 					class="btn btn-ghost btn-icon"
-					aria-label="Descargar"
-					title="Descargar"
+					aria-label={t('download')}
+					title={t('download')}
 					onclick={download}
 				>
 					<Icon name="download" />
@@ -192,13 +194,13 @@
 				<button
 					class="btn btn-ghost btn-icon"
 					class:pressed={showInfo}
-					aria-label="Información (I)"
+					aria-label={t('infoKey')}
 					aria-pressed={showInfo}
 					onclick={() => (showInfo = !showInfo)}
 				>
 					<Icon name="info" />
 				</button>
-				<button class="close" aria-label="Cerrar (Esc)" title="Cerrar (Esc)" onclick={close}>
+				<button class="close" aria-label={t('closeKey')} title={t('closeKey')} onclick={close}>
 					<Icon name="x" />
 				</button>
 			</div>
@@ -208,11 +210,8 @@
 		<div class="picture" onclick={closeOnEmpty}>
 			{#if photo && photo.previewable === false}
 				<div class="cannot-show empty">
-					<h3>Este navegador no puede mostrar esta foto</h3>
-					<p>
-						Es un formato que solo abren algunos navegadores (HEIC, o un RAW sin vista previa). Su
-						ubicación y sus datos sí están guardados, y puedes descargarla.
-					</p>
+					<h3>{t('cannotShow')}</h3>
+					<p>{t('cannotShowText')}</p>
 				</div>
 			{:else if image}
 				<img src={image} alt={title} class="sharp" />
@@ -223,7 +222,7 @@
 
 		<button
 			class="nav prev"
-			aria-label="Anterior (←)"
+			aria-label={t('previous')}
 			disabled={viewer.index === 0}
 			onclick={() => go(-1)}
 		>
@@ -231,7 +230,7 @@
 		</button>
 		<button
 			class="nav next"
-			aria-label="Siguiente (→)"
+			aria-label={t('next')}
 			disabled={viewer.index === viewer.ids.length - 1}
 			onclick={() => go(1)}
 		>
@@ -241,11 +240,11 @@
 		<!-- Phones: the main actions live in a bar at the bottom -->
 		<div class="row phone-actions">
 			<button class:fav={point?.favorite} onclick={() => library.toggleFavorite(id)}>
-				<Icon name="heart" filled={point?.favorite} />Favorito
+				<Icon name="heart" filled={point?.favorite} />{t('favoriteShort')}
 			</button>
 			{#if trips[0]}
 				<button onclick={() => library.setTripCover(trips[0], id)}>
-					<Icon name="folderPlus" />Portada
+					<Icon name="folderPlus" />{t('cover')}
 				</button>
 			{/if}
 			<button
@@ -254,16 +253,16 @@
 					fixing = true;
 				}}
 			>
-				<Icon name="pinEdit" />Ubicación
+				<Icon name="pinEdit" />{t('location')}
 			</button>
-			<button onclick={download}><Icon name="download" />Descargar</button>
+			<button onclick={download}><Icon name="download" />{t('download')}</button>
 		</div>
 
 		<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 		<div class="row mono hints" onclick={closeOnEmpty}>
-			<span class="row"><span class="kbd">←</span><span class="kbd">→</span> navegar</span>
-			<span class="row"><span class="kbd">I</span> información</span>
-			<span class="row"><span class="kbd">Esc</span> cerrar</span>
+			<span class="row"><span class="kbd">←</span><span class="kbd">→</span> {t('navigate')}</span>
+			<span class="row"><span class="kbd">I</span> {t('infoHint')}</span>
+			<span class="row"><span class="kbd">Esc</span> {t('closeHint')}</span>
 		</div>
 		<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 		<div class="row strip" onclick={closeOnEmpty}>
@@ -272,7 +271,7 @@
 					class="mini"
 					class:on={item.index === viewer.index}
 					style:background-image={thumbUrl(item.id) ? `url(${thumbUrl(item.id)})` : undefined}
-					aria-label="Foto {item.index + 1}"
+					aria-label={t('photoNumber', { n: item.index + 1 })}
 					onclick={() => (ui.viewer = { ...viewer, index: item.index })}
 				></button>
 			{/each}
@@ -280,12 +279,12 @@
 	</div>
 
 	{#if showInfo}
-		<aside class="info solid" aria-label="Información">
+		<aside class="info solid" aria-label={t('info')}>
 			<div class="row info-head">
-				<span class="t-h3">Información</span>
+				<span class="t-h3">{t('info')}</span>
 				<button
 					class="btn btn-ghost btn-icon btn-sm"
-					aria-label="Ocultar información"
+					aria-label={t('hideInfo')}
 					onclick={() => (showInfo = false)}
 				>
 					<Icon name="sidebar" />
@@ -315,11 +314,11 @@
 						<div class="settings">
 							<div class="col">
 								<span class="mono s">{photo.aperture ? `f/${photo.aperture}` : '—'}</span>
-								<span class="t-small t3">apertura</span>
+								<span class="t-small t3">{t('aperture')}</span>
 							</div>
 							<div class="col">
 								<span class="mono s">{photo.exposure ? formatExposure(photo.exposure) : '—'}</span>
-								<span class="t-small t3">velocidad</span>
+								<span class="t-small t3">{t('shutter')}</span>
 							</div>
 							<div class="col">
 								<span class="mono s">{photo.iso ?? '—'}</span><span class="t-small t3">ISO</span>
@@ -347,7 +346,7 @@
 						<div class="kv credit">
 							<Icon name="camera" size={16} />
 							<div class="col">
-								<span class="t-small">Foto de ejemplo de <b>{credit.author}</b></span>
+								<span class="t-small">{t('sampleBy')} <b>{credit.author}</b></span>
 								<span class="t-small t3">
 									<a href={credit.page} target="_blank" rel="noopener noreferrer"
 										>Wikimedia Commons</a
@@ -369,13 +368,13 @@
 
 					<div class="col section">
 						<div class="row between">
-							<span class="t-label">Ubicación</span>
+							<span class="t-label">{t('location')}</span>
 							<button
 								class="btn btn-ghost btn-sm corregir"
 								class:is-on={fixing}
 								onclick={() => (fixing = !fixing)}
 							>
-								<Icon name="pinEdit" />{fixing ? 'Cancelar' : 'Corregir'}
+								<Icon name="pinEdit" />{fixing ? tc('cancel') : t('fix')}
 							</button>
 						</div>
 						{#if point?.lat != null && point.lng != null}
@@ -384,20 +383,18 @@
 								lng={point.lng}
 								onpick={fixing ? fixLocation : undefined}
 							/>
-							{#if fixing}<p class="t-small acc">Haz clic en el mapa donde se hizo la foto.</p>{/if}
+							{#if fixing}<p class="t-small acc">{t('pickHint')}</p>{/if}
 							<div class="kv">
 								<Icon name="pin" size={16} />
 								<div class="col">
-									<span class="v">{point.area ?? point.city ?? 'Lugar sin nombre'}</span>
+									<span class="v">{point.area ?? point.city ?? t('noName')}</span>
 									<span class="t-small t3"
 										>{point.area && point.city
 											? `${point.city}, ${countries.name(point.country)}`
 											: countries.name(point.country)}</span
 									>
 									{#if point.estimated}
-										<span class="t-small estimated"
-											>Ubicación estimada con tus fotos de la misma hora</span
-										>
+										<span class="t-small estimated">{t('estimated')}</span>
 									{/if}
 								</div>
 							</div>
@@ -405,7 +402,7 @@
 								<span class="mono">{formatCoords(point.lat, point.lng)}</span>
 								<button
 									class="btn btn-ghost btn-icon btn-sm"
-									aria-label="Copiar coordenadas"
+									aria-label={t('copyCoords')}
 									onclick={copyCoords}
 								>
 									<Icon name={copied ? 'check' : 'copy'} />
@@ -413,16 +410,18 @@
 							</div>
 							{#if photo.altitude != null}
 								<span class="mono t3 alt">
-									Altitud {formatNumber(
-										settings.units === 'km' ? photo.altitude : photo.altitude * 3.281
-									)}
+									{t('altitude', {
+										value: formatNumber(
+											settings.units === 'km' ? photo.altitude : photo.altitude * 3.281
+										)
+									})}
 									{settings.units === 'km' ? 'm' : 'ft'}
 								</span>
 							{/if}
 						{:else}
 							<p class="t-small t2">
-								Esta foto no tiene ubicación. Puedes colocarla desde
-								<a href="/sin-ubicacion" onclick={() => ui.closeViewer()}>Sin ubicación</a>.
+								{t('noLocation')}
+								<a href="/sin-ubicacion" onclick={() => ui.closeViewer()}>{tc('unlocated')}</a>.
 							</p>
 						{/if}
 					</div>
@@ -430,7 +429,7 @@
 					{#if trips.length}
 						<div class="hr"></div>
 						<div class="col section">
-							<span class="t-label">En viajes</span>
+							<span class="t-label">{t('inTrips')}</span>
 							<div class="row chips">
 								{#each trips as trip (trip.id)}
 									<a class="chip is-on" href="/viaje/{trip.id}" onclick={() => ui.closeViewer()}>

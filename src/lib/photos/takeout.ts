@@ -1,6 +1,7 @@
 import { BlobReader, BlobWriter, ZipReader, configure } from '@zip.js/zip.js';
 import { isImage, type ImportHint, type ImportItem } from './importer';
 import { pathOf } from './pick';
+import t from '$lib/i18n/messages/importing';
 
 // Unzipping uses the browser's own DecompressionStream, no extra workers
 configure({ useWebWorkers: false });
@@ -55,7 +56,7 @@ export async function readTakeout(files: File[]): Promise<TakeoutAlbum[] | null>
 		if (!isImage({ name })) continue;
 		const folder = dirname(entry.path);
 		const sidecar = matchSidecar(name, sidecars.get(folder) ?? []);
-		const albumName = basename(folder) || 'Google Fotos';
+		const albumName = basename(folder) || t('googlePhotos');
 		let album = albums.get(folder);
 		if (!album) {
 			album = { id: folder, name: albumName, byYear: YEAR_FOLDER.test(albumName), items: [] };

@@ -2,16 +2,20 @@
 	import Logo from './Logo.svelte';
 	import { formatDecimal } from '$lib/library/format';
 	import type { DemoStatus } from '$lib/demo/load';
+	import t from '$lib/i18n/messages/demo';
 
 	let { status }: { status: DemoStatus } = $props();
 
 	const percent = $derived(Math.round(status.progress * 100));
 	const detail = $derived(
 		status.step === 'place'
-			? 'Colocando las fotos en el globo…'
+			? t('placing')
 			: status.total
-				? `Descargando fotos · ${formatDecimal(status.loaded)} de ${formatDecimal(status.total)} MB`
-				: 'Preparando la descarga…'
+				? t('downloading', {
+						loaded: formatDecimal(status.loaded),
+						total: formatDecimal(status.total)
+					})
+				: t('preparing')
 	);
 </script>
 
@@ -19,15 +23,15 @@
 <div class="backdrop">
 	<div class="card panel" role="dialog" aria-modal="true" aria-labelledby="demo-title">
 		<div class="row brand"><Logo />Waymark</div>
-		<h1 id="demo-title" class="t-h2">Preparando la demo</h1>
+		<h1 id="demo-title" class="t-h2">{t('title')}</h1>
 		<p class="t-small t2">
-			Unas 600 fotos reales de 15 viajes por 18 países, como el álbum de una persona.
+			{t('lead')}
 		</p>
 
 		<div
 			class="bar"
 			role="progressbar"
-			aria-label="Progreso de la demo"
+			aria-label={t('progress')}
 			aria-valuemin={0}
 			aria-valuemax={100}
 			aria-valuenow={percent}
@@ -39,7 +43,7 @@
 			<span class="mono pct">{percent}%</span>
 		</div>
 
-		<p class="t-small t3 note">Fotos de Wikimedia Commons con licencia libre.</p>
+		<p class="t-small t3 note">{t('credits')}</p>
 	</div>
 </div>
 

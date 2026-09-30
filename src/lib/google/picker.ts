@@ -1,5 +1,7 @@
 import { GOOGLE_API_KEY, GOOGLE_APP_ID } from './config';
 import { loadScript } from './script';
+import { i18n } from '$lib/i18n/i18n.svelte';
+import t from '$lib/i18n/messages/sync';
 
 export interface PickedFile {
 	id: string;
@@ -90,18 +92,18 @@ export async function pickFromDrive(token: string): Promise<PickedFile[]> {
 				.setMode(picker.DocsViewMode.LIST)
 				.setLabel(label);
 		new picker.PickerBuilder()
-			.addView(photos('Mi unidad').setParent('root').setIncludeFolders(true))
-			.addView(photos('Compartido conmigo').setOwnedByMe(false).setIncludeFolders(true))
-			.addView(photos('Destacados').setStarred(true))
-			.addView(photos('Unidades compartidas').setEnableDrives(true).setIncludeFolders(true))
+			.addView(photos(t('myDrive')).setParent('root').setIncludeFolders(true))
+			.addView(photos(t('shared')).setOwnedByMe(false).setIncludeFolders(true))
+			.addView(photos(t('starred')).setStarred(true))
+			.addView(photos(t('sharedDrives')).setEnableDrives(true).setIncludeFolders(true))
 			.enableFeature(picker.Feature.SUPPORT_DRIVES)
 			.enableFeature(picker.Feature.MULTISELECT_ENABLED)
 			.setOAuthToken(token)
 			.setDeveloperKey(GOOGLE_API_KEY)
 			// Needed so the chosen files can be read with the drive.file permission
 			.setAppId(GOOGLE_APP_ID)
-			.setLocale('es')
-			.setTitle('Elige las fotos que quieres ver en el globo')
+			.setLocale(i18n.locale)
+			.setTitle(t('pickerTitle'))
 			// As big as Google allows, but never wider than the window
 			.setSize(Math.min(1051, window.innerWidth - 32), Math.min(650, window.innerHeight - 32))
 			.setCallback((result) => {

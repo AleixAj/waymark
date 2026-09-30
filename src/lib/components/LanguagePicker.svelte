@@ -54,7 +54,7 @@
 		title={t('choose')}
 		onclick={() => (open = !open)}
 	>
-		{@render flag(current.id)}<span class="code">{current.short}</span>
+		{@render flag(current.id)}<span class="short">{current.short}</span>
 	</button>
 
 	{#if open}
@@ -87,7 +87,7 @@
 		padding: 0 10px;
 	}
 
-	.code {
+	.short {
 		font:
 			600 12px/1 'Geist Mono',
 			monospace;

@@ -1,5 +1,6 @@
 import { loadCities } from './data';
 import { distanceKm } from './distance';
+import { i18n } from '$lib/i18n/i18n.svelte';
 
 export interface FoundPlace {
 	name: string;
@@ -45,7 +46,8 @@ export async function searchPlaces(text: string, signal?: AbortSignal): Promise<
 			format: 'jsonv2',
 			// More than we show: repeated ones are removed below
 			limit: '12',
-			'accept-language': 'es',
+			// Names in the language of the app
+			'accept-language': i18n.locale,
 			addressdetails: '1'
 		});
 		const response = await fetch(`${NOMINATIM}?${params}`, { signal });

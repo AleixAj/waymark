@@ -7,6 +7,7 @@
 	import { auth } from '$lib/google/auth.svelte';
 	import { drivePickerEnabled, googleEnabled } from '$lib/google/config';
 	import { signIn } from '$lib/sync/sync.svelte';
+	import t from '$lib/i18n/messages/importing';
 
 	// From the "Google Fotos" button only the Takeout steps are shown
 	const onlyTakeout = ui.importOnly === 'takeout';
@@ -22,7 +23,7 @@
 			if (!auth.signedIn) await signIn();
 			await importFromDrive();
 		} catch (e) {
-			error = e instanceof Error ? e.message : 'No se pudo abrir Google Drive';
+			error = e instanceof Error ? e.message : t('driveFailed');
 		} finally {
 			busy = false;
 		}
@@ -30,10 +31,8 @@
 </script>
 
 <Modal
-	title={onlyTakeout ? 'Importar desde Google Fotos' : 'Importar fotos'}
-	subtitle={onlyTakeout
-		? 'Tres pasos, y tus álbumes aparecen en el globo con su ubicación.'
-		: 'Elige de dónde vienen. Leemos la ubicación de cada foto para colocarla en el globo.'}
+	title={onlyTakeout ? t('fromPhotosTitle') : t('title')}
+	subtitle={onlyTakeout ? t('fromPhotosSubtitle') : t('subtitle')}
 	width={onlyTakeout ? 540 : 620}
 	onclose={() => ui.closeImport()}
 >
@@ -42,16 +41,16 @@
 			<section class="option">
 				<div class="icon device"><Icon name="upload" /></div>
 				<div class="col text">
-					<h2>Desde este dispositivo</h2>
+					<h2>{t('deviceTitle')}</h2>
 					<p class="t-small t3">
-						Elige fotos o carpetas, o arrástralas a la ventana. JPG, HEIC, RAW y más.
+						{t('deviceText')}
 					</p>
 					<div class="row buttons">
 						<button class="btn btn-primary btn-sm" onclick={() => importFromDevice(false)}
-							><Icon name="image" />Elegir fotos</button
+							><Icon name="image" />{t('choosePhotos')}</button
 						>
 						<button class="btn btn-secondary btn-sm" onclick={() => importFromDevice(true)}
-							><Icon name="folder" />Elegir carpeta</button
+							><Icon name="folder" />{t('chooseFolder')}</button
 						>
 					</div>
 				</div>
@@ -61,13 +60,13 @@
 				<section class="option">
 					<div class="icon"><ServiceMark service="drive" size={22} /></div>
 					<div class="col text">
-						<h2>Desde Google Drive</h2>
+						<h2>{t('driveTitle')}</h2>
 						<p class="t-small t3">
-							Elige fotos que ya tienes en tu Drive. No se duplican: Waymark las lee desde allí.
+							{t('driveText')}
 						</p>
 						<div class="row buttons">
 							<button class="btn btn-secondary btn-sm" disabled={busy} onclick={fromDrive}
-								>{auth.signedIn ? 'Elegir en Drive' : 'Entrar y elegir en Drive'}</button
+								>{auth.signedIn ? t('driveChoose') : t('driveSignIn')}</button
 							>
 						</div>
 					</div>
@@ -78,31 +77,30 @@
 		<section class="option" class:plain={onlyTakeout}>
 			{#if !onlyTakeout}<div class="icon"><ServiceMark service="photos" size={22} /></div>{/if}
 			<div class="col text">
-				{#if !onlyTakeout}<h2>Desde Google Fotos</h2>{/if}
+				{#if !onlyTakeout}<h2>{t('photosTitle')}</h2>{/if}
 				<p class="t-small t3">
-					Google Fotos no deja a otras apps leer la ubicación de tus fotos, pero su exportación
-					(Google Takeout) sí la conserva.
+					{t('photosText')}
 				</p>
 				<ol class="steps">
 					<li>
 						<span class="num mono">1</span>
 						<span
-							>Abre <a
+							>{t('step1Open')}
+							<a
 								href="https://takeout.google.com/settings/takeout/custom/photos"
 								target="_blank"
 								rel="noopener noreferrer">Google Takeout</a
-							>, pulsa <b>"Todos los álbumes de fotos incluidos"</b> y marca solo los que quieras.</span
+							>{t('step1Press')} <b>{t('step1Button')}</b>
+							{t('step1End')}</span
 						>
 					</li>
 					<li>
 						<span class="num mono">2</span>
-						<span
-							>Pulsa <b>Siguiente paso</b>, elige .zip y descárgalos cuando te llegue el correo.</span
-						>
+						<span>{t('step2Press')} <b>{t('step2Button')}</b>{t('step2End')}</span>
 					</li>
 					<li>
 						<span class="num mono">3</span>
-						<span>Súbelos aquí y elige qué álbumes ver en el globo.</span>
+						<span>{t('step3')}</span>
 					</li>
 				</ol>
 				<div class="row buttons">
@@ -110,10 +108,10 @@
 						class="btn btn-sm"
 						class:btn-primary={onlyTakeout}
 						class:btn-secondary={!onlyTakeout}
-						onclick={() => importTakeout(false)}><Icon name="upload" />Elegir archivos .zip</button
+						onclick={() => importTakeout(false)}><Icon name="upload" />{t('chooseZip')}</button
 					>
 					<button class="btn btn-ghost btn-sm" onclick={() => importTakeout(true)}
-						><Icon name="folder" />Carpeta ya descomprimida</button
+						><Icon name="folder" />{t('unzippedFolder')}</button
 					>
 				</div>
 			</div>
@@ -126,13 +124,11 @@
 		<p class="row t-small t3 note">
 			<Icon name="lock" size={16} />
 			{#if auth.signedIn}
-				Se guarda una copia ligera en la carpeta Waymark de tu Drive para verlas en todos tus
-				dispositivos.
+				{t('noteSynced')}
 			{:else if googleEnabled}
-				Tus fotos se quedan en este navegador. Entra con Google para verlas en todos tus
-				dispositivos.
+				{t('noteSignIn')}
 			{:else}
-				Tus fotos se quedan en este navegador.
+				{t('noteLocal')}
 			{/if}
 		</p>
 	{/if}

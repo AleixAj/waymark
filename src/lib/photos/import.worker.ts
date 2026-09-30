@@ -34,8 +34,10 @@ export interface ImportHint {
 }
 
 export type WorkerRequest = { file: File; hint?: ImportHint };
+// The error is a key of the import messages: the worker has no language of its own
 export type WorkerResponse =
-	{ ok: true; photo: ProcessedPhoto } | { ok: false; error: string; retryable: boolean };
+	| { ok: true; photo: ProcessedPhoto }
+	| { ok: false; error: 'damaged' | 'unreadable'; retryable: boolean };
 
 // Heavy work (hashing, EXIF, decode and resize) runs here so the globe never stutters.
 // Finding the country and city is done once on the main thread, not in every worker.
@@ -58,7 +60,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
 		if (!preview.decoded && !meta.hasExif) {
 			self.postMessage({
 				ok: false,
-				error: 'Archivo dañado',
+				error: 'damaged',
 				retryable: false
 			} satisfies WorkerResponse);
 			return;
@@ -79,7 +81,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
 	} catch {
 		self.postMessage({
 			ok: false,
-			error: 'Archivo dañado',
+			error: 'damaged',
 			retryable: true
 		} satisfies WorkerResponse);
 	}

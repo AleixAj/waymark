@@ -3,8 +3,9 @@
 	import Modal from './ui/Modal.svelte';
 	import { ui } from '$lib/state/ui.svelte';
 	import { importAlbums } from '$lib/state/importing';
-	import { formatNumber } from '$lib/library/format';
 	import type { TakeoutAlbum } from '$lib/photos/takeout';
+	import t from '$lib/i18n/messages/importing';
+	import tc from '$lib/i18n/messages/common';
 
 	let { albums }: { albums: TakeoutAlbum[] } = $props();
 
@@ -37,8 +38,8 @@
 	<div class="row group-head">
 		<h2 class="t-label">{title}</h2>
 		<span class="row links">
-			<button class="link" onclick={() => setAll(list, true)}>Todos</button>
-			<button class="link" onclick={() => setAll(list, false)}>Ninguno</button>
+			<button class="link" onclick={() => setAll(list, true)}>{t('all')}</button>
+			<button class="link" onclick={() => setAll(list, false)}>{t('none')}</button>
 		</span>
 	</div>
 	<ul class="list">
@@ -47,7 +48,7 @@
 				<label class="row album">
 					<input type="checkbox" checked={chosen.has(album.id)} onchange={() => toggle(album.id)} />
 					<span class="name">{album.name}</span>
-					<span class="mono t3 count">{formatNumber(album.items.length)} fotos</span>
+					<span class="mono t3 count">{tc('photos', { n: album.items.length })}</span>
 				</label>
 			</li>
 		{/each}
@@ -55,21 +56,21 @@
 {/snippet}
 
 <Modal
-	title="Tus álbumes de Google Fotos"
-	subtitle="Elige cuáles quieres ver en el globo. Las fotos repetidas en varios álbumes se importan una vez."
+	title={t('albumsTitle')}
+	subtitle={t('albumsSubtitle')}
 	width={600}
 	onclose={() => (ui.takeout = null)}
 >
-	{#if named.length}{@render group('Álbumes', named)}{/if}
-	{#if years.length}{@render group('Todas las fotos, por año', years)}{/if}
+	{#if named.length}{@render group(t('albums'), named)}{/if}
+	{#if years.length}{@render group(t('byYear'), years)}{/if}
 
 	{#snippet footer()}
-		<span class="t-small t3 total">{formatNumber(photoCount)} fotos</span>
-		<button class="btn btn-ghost" onclick={() => (ui.takeout = null)}>Cancelar</button>
+		<span class="t-small t3 total">{tc('photos', { n: photoCount })}</span>
+		<button class="btn btn-ghost" onclick={() => (ui.takeout = null)}>{tc('cancel')}</button>
 		<button
 			class="btn btn-primary"
 			disabled={photoCount === 0}
-			onclick={() => importAlbums(selected)}>Importar</button
+			onclick={() => importAlbums(selected)}>{t('import')}</button
 		>
 	{/snippet}
 </Modal>

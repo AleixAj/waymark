@@ -1,0 +1,68 @@
+import { translator } from '../i18n.svelte';
+
+// Texts of the map: controls, color styles and markers
+export default translator({
+	es: {
+		timeline: 'Línea de tiempo',
+		zoomIn: 'Acercar',
+		zoomOut: 'Alejar',
+		worldView: 'Vista global',
+		flat: 'Mapa plano',
+		paletteButton: 'Estilo de colores del globo',
+		paletteGroup: 'Estilo de colores',
+		paletteTitle: 'Colores del globo',
+		natural: 'Natural',
+		naturalHint: 'Relieve suave y tus países en ámbar',
+		gris: 'Gris',
+		grisHint: 'El mundo en grises y tus países a color',
+		noche: 'Noche',
+		nocheHint: 'Tierra oscura y tus países iluminados',
+		atlas: 'Atlas',
+		atlasHint: 'Papel antiguo y tus países en terracota',
+		globeLabel: 'Globo con tus fotos',
+		marker: '{place}, {n} foto|{place}, {n} fotos',
+		photos: 'Fotos'
+	},
+	en: {
+		timeline: 'Timeline',
+		zoomIn: 'Zoom in',
+		zoomOut: 'Zoom out',
+		worldView: 'World view',
+		flat: 'Flat map',
+		paletteButton: 'Globe color style',
+		paletteGroup: 'Color style',
+		paletteTitle: 'Globe colors',
+		natural: 'Natural',
+		naturalHint: 'Soft terrain and your countries in amber',
+		gris: 'Grey',
+		grisHint: 'The world in greys and your countries in color',
+		noche: 'Night',
+		nocheHint: 'Dark land and your countries lit up',
+		atlas: 'Atlas',
+		atlasHint: 'Old paper and your countries in terracotta',
+		globeLabel: 'Globe with your photos',
+		marker: '{place}, {n} photo|{place}, {n} photos',
+		photos: 'Photos'
+	},
+	ca: {
+		timeline: 'Línia de temps',
+		zoomIn: 'Apropar',
+		zoomOut: 'Allunyar',
+		worldView: 'Vista global',
+		flat: 'Mapa pla',
+		paletteButton: 'Estil de colors del globus',
+		paletteGroup: 'Estil de colors',
+		paletteTitle: 'Colors del globus',
+		natural: 'Natural',
+		naturalHint: 'Relleu suau i els teus països en ambre',
+		gris: 'Gris',
+		grisHint: 'El món en grisos i els teus països en color',
+		noche: 'Nit',
+		nocheHint: 'Terra fosca i els teus països il·luminats',
+		atlas: 'Atles',
+		atlasHint: 'Paper antic i els teus països en terracota',
+		globeLabel: 'Globus amb les teves fotos',
+		marker: '{place}, {n} foto|{place}, {n} fotos',
+		photos: 'Fotos'
+	}
+});

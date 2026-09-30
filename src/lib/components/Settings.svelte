@@ -12,6 +12,9 @@
 	import { auth } from '$lib/google/auth.svelte';
 	import { sync } from '$lib/sync/sync.svelte';
 	import { demoMode } from '$lib/state/mode';
+	import { i18n, LOCALES } from '$lib/i18n/i18n.svelte';
+	import tc from '$lib/i18n/messages/common';
+	import t from '$lib/i18n/messages/settings';
 
 	let storage = $state<{ thumbs: number; originals: number; used: number; quota: number } | null>(
 		null
@@ -19,25 +22,18 @@
 	let confirmDelete = $state(false);
 	let cacheCleared = $state(false);
 
-	const styles: { id: MapStyle; label: string }[] = [
-		{ id: 'sobrio', label: 'Sobrio' },
-		{ id: 'relieve', label: 'Relieve' },
-		{ id: 'satelite', label: 'Satélite' }
-	];
+	// Derived so the labels follow the language
+	const styles = $derived<{ id: MapStyle; label: string }[]>([
+		{ id: 'sobrio', label: t('styleSobrio') },
+		{ id: 'relieve', label: t('styleRelieve') },
+		{ id: 'satelite', label: t('styleSatelite') }
+	]);
 
-	const qualities: { id: Quality; label: string; hint: string }[] = [
-		{
-			id: 'alta',
-			label: 'Alta',
-			hint: 'Máxima nitidez en pantallas de alta densidad. Consume más batería.'
-		},
-		{ id: 'equilibrada', label: 'Equilibrada', hint: '60 fps en la mayoría de equipos.' },
-		{
-			id: 'ahorro',
-			label: 'Ahorro de batería',
-			hint: 'Menos píxeles, sin halo, sombreado ni paneles translúcidos.'
-		}
-	];
+	const qualities = $derived<{ id: Quality; label: string; hint: string }[]>([
+		{ id: 'alta', label: t('qualityAlta'), hint: t('qualityAltaHint') },
+		{ id: 'equilibrada', label: t('qualityEquilibrada'), hint: t('qualityEquilibradaHint') },
+		{ id: 'ahorro', label: t('qualityAhorro'), hint: t('qualityAhorroHint') }
+	]);
 
 	async function measure() {
 		const [sizes, estimate] = await Promise.all([
@@ -71,7 +67,7 @@
 			try {
 				await sync.deleteRemote();
 			} catch {
-				deleteError = 'No se pudo borrar la copia de Google Drive. Inténtalo de nuevo.';
+				deleteError = t('deleteError');
 				return;
 			}
 		}
@@ -105,19 +101,19 @@
 		use:focusTrap
 		tabindex="-1"
 		aria-modal="true"
-		aria-label="Ajustes"
+		aria-label={t('title')}
 		onclick={(e) => e.stopPropagation()}
 	>
 		<div class="row head">
 			<div class="row title">
-				<h1 class="t-h2">Ajustes</h1>
-				<span class="mono t3 saved">Los cambios se guardan al momento</span>
+				<h1 class="t-h2">{t('title')}</h1>
+				<span class="mono t3 saved">{t('saved')}</span>
 			</div>
 			<div class="row close">
 				<span class="kbd">Esc</span>
 				<button
 					class="btn btn-ghost btn-icon"
-					aria-label="Cerrar"
+					aria-label={tc('close')}
 					onclick={() => (ui.settingsOpen = false)}
 				>
 					<Icon name="x" />
@@ -126,21 +122,21 @@
 		</div>
 
 		<div class="columns scroll">
-			<div class="col side">
+			<div class="col pane">
 				<div class="grp">
-					<h2>Apariencia</h2>
+					<h2>{t('appearance')}</h2>
 					<div class="set">
 						<div class="l">
-							<b>Tema</b><span>Sistema sigue la preferencia del dispositivo.</span>
+							<b>{t('theme')}</b><span>{t('themeHint')}</span>
 						</div>
-						<div class="seg" role="radiogroup" aria-label="Tema">
+						<div class="seg" role="radiogroup" aria-label={t('theme')}>
 							<button
 								class:is-on={settings.theme === 'dark'}
 								role="radio"
 								aria-checked={settings.theme === 'dark'}
 								onclick={() => (settings.theme = 'dark')}
 							>
-								<Icon name="moon" />Oscuro
+								<Icon name="moon" />{t('dark')}
 							</button>
 							<button
 								class:is-on={settings.theme === 'light'}
@@ -148,7 +144,7 @@
 								aria-checked={settings.theme === 'light'}
 								onclick={() => (settings.theme = 'light')}
 							>
-								<Icon name="sun" />Claro
+								<Icon name="sun" />{t('light')}
 							</button>
 							<button
 								class:is-on={settings.theme === 'system'}
@@ -156,17 +152,27 @@
 								aria-checked={settings.theme === 'system'}
 								onclick={() => (settings.theme = 'system')}
 							>
-								Sistema
+								{t('system')}
 							</button>
 						</div>
 					</div>
 					<div class="set">
-						<div class="l"><b>Idioma</b><span>Nombres de lugares y fechas.</span></div>
-						<span class="select">Español (España)</span>
+						<div class="l"><b>{t('language')}</b><span>{t('languageHint')}</span></div>
+						<div class="seg" role="radiogroup" aria-label={t('language')}>
+							{#each LOCALES as locale (locale.id)}
+								<button
+									class:is-on={i18n.locale === locale.id}
+									role="radio"
+									aria-checked={i18n.locale === locale.id}
+									lang={locale.id}
+									onclick={() => i18n.set(locale.id)}>{locale.name}</button
+								>
+							{/each}
+						</div>
 					</div>
 					<div class="set">
-						<div class="l"><b>Unidades</b><span>Distancias y altitud.</span></div>
-						<div class="seg" role="radiogroup" aria-label="Unidades">
+						<div class="l"><b>{t('units')}</b><span>{t('unitsHint')}</span></div>
+						<div class="seg" role="radiogroup" aria-label={t('units')}>
 							<button
 								class:is-on={settings.units === 'km'}
 								role="radio"
@@ -184,12 +190,12 @@
 				</div>
 
 				<div class="grp">
-					<h2>Mapa</h2>
+					<h2>{t('map')}</h2>
 					<div class="set stack">
 						<div class="l">
-							<b>Estilo del mapa</b><span>Se aplica al globo y al mapa de calles.</span>
+							<b>{t('mapStyle')}</b><span>{t('mapStyleHint')}</span>
 						</div>
-						<div class="styles" role="radiogroup" aria-label="Estilo del mapa">
+						<div class="styles" role="radiogroup" aria-label={t('mapStyle')}>
 							{#each styles as style (style.id)}
 								<button
 									class="opt"
@@ -205,37 +211,35 @@
 						</div>
 					</div>
 					<div class="set">
-						<div class="l"><b>Mostrar fronteras</b><span>Líneas finas entre países.</span></div>
+						<div class="l"><b>{t('borders')}</b><span>{t('bordersHint')}</span></div>
 						<button
 							class="toggle"
 							role="switch"
 							aria-checked={settings.borders}
-							aria-label="Mostrar fronteras"
+							aria-label={t('borders')}
 							onclick={() => (settings.borders = !settings.borders)}
 						></button>
 					</div>
 					<div class="set">
 						<div class="l">
-							<b>Reducir movimiento</b>
-							<span
-								>Sin vuelos de cámara: cambios directos con fundido. Activado si el sistema lo pide.</span
-							>
+							<b>{t('reducedMotion')}</b>
+							<span>{t('reducedMotionHint')}</span>
 						</div>
 						<button
 							class="toggle"
 							role="switch"
 							aria-checked={settings.reducedMotion}
-							aria-label="Reducir movimiento"
+							aria-label={t('reducedMotion')}
 							onclick={() => (settings.reducedMotion = !settings.reducedMotion)}
 						></button>
 					</div>
 				</div>
 			</div>
 
-			<div class="col side">
+			<div class="col pane">
 				<div class="grp">
-					<h2>Calidad del globo</h2>
-					<div class="col qualities" role="radiogroup" aria-label="Calidad del globo">
+					<h2>{t('quality')}</h2>
+					<div class="col qualities" role="radiogroup" aria-label={t('quality')}>
 						{#each qualities as q (q.id)}
 							<button
 								class="opt quality"
@@ -248,7 +252,7 @@
 								<span class="col">
 									<b
 										>{q.label}{#if q.id === 'equilibrada'}
-											<span class="mono t3 rec">· recomendada</span>{/if}</b
+											<span class="mono t3 rec">{t('recommended')}</span>{/if}</b
 									>
 									<span class="t-small t3">{q.hint}</span>
 								</span>
@@ -258,13 +262,12 @@
 				</div>
 
 				<div class="grp">
-					<h2>Almacenamiento local</h2>
+					<h2>{t('storage')}</h2>
 					{#if storage}
 						<div class="row between usage">
 							<span>
 								<span class="mono big">{formatBytes(storage.used)}</span>
-								<span class="t3 small"
-									>de {formatBytes(storage.quota)} disponibles para Waymark</span
+								<span class="t3 small">{t('available', { quota: formatBytes(storage.quota) })}</span
 								>
 							</span>
 							<span class="mono t3"
@@ -283,15 +286,15 @@
 						</div>
 						<div class="row legend t-small t2">
 							<span class="row"
-								><i class="a"></i>Miniaturas
+								><i class="a"></i>{t('thumbs')}
 								<span class="mono t3">{formatBytes(storage.thumbs)}</span></span
 							>
 							<span class="row"
-								><i class="b"></i>Fotos
+								><i class="b"></i>{t('photos')}
 								<span class="mono t3">{formatBytes(storage.originals)}</span></span
 							>
 							<span class="row"
-								><i class="c"></i>Mapas y datos
+								><i class="c"></i>{t('mapsData')}
 								<span class="mono t3"
 									>{formatBytes(
 										Math.max(0, storage.used - storage.thumbs - storage.originals)
@@ -305,49 +308,44 @@
 					<div class="row actions">
 						<button class="btn btn-secondary btn-sm" onclick={clearMapCache}>
 							<Icon name={cacheCleared ? 'check' : 'refresh'} />{cacheCleared
-								? 'Caché liberada'
-								: 'Liberar caché del mapa'}
+								? t('cacheCleared')
+								: t('clearCache')}
 						</button>
 					</div>
 					<p class="row t-small t3 note">
-						<Icon name="lock" size={14} />Todo se guarda solo en este navegador. Nada se sube a
-						ningún servidor.
+						<Icon name="lock" size={14} />{t('localOnly')}
 					</p>
 				</div>
 
 				<div class="grp">
-					<h2>Biblioteca</h2>
+					<h2>{t('library')}</h2>
 					<div class="set">
 						<div class="l">
-							<b>Exportar biblioteca</b><span
-								>Un archivo .json con viajes, ubicaciones corregidas y favoritos.</span
-							>
+							<b>{t('export')}</b><span>{t('exportHint')}</span>
 						</div>
 						<button class="btn btn-secondary btn-sm" onclick={exportLibrary}
-							><Icon name="download" />Exportar</button
+							><Icon name="download" />{t('exportButton')}</button
 						>
 					</div>
 					<div class="set">
 						<div class="l">
-							<b>Borrar biblioteca</b><span
-								>{auth.signedIn
-									? 'Elimina todo lo guardado en este navegador y envía la carpeta Waymark de tu Drive a la papelera. Tus fotos originales no se tocan.'
-									: 'Elimina todo lo guardado en este navegador. Tus fotos originales no se tocan.'}</span
+							<b>{t('delete')}</b><span
+								>{auth.signedIn ? t('deleteHintDrive') : t('deleteHint')}</span
 							>
 							{#if deleteError}<span class="err-text">{deleteError}</span>{/if}
 						</div>
 						{#if confirmDelete}
 							<div class="row confirm">
 								<button class="btn btn-ghost btn-sm" onclick={() => (confirmDelete = false)}
-									>Cancelar</button
+									>{tc('cancel')}</button
 								>
 								<button class="btn btn-danger btn-sm" onclick={deleteLibrary}
-									>Sí, borrar todo</button
+									>{t('confirmDelete')}</button
 								>
 							</div>
 						{:else}
 							<button class="btn btn-danger btn-sm" onclick={() => (confirmDelete = true)}
-								><Icon name="trash" />Borrar…</button
+								><Icon name="trash" />{t('deleteButton')}</button
 							>
 						{/if}
 					</div>
@@ -416,12 +414,12 @@
 		grid-template-columns: 1fr 1fr;
 	}
 
-	.side {
+	.pane {
 		padding: 20px 28px;
 		gap: 24px;
 	}
 
-	.side:first-child {
+	.pane:first-child {
 		border-right: 1px solid var(--line);
 	}
 
@@ -470,17 +468,6 @@
 		line-height: 16px;
 		color: var(--t3);
 		text-wrap: pretty;
-	}
-
-	.select {
-		display: inline-flex;
-		align-items: center;
-		height: 32px;
-		padding: 0 10px;
-		border-radius: 8px;
-		background: var(--field);
-		border: 1px solid var(--line);
-		font-size: 13px;
 	}
 
 	.styles {
@@ -665,7 +652,7 @@
 			grid-template-columns: 1fr;
 		}
 
-		.side:first-child {
+		.pane:first-child {
 			border-right: 0;
 			border-bottom: 1px solid var(--line);
 		}

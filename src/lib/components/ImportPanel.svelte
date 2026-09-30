@@ -3,6 +3,7 @@
 	import { library } from '$lib/state/library.svelte';
 	import { thumbUrl } from '$lib/state/thumbs.svelte';
 	import { formatNumber } from '$lib/library/format';
+	import t from '$lib/i18n/messages/importing';
 
 	const progress = $derived(library.progress!);
 	const percent = $derived(progress.total ? (progress.done / progress.total) * 100 : 0);
@@ -23,17 +24,17 @@
 {#if library.importMinimized}
 	<button class="mini panel row" onclick={() => (library.importMinimized = false)}>
 		<span class="dot sm ringed"></span>
-		<span>Importando <span class="mono">{Math.round(percent)} %</span></span>
+		<span>{t('importingShort')} <span class="mono">{Math.round(percent)} %</span></span>
 	</button>
 {:else}
 	<section class="import panel" role="status" aria-live="polite">
 		<div class="row between">
 			<div class="row title">
-				<span class="dot sm ringed"></span><span class="t-h3">Importando fotos</span>
+				<span class="dot sm ringed"></span><span class="t-h3">{t('importing')}</span>
 			</div>
 			<button
 				class="btn btn-ghost btn-icon btn-sm"
-				aria-label="Minimizar"
+				aria-label={t('minimize')}
 				onclick={() => (library.importMinimized = true)}
 			>
 				<Icon name="minimize" />
@@ -41,7 +42,8 @@
 		</div>
 		<div class="row between counts">
 			<span>
-				Procesando <span class="mono big">{formatNumber(progress.done)}</span> de
+				{t('processing')} <span class="mono big">{formatNumber(progress.done)}</span>
+				{t('of')}
 				<span class="mono big">{formatNumber(progress.total)}</span>
 			</span>
 			<span class="mono t3">{Math.round(percent)} %{remaining ? ` · ${remaining}` : ''}</span>
@@ -64,19 +66,19 @@
 		<div class="boxes">
 			<div class="box col">
 				<span class="mono num acc">{formatNumber(progress.withLocation)}</span>
-				<span class="t-small t3">con ubicación</span>
+				<span class="t-small t3">{t('withLocation')}</span>
 			</div>
 			<div class="box col">
 				<span class="mono num">{formatNumber(progress.withoutLocation)}</span>
-				<span class="t-small t3">sin ubicación</span>
+				<span class="t-small t3">{t('withoutLocation')}</span>
 			</div>
 			<div class="box col">
 				<span class="mono num">{formatNumber(progress.duplicates)}</span>
-				<span class="t-small t3">duplicadas</span>
+				<span class="t-small t3">{t('duplicates')}</span>
 			</div>
 		</div>
 		<p class="row t-small t3 note">
-			<Icon name="lock" size={14} />Se procesa en este dispositivo. Puedes seguir usando la app.
+			<Icon name="lock" size={14} />{t('processedHere')}
 		</p>
 	</section>
 {/if}

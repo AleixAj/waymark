@@ -1,6 +1,8 @@
 <script lang="ts">
 	import Icon from './ui/Icon.svelte';
 	import { library } from '$lib/state/library.svelte';
+	import t from '$lib/i18n/messages/importing';
+	import tc from '$lib/i18n/messages/common';
 
 	const count = $derived(library.errors.length);
 	const canRetry = $derived(library.errors.some((e) => e.retryable));
@@ -10,12 +12,12 @@
 	<div class="row head">
 		<span class="icon"><Icon name="fileX" /></span>
 		<div class="col grow">
-			<span class="title">No hemos podido leer {count} {count === 1 ? 'archivo' : 'archivos'}</span>
-			<span class="t-small t2">El resto de la importación ha terminado bien.</span>
+			<span class="title">{t('unreadFiles', { n: count })}</span>
+			<span class="t-small t2">{t('restFine')}</span>
 		</div>
 		<button
 			class="btn btn-ghost btn-icon btn-sm close"
-			aria-label="Cerrar"
+			aria-label={tc('close')}
 			onclick={() => (library.errors = [])}
 		>
 			<Icon name="x" />
@@ -29,14 +31,14 @@
 			</div>
 		{/each}
 		{#if count > 5}
-			<div class="row item t-small t3">y {count - 5} más</div>
+			<div class="row item t-small t3">{t('more', { n: count - 5 })}</div>
 		{/if}
 	</div>
 	<div class="row actions">
-		<button class="btn btn-ghost btn-sm" onclick={() => (library.errors = [])}>Omitir</button>
+		<button class="btn btn-ghost btn-sm" onclick={() => (library.errors = [])}>{t('skip')}</button>
 		{#if canRetry}
 			<button class="btn btn-secondary btn-sm" onclick={() => library.retryErrors()}>
-				<Icon name="refresh" />Reintentar
+				<Icon name="refresh" />{t('retry')}
 			</button>
 		{/if}
 	</div>

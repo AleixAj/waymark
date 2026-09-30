@@ -3,6 +3,7 @@ import { findPlace } from '$lib/photos/placeFinder';
 import { toPoint, type Photo, type PhotoPoint } from '$lib/photos/types';
 import type { ImportProgress } from '$lib/photos/importer';
 import { generateDemo, type DemoPhoto } from './generate';
+import t from '$lib/i18n/messages/demo';
 
 /** What the loading window shows */
 export interface DemoStatus {
@@ -87,7 +88,7 @@ async function downloadThumbs(
 		if (!response.ok || !response.body) throw new Error(String(response.status));
 	} catch (error) {
 		if (signal?.aborted) throw error;
-		const offline = new Error('Hace falta conexión a internet para descargar las fotos de ejemplo');
+		const offline = new Error(t('offline'));
 		offline.name = 'UserError';
 		throw offline;
 	}

@@ -1,7 +1,9 @@
 import { distanceKm, pathLengthKm } from '$lib/geo/distance';
 import type { TripEdit } from '$lib/photos/db';
 import type { LocatedPoint } from '$lib/photos/types';
-import { daysBetween, monthKey } from './format';
+import { i18n } from '$lib/i18n/i18n.svelte';
+import t from '$lib/i18n/messages/trip';
+import { daysBetween, formatMonthLong, monthKey } from './format';
 
 export interface Stop {
 	/** 1-based position in the trip */
@@ -43,21 +45,6 @@ const MIN_PHOTOS = 8;
 const HOME_RADIUS_KM = 60;
 // A place is home only if you took photos there in several different months
 const MIN_HOME_MONTHS = 3;
-
-const MONTH_NAMES = [
-	'enero',
-	'febrero',
-	'marzo',
-	'abril',
-	'mayo',
-	'junio',
-	'julio',
-	'agosto',
-	'septiembre',
-	'octubre',
-	'noviembre',
-	'diciembre'
-];
 
 /**
  * Home is the city where you took photos in the most different months (a two-week
@@ -169,7 +156,7 @@ export function buildStops(photos: LocatedPoint[]): Stop[] {
 		const center = centroid(group);
 		stops.push({
 			index: stops.length + 1,
-			city: group[0].city ?? 'Sin nombre',
+			city: group[0].city ?? t('noName'),
 			...center,
 			start: group[0].takenAt,
 			photoIds: group.map((p) => p.id),
@@ -187,27 +174,28 @@ export function buildStops(photos: LocatedPoint[]): Stop[] {
 }
 
 /**
- * Trip names: "Japón 2025" abroad, "Oviedo, julio 2026" at home,
- * "Italia y Francia" when the trip covers several countries.
+ * Trip names in the current language: "Japón 2025" abroad, "Oviedo, julio 2026"
+ * at home, "Italia y Francia" when the trip covers several countries.
  */
 function tripTitle(
 	photos: LocatedPoint[],
 	home: Home | null,
 	countryName: (iso3: string) => string
 ) {
-	const date = new Date(photos[0].takenAt);
-	const year = date.getFullYear();
+	const year = new Date(photos[0].takenAt).getFullYear();
 	const countries = ranked(photos, (p) => p.country);
 	const cities = ranked(photos, (p) => p.city);
 
 	if (countries.length === 1 && countries[0] === home?.country) {
 		const place = cities[0] ?? countryName(countries[0]);
-		return `${place}, ${MONTH_NAMES[date.getMonth()]} ${year}`;
+		// "Julio 2026" -> "julio 2026": months are lower case inside a name, except in English
+		const month = formatMonthLong(photos[0].takenAt);
+		return t('atHome', { place, date: i18n.locale === 'en' ? month : month.toLowerCase() });
 	}
 	if (countries.length >= 2) {
-		return `${countryName(countries[0])} y ${countryName(countries[1])}`;
+		return t('twoCountries', { a: countryName(countries[0]), b: countryName(countries[1]) });
 	}
-	const place = countries[0] ? countryName(countries[0]) : (cities[0] ?? 'Viaje');
+	const place = countries[0] ? countryName(countries[0]) : (cities[0] ?? t('trip'));
 	return `${place} ${year}`;
 }
 

@@ -16,7 +16,25 @@
 	import { distanceKm } from '$lib/geo/distance';
 	import { EQUATOR_KM } from '$lib/geo/distance';
 	import { TOTAL_COUNTRIES } from '$lib/geo/countries';
-	import { formatDecimal, formatMonth, formatNumber } from '$lib/library/format';
+	import {
+		formatDecimal,
+		formatLat,
+		formatLng,
+		formatMonth,
+		formatNumber
+	} from '$lib/library/format';
+	import t from '$lib/i18n/messages/stats';
+	import tc from '$lib/i18n/messages/common';
+
+	// The data files name continents in Spanish
+	const CONTINENTS = {
+		África: 'africa',
+		América: 'america',
+		Antártida: 'antarctica',
+		Asia: 'asia',
+		Europa: 'europe',
+		Oceanía: 'oceania'
+	} as const;
 
 	let year = $state<number | null>(null);
 
@@ -44,7 +62,8 @@
 	const continents = $derived.by(() => {
 		const counts = new Map<string, number>();
 		for (const c of countryList) {
-			const name = countries.info(c.iso3)?.continent || 'Otros';
+			const continent = countries.info(c.iso3)?.continent as keyof typeof CONTINENTS | undefined;
+			const name = t(continent && CONTINENTS[continent] ? CONTINENTS[continent] : 'other');
 			counts.set(name, (counts.get(name) ?? 0) + 1);
 		}
 		return [...counts.entries()].sort((a, b) => b[1] - a[1]);
@@ -99,32 +118,24 @@
 	}
 	const shownCountries = countUp(() => countryList.length);
 	const shownKm = countUp(() => totalKm);
-
-	function lat(value: number) {
-		return `${Math.abs(value).toFixed(4)}° ${value >= 0 ? 'N' : 'S'}`;
-	}
-
-	function lng(value: number) {
-		return `${Math.abs(value).toFixed(4)}° ${value >= 0 ? 'E' : 'O'}`;
-	}
 </script>
 
-<svelte:head><title>Estadísticas · Waymark</title></svelte:head>
+<svelte:head><title>{t('title')} · Waymark</title></svelte:head>
 
 <main class="stats">
 	<div class="wrap">
 		<div class="row header">
 			<div>
-				<h1 class="t-h1">Estadísticas</h1>
-				<p class="mono t3 sub">{range} · {formatNumber(points.length)} fotos con ubicación</p>
+				<h1 class="t-h1">{t('title')}</h1>
+				<p class="mono t3 sub">{range} · {t('located', { n: points.length })}</p>
 			</div>
 			<div class="row tools">
-				<div class="seg" role="radiogroup" aria-label="Año">
+				<div class="seg" role="radiogroup" aria-label={t('year')}>
 					<button
 						class:is-on={year === null}
 						role="radio"
 						aria-checked={year === null}
-						onclick={() => (year = null)}>Todo</button
+						onclick={() => (year = null)}>{t('all')}</button
 					>
 					{#each shownYears as y (y)}
 						<button
@@ -136,7 +147,7 @@
 					{/each}
 				</div>
 				<button class="btn btn-secondary" onclick={() => window.print()}
-					><Icon name="download" />Exportar informe</button
+					><Icon name="download" />{t('export')}</button
 				>
 			</div>
 		</div>
@@ -145,18 +156,19 @@
 			<div class="card span8 tall">
 				<div class="row between top">
 					<div>
-						<span class="t-label">Países visitados</span>
+						<span class="t-label">{t('countries')}</span>
 						<div class="row big-row">
 							<span class="big acc">{Math.round(shownCountries.current)}</span>
 							<span class="mono t3 of"
-								>de {TOTAL_COUNTRIES} · {Math.round((countryList.length / TOTAL_COUNTRIES) * 100)} %</span
+								>{t('ofTotal', {
+									total: TOTAL_COUNTRIES,
+									percent: Math.round((countryList.length / TOTAL_COUNTRIES) * 100)
+								})}</span
 							>
 						</div>
 					</div>
 					<div class="col right">
-						<span class="mono t2"
-							>{continents.length} {continents.length === 1 ? 'continente' : 'continentes'}</span
-						>
+						<span class="mono t2">{t('continents', { n: continents.length })}</span>
 						<span class="mono t3 small"
 							>{continents.map(([name, n]) => `${name} ${n}`).join(' · ')}</span
 						>
@@ -166,14 +178,14 @@
 			</div>
 
 			<div class="card span4 tall">
-				<span class="t-label">Distancia recorrida</span>
+				<span class="t-label">{t('distance')}</span>
 				<div class="row big-row">
 					<span class="big acc">{dist(shownKm.current)}</span><span class="mono t3 of">{unit}</span>
 				</div>
 				<p class="t2 note">
-					{#if laps >= 1}Equivale a {formatDecimal(laps)} vueltas al ecuador.{:else}El {Math.round(
-							laps * 100
-						)} % de una vuelta al ecuador.{/if}
+					{laps >= 1
+						? t('laps', { laps: formatDecimal(laps) })
+						: t('lapShare', { percent: Math.round(laps * 100) })}
 				</p>
 				<div class="laps">
 					{#each Array.from({ length: Math.min(3, Math.ceil(laps) || 1) }, (_, i) => i) as i (i)}
@@ -183,12 +195,12 @@
 					{/each}
 				</div>
 				<div class="row between mono t3 small lap-legend">
-					<span>1.ª vuelta</span><span>{dist(EQUATOR_KM)} {unit}</span>
+					<span>{t('firstLap')}</span><span>{dist(EQUATOR_KM)} {unit}</span>
 				</div>
 				<div class="col facts">
 					{#if farthest}
 						<div class="row between fact">
-							<span class="t2">Más lejos de casa</span>
+							<span class="t2">{t('farthest')}</span>
 							<span class="mono"
 								>{farthest.point.city ?? countries.name(farthest.point.country)} · {dist(
 									farthest.km
@@ -199,13 +211,13 @@
 					{/if}
 					{#if longestTrip}
 						<div class="row between fact">
-							<span class="t2">Viaje más largo</span>
-							<span class="mono">{longestTrip.title} · {longestTrip.days} días</span>
+							<span class="t2">{t('longestTrip')}</span>
+							<span class="mono">{longestTrip.title} · {tc('days', { n: longestTrip.days })}</span>
 						</div>
 					{/if}
 					{#if kmTrip}
 						<div class="row between fact">
-							<span class="t2">Más kilómetros</span>
+							<span class="t2">{t('mostKm')}</span>
 							<span class="mono">{kmTrip.title} · {dist(kmTrip.km)} {unit}</span>
 						</div>
 					{/if}
@@ -214,8 +226,10 @@
 
 			<div class="card span5">
 				<div class="row between">
-					<span class="t-label">Fotos por año</span>
-					<span class="mono t3 small">máx. {maxYear.year} · {formatNumber(maxYear.count)}</span>
+					<span class="t-label">{t('perYear')}</span>
+					<span class="mono t3 small"
+						>{t('max', { year: String(maxYear.year), count: maxYear.count })}</span
+					>
 				</div>
 				<div class="row years">
 					{#each perYear as y, i (y.year)}
@@ -225,7 +239,7 @@
 							class="col bar-col"
 							class:dim={year !== null && year !== y.year}
 							onclick={() => (year = year === y.year ? null : y.year)}
-							aria-label="{y.year}: {y.count} fotos"
+							aria-label={t('yearBar', { year: String(y.year), n: y.count })}
 						>
 							<span class="mono small" class:acc={best} class:t3={!best}
 								>{formatNumber(y.count)}</span
@@ -247,7 +261,7 @@
 			</div>
 
 			<div class="card span3">
-				<span class="t-label">Ciudades con más fotos</span>
+				<span class="t-label">{t('topCities')}</span>
 				<div class="col cities">
 					{#each cities as c, i (c.city + c.country)}
 						<div class="col city">
@@ -271,13 +285,13 @@
 			</div>
 
 			<div class="card span4">
-				<span class="t-label">Puntos extremos</span>
+				<span class="t-label">{t('extremes')}</span>
 				{#if ends}
 					<div class="extremes">
-						{#each [{ label: 'Norte', icon: 'chevU', p: ends.north, v: lat(ends.north.lat) }, { label: 'Sur', icon: 'chevD', p: ends.south, v: lat(ends.south.lat) }, { label: 'Este', icon: 'chevR', p: ends.east, v: lng(ends.east.lng) }, { label: 'Oeste', icon: 'chevL', p: ends.west, v: lng(ends.west.lng) }] as const as e (e.label)}
+						{#each [{ label: t('north'), icon: 'chevU', p: ends.north, v: formatLat(ends.north.lat) }, { label: t('south'), icon: 'chevD', p: ends.south, v: formatLat(ends.south.lat) }, { label: t('east'), icon: 'chevR', p: ends.east, v: formatLng(ends.east.lng) }, { label: t('west'), icon: 'chevL', p: ends.west, v: formatLng(ends.west.lng) }] as const as e (e.icon)}
 							<div class="col extreme">
 								<span class="row t-label dir"><Icon name={e.icon} size={14} />{e.label}</span>
-								<span class="place-name">{e.p.city ?? 'Sin nombre'}</span>
+								<span class="place-name">{e.p.city ?? t('noName')}</span>
 								<span class="t-small t3">{countries.name(e.p.country)}</span>
 								<span class="mono acc coord">{e.v}</span>
 							</div>

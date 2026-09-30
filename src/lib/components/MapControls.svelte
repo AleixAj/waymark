@@ -3,6 +3,8 @@
 	import PalettePicker from './PalettePicker.svelte';
 	import { mapView } from '$lib/map/view.svelte';
 	import { ui } from '$lib/state/ui.svelte';
+	import tc from '$lib/i18n/messages/common';
+	import t from '$lib/i18n/messages/map';
 
 	let { projection = true, style = '' }: { projection?: boolean; style?: string } = $props();
 </script>
@@ -14,7 +16,7 @@
 			<button
 				class="btn btn-ghost"
 				class:on={ui.timelineOpen}
-				aria-label="Línea de tiempo"
+				aria-label={t('timeline')}
 				aria-pressed={ui.timelineOpen}
 				onclick={() => (ui.timelineOpen = !ui.timelineOpen)}
 			>
@@ -22,16 +24,16 @@
 			</button>
 		</div>
 		<div class="ctl panel zoom">
-			<button class="btn btn-ghost" aria-label="Acercar" onclick={() => mapView.zoomBy(1)}>
+			<button class="btn btn-ghost" aria-label={t('zoomIn')} onclick={() => mapView.zoomBy(1)}>
 				<Icon name="plus" />
 			</button>
 			<div class="hr"></div>
-			<button class="btn btn-ghost" aria-label="Alejar" onclick={() => mapView.zoomBy(-1)}>
+			<button class="btn btn-ghost" aria-label={t('zoomOut')} onclick={() => mapView.zoomBy(-1)}>
 				<Icon name="minus" />
 			</button>
 		</div>
 		<div class="ctl panel">
-			<button class="btn btn-ghost" aria-label="Vista global" onclick={() => mapView.world()}>
+			<button class="btn btn-ghost" aria-label={t('worldView')} onclick={() => mapView.world()}>
 				<Icon name="target" />
 			</button>
 		</div>
@@ -41,7 +43,7 @@
 				<button
 					class="btn btn-ghost"
 					class:on={!ui.flat}
-					aria-label="Globo"
+					aria-label={tc('globe')}
 					aria-pressed={!ui.flat}
 					onclick={() => (ui.flat = false)}
 				>
@@ -50,7 +52,7 @@
 				<button
 					class="btn btn-ghost"
 					class:on={ui.flat}
-					aria-label="Mapa plano"
+					aria-label={t('flat')}
 					aria-pressed={ui.flat}
 					onclick={() => (ui.flat = true)}
 				>

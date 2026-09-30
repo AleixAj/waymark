@@ -15,6 +15,7 @@
 	import { signIn, sync } from '$lib/sync/sync.svelte';
 	import GoogleMark from './ui/GoogleMark.svelte';
 	import { enterDemo } from '$lib/state/mode';
+	import t from '$lib/i18n/messages/welcome';
 
 	const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent);
 
@@ -33,7 +34,7 @@
 		try {
 			await signIn();
 		} catch (e) {
-			error = e instanceof Error ? e.message : 'No se pudo entrar con Google';
+			error = e instanceof Error ? e.message : t('signInFailed');
 		} finally {
 			busy = false;
 		}
@@ -51,7 +52,7 @@
 			if (!auth.signedIn) await signIn();
 			await importFromDrive();
 		} catch (e) {
-			error = e instanceof Error ? e.message : 'No se pudo abrir Google Drive';
+			error = e instanceof Error ? e.message : t('driveFailed');
 		} finally {
 			busy = false;
 		}
@@ -66,7 +67,7 @@
 		<LanguagePicker />
 		<button
 			class="btn btn-ghost btn-icon"
-			aria-label="Cambiar tema"
+			aria-label={t('theme')}
 			onclick={() => settings.toggleTheme()}
 		>
 			<Icon name={settings.resolvedTheme === 'dark' ? 'sun' : 'moon'} />
@@ -76,57 +77,56 @@
 </header>
 
 <main class="col welcome">
-	<img class="hero-logo" src={logo} alt="" width="118" height="96" />
+	<img class="hero-logo" src={logo} alt="" width="442" height="360" />
 	<h1 class="wordmark">Waymark</h1>
-	<p class="tagline">Tu vuelta al mundo, foto a foto</p>
 
 	{#if gate}
 		<div class="gate panel col">
-			<p class="t-h3 title">Tu álbum de viajes, sobre el globo</p>
+			<p class="t-h3 title">{t('gateTitle')}</p>
 			<p class="t-small t2 lead">
-				Entra con tu cuenta de Google para crear tu álbum y verlo en todos tus dispositivos.
+				{t('gateLead')}
 			</p>
 			<div class="col ways">
 				<button class="btn btn-lg google" disabled={busy} onclick={enter}
-					><GoogleMark />{busy ? 'Abriendo Google…' : 'Continuar con Google'}</button
+					><span class="g"><GoogleMark /></span>{busy ? t('opening') : t('continue')}</button
 				>
-				<div class="row t-small t3 or" aria-hidden="true">o</div>
-				<button class="btn btn-secondary btn-lg" onclick={enterDemo}
-					><Icon name="play" />Ver la demo</button
+				<div class="row t-small t3 or" aria-hidden="true">{t('or')}</div>
+				<button class="btn btn-lg demo-way" onclick={enterDemo}
+					><Icon name="play" />{t('seeDemo')}</button
 				>
-				<p class="t-small t3">600 fotos reales de 15 viajes, sin registrarte.</p>
+				<p class="t-small t3">{t('demoLead')}</p>
 			</div>
 			{#if error}<p class="t-small err" role="alert">{error}</p>{/if}
 		</div>
 		<ul class="row features">
-			<li class="row"><Icon name="globe" size={16} />Cada foto en su lugar</li>
-			<li class="row"><Icon name="route" size={16} />Viajes detectados solos</li>
-			<li class="row"><Icon name="chart" size={16} />Tus estadísticas</li>
+			<li class="row"><Icon name="globe" size={16} />{t('featurePlace')}</li>
+			<li class="row"><Icon name="route" size={16} />{t('featureTrips')}</li>
+			<li class="row"><Icon name="chart" size={16} />{t('featureStats')}</li>
 		</ul>
 	{:else if looking}
 		<div class="gate panel col" role="status">
 			<span class="spinner" aria-hidden="true"></span>
-			<p class="t-h3 title">Buscando tu álbum…</p>
-			<p class="t-small t2 lead">Miramos si ya tienes fotos guardadas en tu Google Drive.</p>
+			<p class="t-h3 title">{t('looking')}</p>
+			<p class="t-small t2 lead">{t('lookingLead')}</p>
 		</div>
 	{:else}
 		<div class="drop panel col">
 			<div class="dashed" aria-hidden="true"></div>
 			<div class="icon"><Icon name="upload" /></div>
 			<p class="t-h3 title">
-				{firstName ? `Hola, ${firstName}. ` : ''}Arrastra aquí tus fotos o carpetas
+				{firstName ? t('dropTitleNamed', { name: firstName }) : t('dropTitle')}
 			</p>
 			<p class="t-small t3">
-				JPG, HEIC, RAW y más. Leemos la ubicación GPS de cada foto para colocarla en el globo.
+				{t('dropLead')}
 			</p>
 			<div class="choices">
 				<button class="btn btn-primary btn-lg" onclick={() => choose(false)}
-					><Icon name="image" />Elegir fotos</button
+					><Icon name="image" />{t('choosePhotos')}</button
 				>
 				<button class="btn btn-secondary btn-lg" onclick={() => choose(true)}
-					><Icon name="folder" />Elegir carpeta</button
+					><Icon name="folder" />{t('chooseFolder')}</button
 				>
-				<div class="row t-small t3 or" aria-hidden="true">o importa desde</div>
+				<div class="row t-small t3 or" aria-hidden="true">{t('importFrom')}</div>
 				{#if drivePickerEnabled}
 					<button class="btn btn-secondary btn-lg" disabled={busy} onclick={fromDrive}
 						><ServiceMark service="drive" />Google Drive</button
@@ -136,7 +136,7 @@
 					class="btn btn-secondary btn-lg"
 					class:wide={!drivePickerEnabled}
 					onclick={() => ui.openImport('takeout')}
-					><ServiceMark service="photos" />Google Fotos</button
+					><ServiceMark service="photos" />{t('googlePhotos')}</button
 				>
 			</div>
 			{#if error}<p class="t-small err" role="alert">{error}</p>{/if}
@@ -144,26 +144,25 @@
 		<p class="row t2 privacy">
 			<Icon name="lock" size={16} />
 			{#if auth.signedIn}
-				Todo se procesa en este navegador y se guarda una copia ligera en tu Drive.
+				{t('privacySynced')}
 			{:else}
-				Tus fotos no salen de tu dispositivo. Todo se procesa en este navegador.
+				{t('privacyLocal')}
 			{/if}
 		</p>
-		<button class="demo" onclick={enterDemo}
-			><Icon name="play" size={14} />Probar con fotos de ejemplo</button
-		>
+		<button class="demo" onclick={enterDemo}><Icon name="play" size={14} />{t('tryDemo')}</button>
 	{/if}
 </main>
 
 <footer class="row mono t3 bottom">
 	<span class="row legal"
-		>v1.0 · <a href="/privacidad" data-sveltekit-reload>Privacidad</a> ·
-		<a href="/terminos" data-sveltekit-reload>Condiciones</a></span
+		>v1.0 · <a href="/privacidad" data-sveltekit-reload>{t('privacy')}</a> ·
+		<a href="/terminos" data-sveltekit-reload>{t('terms')}</a></span
 	>
 	{#if !gate}<span class="row hint">
 			<span class="kbds"
 				><span class="kbd">{isMac ? '⌘' : 'Ctrl'}</span><span class="kbd">O</span></span
-			> abrir fotos
+			>
+			{t('openPhotos')}
 		</span>{/if}
 </footer>
 
@@ -223,19 +222,24 @@
 		z-index: 2;
 	}
 
-	/* The logo above the title, with the same soft amber glow as its letters */
+	/* The logo above the title, about as tall as its letters, outlined in the same
+	   amber with the same soft glow so both read as one piece */
 	.hero-logo {
-		width: clamp(56px, min(9vw, 11vh), 104px);
+		width: clamp(92px, min(16vw, 17vh), 176px);
 		height: auto;
-		margin-bottom: clamp(10px, 1.6vw, 18px);
-		filter: drop-shadow(0 0 1px #ffe9c4) drop-shadow(0 6px 18px oklch(0.75 0.17 55 / 0.35));
+		margin-bottom: clamp(8px, 1.4vw, 16px);
+		filter: drop-shadow(0 0 1.2px oklch(0.78 0.18 56)) drop-shadow(0 0 1.2px oklch(0.78 0.18 56))
+			drop-shadow(0 0 5px oklch(0.78 0.18 55 / 0.55))
+			drop-shadow(0 10px 28px oklch(0.2 0.03 258 / 0.55));
 	}
 
 	:global([data-theme='light']) .hero-logo {
-		filter: drop-shadow(0 6px 16px oklch(0.7 0.15 55 / 0.3));
+		filter: drop-shadow(0 0 1px oklch(0.66 0.18 50)) drop-shadow(0 0 4px oklch(0.72 0.18 50 / 0.4))
+			drop-shadow(0 10px 24px oklch(0.4 0.05 250 / 0.25));
 	}
 
-	/* The big title: white letters with only their outline in amber and a soft glow.
+	/* The big title, drawn like the logo: the camera's light amber body with its
+	   thick navy outline, and the same thin amber line and glow around it.
 	   The stroke is painted under the fill, so only its outer half shows and the
 	   lines where the font's shapes overlap stay hidden. */
 	.wordmark {
@@ -246,28 +250,16 @@
 		line-height: 0.9;
 		letter-spacing: -0.03em;
 		padding: 0 0.08em;
-		color: oklch(0.97 0.012 85);
-		-webkit-text-stroke: 3px oklch(0.78 0.18 56);
+		color: #fece8e;
+		-webkit-text-stroke: 7px #1a263e;
 		paint-order: stroke fill;
-		/* drop-shadow follows the painted letters, so the glow stays at the edge */
-		filter: drop-shadow(0 0 3px oklch(0.78 0.18 55 / 0.7));
+		/* drop-shadow follows the painted letters, so the line and glow stay at the edge */
+		filter: drop-shadow(0 0 1.2px oklch(0.78 0.18 56)) drop-shadow(0 0 1.2px oklch(0.78 0.18 56))
+			drop-shadow(0 0 6px oklch(0.78 0.18 55 / 0.5));
 	}
 
 	:global([data-theme='light']) .wordmark {
-		color: #fff;
-		-webkit-text-stroke-color: oklch(0.66 0.18 50);
-		filter: drop-shadow(0 0 4px oklch(0.72 0.18 50 / 0.4));
-	}
-
-	.tagline {
-		margin-top: clamp(22px, 3vw, 34px);
-		font-size: clamp(18px, 2.2vw, 24px);
-		line-height: 1.3;
-		font-weight: 450;
-		letter-spacing: -0.01em;
-		color: var(--t1);
-		opacity: 0.88;
-		text-wrap: balance;
+		filter: drop-shadow(0 0 1px oklch(0.66 0.18 50)) drop-shadow(0 0 4px oklch(0.72 0.18 50 / 0.4));
 	}
 
 	.drop {
@@ -370,15 +362,72 @@
 	}
 
 	/* Google's own look: white button with the coloured G */
+	/* The two ways in, in the logo's colours: the main one filled with the camera's
+	   amber and navy outline, the demo outlined in amber. Google's mark keeps its
+	   white circle so it still reads as Google sign-in. */
 	.google {
-		background: #fff;
-		color: #1f1f1f;
-		border-color: oklch(0.3 0.02 255 / 0.18);
-		box-shadow: 0 1px 2px oklch(0 0 0 / 0.12);
+		background: #fece8e;
+		color: #1a263e;
+		border: 2px solid #1a263e;
+		font-weight: 650;
+		box-shadow:
+			0 0 0 1px oklch(0.78 0.18 56 / 0.9),
+			0 8px 24px -8px oklch(0.78 0.18 55 / 0.55);
+		transition:
+			background-color var(--dur-fast),
+			box-shadow var(--dur),
+			transform var(--dur) var(--ease-spring);
 	}
 
 	.google:hover {
-		background: #f3f5f8;
+		background: #ffd9a6;
+		transform: translateY(-1px);
+		box-shadow:
+			0 0 0 1px oklch(0.78 0.18 56),
+			0 12px 30px -8px oklch(0.78 0.18 55 / 0.7);
+	}
+
+	.google:active {
+		transform: scale(0.98);
+	}
+
+	.g {
+		display: grid;
+		place-items: center;
+		width: 24px;
+		height: 24px;
+		border-radius: 50%;
+		background: #fff;
+		box-shadow: 0 0 0 1.5px #1a263e;
+	}
+
+	.demo-way {
+		background: oklch(0.78 0.18 56 / 0.08);
+		color: var(--acc-text);
+		border: 1.5px solid oklch(0.78 0.18 56 / 0.55);
+		font-weight: 600;
+		transition:
+			background-color var(--dur-fast),
+			border-color var(--dur-fast),
+			transform var(--dur) var(--ease-spring);
+	}
+
+	.demo-way:hover {
+		background: oklch(0.78 0.18 56 / 0.16);
+		border-color: oklch(0.78 0.18 56 / 0.85);
+		transform: translateY(-1px);
+	}
+
+	.demo-way:active {
+		transform: scale(0.98);
+	}
+
+	/* The card itself gets a faint amber edge, like the logo's outline */
+	.gate {
+		border-color: oklch(0.78 0.18 56 / 0.28);
+		box-shadow:
+			var(--shadow),
+			0 0 40px -12px oklch(0.78 0.18 55 / 0.35);
 	}
 
 	.features {
@@ -455,7 +504,7 @@
 		transform: scale(0.97);
 	}
 
-	/* Everything arrives in order: name, tagline, import card, then the rest */
+	/* Everything arrives in order: logo, name, sign-in card, then the rest */
 	.welcome > * {
 		animation: item-in 0.6s var(--ease-out) both;
 	}

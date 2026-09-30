@@ -12,7 +12,9 @@
 	import { mapView } from '$lib/map/view.svelte';
 	import { centroid } from '$lib/library/trips';
 	import { circle, cityAreas } from '$lib/library/areas';
-	import { formatNumber } from '$lib/library/format';
+	import { formatLat, formatLng, formatNumber } from '$lib/library/format';
+	import t from '$lib/i18n/messages/place';
+	import tc from '$lib/i18n/messages/common';
 	import type { LngLatBounds } from 'maplibre-gl';
 
 	const iso = $derived(page.params.iso ?? '');
@@ -103,7 +105,7 @@
 	});
 
 	function coords(lat: number, lng: number) {
-		return `${Math.abs(lat).toFixed(4)}° ${lat >= 0 ? 'N' : 'S'} · ${Math.abs(lng).toFixed(4)}° ${lng >= 0 ? 'E' : 'O'}`;
+		return `${formatLat(lat)} · ${formatLng(lng)}`;
 	}
 </script>
 
@@ -111,20 +113,20 @@
 
 <Breadcrumb
 	items={[
-		{ label: 'Mundo', href: '/' },
+		{ label: tc('world'), href: '/' },
 		{ label: countryName, href: `/pais/${iso}` },
 		{ label: city }
 	]}
 />
 <MapControls style="right: 452px; bottom: 16px" />
 
-<aside use:sheet={'half'} class="rpanel panel" aria-label="Fotos en esta zona">
+<aside use:sheet={'half'} class="rpanel panel" aria-label={t('inThisArea')}>
 	<div class="head">
 		<div class="row between">
 			<span class="t-label">{city}, {countryName}</span>
 			<button
 				class="btn btn-ghost btn-icon btn-sm close"
-				aria-label="Cerrar"
+				aria-label={tc('close')}
 				onclick={() => goto(`/pais/${iso}`)}
 			>
 				<Icon name="x" />
@@ -133,9 +135,9 @@
 		<h1 class="t-h1 title">{city}</h1>
 		{#if center}<p class="mono t2 sub">{coords(center.lat, center.lng)}</p>{/if}
 		{#if hasAreas}
-			<div class="areas" role="group" aria-label="Zonas de {city}">
+			<div class="areas" role="group" aria-label={t('areasOf', { city })}>
 				<button class="chip" class:is-on={!active} onclick={() => chooseArea(null)}>
-					Toda la ciudad <span class="mono">{formatNumber(cityPhotos.length)}</span>
+					{t('wholeCity')} <span class="mono">{formatNumber(cityPhotos.length)}</span>
 				</button>
 				{#each areas as area (area.name)}
 					<button
@@ -151,9 +153,7 @@
 		{/if}
 		<div class="row zone">
 			<span class="row t-small t2 zone-label"
-				><span class="dot sm"></span>{active
-					? `Fotos en ${active}`
-					: 'Mostrando fotos en esta zona'}</span
+				><span class="dot sm"></span>{active ? t('photosIn', { area: active }) : t('showing')}</span
 			>
 			<span class="mono count">{formatNumber(shown.length)}</span>
 		</div>
@@ -163,8 +163,8 @@
 			<PhotoDays photos={shown} context={active ?? city} />
 		{:else}
 			<div class="empty nothing">
-				<h3>No hay fotos en esta zona</h3>
-				<p>Mueve el mapa o aleja el zoom para ver más.</p>
+				<h3>{t('empty')}</h3>
+				<p>{t('emptyText')}</p>
 			</div>
 		{/if}
 	</div>

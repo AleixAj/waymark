@@ -1,5 +1,6 @@
 import { GOOGLE_CLIENT_ID, googleEnabled } from './config';
 import { loadScript } from './script';
+import t from '$lib/i18n/messages/sync';
 
 // Google Identity Services: the sign-in popup and the access tokens
 const GIS_SRC = 'https://accounts.google.com/gsi/client';
@@ -93,10 +94,10 @@ class Auth {
 		const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
 			headers: { Authorization: `Bearer ${token}` }
 		});
-		if (!response.ok) throw new AuthError('No se pudo leer tu cuenta de Google');
+		if (!response.ok) throw new AuthError(t('accountFailed'));
 		const info = (await response.json()) as { name?: string; email?: string; picture?: string };
 		this.account = {
-			name: info.name ?? info.email ?? 'Tu cuenta',
+			name: info.name ?? info.email ?? t('yourAccount'),
 			email: info.email ?? '',
 			picture: info.picture ?? null
 		};
@@ -147,12 +148,12 @@ class Auth {
 				scope: SCOPES,
 				callback: (response) => {
 					if (response.error || !response.access_token) {
-						reject(new AuthError('Google no ha dado permiso'));
+						reject(new AuthError(t('noPermission')));
 						return;
 					}
 					// The user can untick Drive in the permission screen
 					if (!api.hasGrantedAllScopes(response, DRIVE_SCOPE)) {
-						reject(new AuthError('Hace falta el permiso de Google Drive para sincronizar'));
+						reject(new AuthError(t('drivePermission')));
 						return;
 					}
 					this.token = response.access_token;
@@ -161,13 +162,7 @@ class Auth {
 					resolve(response.access_token);
 				},
 				error_callback: (error) =>
-					reject(
-						new AuthError(
-							error.type === 'popup_closed'
-								? 'Has cerrado la ventana de Google'
-								: 'No se pudo abrir la ventana de Google'
-						)
-					)
+					reject(new AuthError(error.type === 'popup_closed' ? t('popupClosed') : t('popupFailed')))
 			});
 			client.requestAccessToken({ prompt, login_hint: this.account?.email });
 		});

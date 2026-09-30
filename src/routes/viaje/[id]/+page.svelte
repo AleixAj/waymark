@@ -15,6 +15,8 @@
 	import { fullImageUrl } from '$lib/photos/image';
 	import { formatDay, formatNumber } from '$lib/library/format';
 	import { downloadText, tripToGpx } from '$lib/library/gpx';
+	import t from '$lib/i18n/messages/trip';
+	import tc from '$lib/i18n/messages/common';
 
 	const trip = $derived(library.trips.find((t) => t.id === page.params.id));
 
@@ -142,19 +144,19 @@
 		const startYear = new Date(trip.start).getFullYear();
 		const endYear = new Date(trip.end).getFullYear();
 		const start = formatDay(trip.start) + (startYear !== endYear ? ` ${startYear}` : '');
-		return `${start} – ${formatDay(trip.end)} ${endYear} · ${trip.days} días`;
+		return `${start} – ${formatDay(trip.end)} ${endYear} · ${tc('days', { n: trip.days })}`;
 	}
 </script>
 
-<svelte:head><title>{trip?.title ?? 'Viaje'} · Waymark</title></svelte:head>
+<svelte:head><title>{trip?.title ?? t('trip')} · Waymark</title></svelte:head>
 
-<Breadcrumb items={[{ label: 'Viajes', href: '/' }, { label: trip?.title ?? 'Viaje' }]} />
+<Breadcrumb items={[{ label: t('trips'), href: '/' }, { label: trip?.title ?? t('trip') }]} />
 <MapControls projection={false} style="right: 452px; bottom: 16px" />
 
 {#if trip}
 	<!-- A new panel for each trip: the editable title never keeps the previous trip's text -->
 	{#key trip.id}
-		<aside use:sheet={'half'} class="rpanel panel" aria-label="Viaje">
+		<aside use:sheet={'half'} class="rpanel panel" aria-label={t('trip')}>
 			<div class="scroll" bind:this={scroller}>
 				<div class="cover-wrap">
 					<div class="cover" style:background-image={cover ? `url(${cover})` : undefined}></div>
@@ -165,7 +167,7 @@
 							class="t-h2 title"
 							contenteditable="plaintext-only"
 							spellcheck="false"
-							aria-label="Nombre del viaje (editable)"
+							aria-label={t('nameLabel')}
 							onblur={rename}
 							onkeydown={titleKeys}
 						>
@@ -181,28 +183,29 @@
 							>
 						</div>
 						<div class="col">
-							<span class="mono num">{trip.stops.length}</span><span class="t-small t3">etapas</span
+							<span class="mono num">{trip.stops.length}</span><span class="t-small t3"
+								>{t('stops', { n: trip.stops.length })}</span
 							>
 						</div>
 						<div class="col">
 							<span class="mono num">{trip.countries.length}</span><span class="t-small t3"
-								>{trip.countries.length === 1 ? 'país' : 'países'}</span
+								>{tc('countriesWord', { n: trip.countries.length })}</span
 							>
 						</div>
 						<div class="col">
 							<span class="mono num">{formatNumber(trip.photoIds.length)}</span><span
-								class="t-small t3">fotos</span
+								class="t-small t3">{tc('photosWord', { n: trip.photoIds.length })}</span
 							>
 						</div>
 					</div>
 					<div class="row actions">
 						<button class="btn btn-primary grow" onclick={play}>
-							<Icon name={playing ? 'pause' : 'play'} />{playing ? 'Pausar' : 'Reproducir viaje'}
+							<Icon name={playing ? 'pause' : 'play'} />{playing ? t('pause') : t('play')}
 						</button>
 						<button
 							class="btn btn-secondary btn-icon"
-							aria-label="Exportar la ruta (GPX)"
-							title="Exportar la ruta (GPX)"
+							aria-label={t('exportGpx')}
+							title={t('exportGpx')}
 							onclick={() =>
 								downloadText(`${trip!.title}.gpx`, tripToGpx(trip!), 'application/gpx+xml')}
 						>
@@ -210,8 +213,8 @@
 						</button>
 						<button
 							class="btn btn-secondary btn-icon"
-							aria-label="Ver todas las fotos"
-							title="Ver todas las fotos"
+							aria-label={t('allPhotos')}
+							title={t('allPhotos')}
 							onclick={() => ui.openViewer(trip!.photoIds, trip!.photoIds[0], trip!.title)}
 						>
 							<Icon name="expand" />
@@ -230,7 +233,7 @@
 									mapView.activeStop = stop.index;
 									mapView.flyTo([stop.lng, stop.lat], 11);
 								}}
-								aria-label="Ver la etapa {stop.index} en el mapa">{stop.index}</button
+								aria-label={t('showStop', { n: stop.index })}>{stop.index}</button
 							>
 							<div class="col grow">
 								<b>{i > 0 ? `${trip.stops[i - 1].city} → ` : ''}{stop.city}</b>
@@ -259,9 +262,9 @@
 {:else if library.loaded}
 	<aside use:sheet={'half'} class="rpanel panel">
 		<div class="empty missing">
-			<h3>Este viaje ya no existe</h3>
-			<p>Puede que hayas borrado sus fotos o cambiado sus fechas.</p>
-			<a class="btn btn-secondary btn-sm" href="/">Volver al globo</a>
+			<h3>{t('missing')}</h3>
+			<p>{t('missingText')}</p>
+			<a class="btn btn-secondary btn-sm" href="/">{t('backToGlobe')}</a>
 		</div>
 	</aside>
 {/if}

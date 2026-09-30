@@ -25,6 +25,7 @@ import { createWorker, processInWorker } from '$lib/photos/importer';
 import { syncCopy } from './copy';
 import { demoMode } from '$lib/state/mode';
 import { mergeTrips, planSync, toRemote } from './plan';
+import t from '$lib/i18n/messages/sync';
 
 // Everything lives in one folder of the user's Drive
 const FOLDER = 'Waymark';
@@ -122,7 +123,7 @@ class Sync {
 		try {
 			token = await auth.getToken(interactive);
 		} catch (error) {
-			this.fail(error instanceof AuthError ? error.message : 'No se pudo conectar con Google');
+			this.fail(error instanceof AuthError ? error.message : t('connectFailed'));
 			return;
 		}
 		if (!token) {
@@ -147,9 +148,9 @@ class Sync {
 				auth.expire();
 				this.status = 'reconnect';
 			} else if (error instanceof DriveError && error.status === 403) {
-				this.fail('Tu Google Drive está lleno o no da permiso');
+				this.fail(t('driveFull'));
 			} else {
-				this.fail('No se pudo sincronizar con Google Drive');
+				this.fail(t('syncFailed'));
 			}
 		} finally {
 			this.progress = null;

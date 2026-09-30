@@ -9,6 +9,9 @@
 	import { ui } from '$lib/state/ui.svelte';
 	import { loadThumbUrl, thumbUrl } from '$lib/state/thumbs.svelte';
 	import { mapView } from './view.svelte';
+	import { i18n } from '$lib/i18n/i18n.svelte';
+	import tc from '$lib/i18n/messages/common';
+	import t from '$lib/i18n/messages/map';
 
 	interface Props {
 		points: LocatedPoint[];
@@ -196,7 +199,7 @@
 			const place = labelOf(item, key, Math.floor(zoom));
 			const label = showLabels ? place : '';
 			const html = markerHtml(count, photoMode, label, firstId, showCount);
-			const ariaLabel = place ? `${place}, ${count} fotos` : `${count} fotos`;
+			const ariaLabel = place ? t('marker', { place, n: count }) : tc('photos', { n: count });
 
 			const existing = markers.get(key);
 			if (existing) {
@@ -213,8 +216,8 @@
 					}
 					existing.html = html;
 					existing.thumb = firstId;
-					existing.el.setAttribute('aria-label', ariaLabel);
 				}
+				existing.el.setAttribute('aria-label', ariaLabel);
 				continue;
 			}
 
@@ -306,7 +309,7 @@
 			// The panel lists every photo of the circle while the map zooms into it;
 			// clicking a smaller circle there narrows the list down
 			const photos = leaves(item);
-			ui.zone = { ids: photos.map((p) => p.id), title: placeLabel(photos) || 'Fotos' };
+			ui.zone = { ids: photos.map((p) => p.id), title: placeLabel(photos) || t('photos') };
 			// Frame all the photos of the circle, at least one zoom step closer so it splits
 			const target = Math.min(index.getClusterExpansionZoom(item.properties.cluster_id), 17);
 			const spread = photos.some((p) => p.lat !== photos[0].lat || p.lng !== photos[0].lng);
@@ -331,9 +334,9 @@
 			lng,
 			lat,
 			ids: [...new Set(pick)],
-			title: placeLabel(items) || 'Fotos',
+			title: placeLabel(items) || t('photos'),
 			count: items.length,
-			meta: `${formatRange(items[0].takenAt, items[items.length - 1].takenAt)} · ${places} ${places === 1 ? 'lugar' : 'lugares'}`
+			meta: `${formatRange(items[0].takenAt, items[items.length - 1].takenAt)} · ${tc('places', { n: places })}`
 		};
 	}
 
@@ -356,6 +359,7 @@
 	$effect(() => {
 		void index;
 		void labels;
+		void i18n.locale;
 		labelCache = new Map();
 		// render() also writes state (tick), so it must not become a dependency
 		untrack(() => render(true));
@@ -408,7 +412,7 @@
 		</div>
 		<div class="row between">
 			<span class="title">{preview.title}</span>
-			<span class="mono t3 small">{formatNumber(preview.count)} fotos</span>
+			<span class="mono t3 small">{tc('photos', { n: preview.count })}</span>
 		</div>
 		<div class="mono t3 small">{preview.meta}</div>
 	</div>

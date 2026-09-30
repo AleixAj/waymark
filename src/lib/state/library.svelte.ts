@@ -23,6 +23,7 @@ import { isLocated, type PhotoPoint } from '$lib/photos/types';
 import { cityCounts, countrySummaries } from '$lib/library/stats';
 import { inRange, type TimeRange } from '$lib/library/timeline';
 import { mergeByTime } from '$lib/library/merge';
+import t from '$lib/i18n/messages/library';
 import { detectTrips, findHome, type Trip } from '$lib/library/trips';
 import { estimateLocations } from '$lib/library/estimate';
 import { countries } from './countries.svelte';
@@ -213,8 +214,8 @@ class Library {
 			if (!controller.signal.aborted) {
 				this.errors = [
 					{
-						name: 'Importación',
-						reason: message ?? 'Se ha interrumpido',
+						name: t('import'),
+						reason: message ?? t('interrupted'),
 						retryable: false,
 						item: { name: '', open: async () => new File([], '') }
 					}

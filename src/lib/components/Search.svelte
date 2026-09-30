@@ -7,7 +7,9 @@
 	import { countries } from '$lib/state/countries.svelte';
 	import { ui } from '$lib/state/ui.svelte';
 	import { mapView } from '$lib/map/view.svelte';
-	import { formatNumber, formatRange } from '$lib/library/format';
+	import { formatRange } from '$lib/library/format';
+	import tc from '$lib/i18n/messages/common';
+	import t from '$lib/i18n/messages/search';
 
 	interface Result {
 		group: string;
@@ -41,9 +43,9 @@
 		const list: Result[] = [];
 		if (coords) {
 			list.push({
-				group: 'Coordenadas',
+				group: t('coords'),
 				label: `${coords.lat}, ${coords.lng}`,
-				detail: 'Ir a este punto',
+				detail: t('goHere'),
 				icon: 'pin',
 				run: () => {
 					goto('/');
@@ -59,9 +61,9 @@
 			.slice(0, q ? 6 : 4);
 		for (const trip of trips) {
 			list.push({
-				group: 'Viajes',
+				group: t('trips'),
 				label: trip.title,
-				detail: `${formatRange(trip.start, trip.end)} · ${formatNumber(trip.photoIds.length)} fotos`,
+				detail: `${formatRange(trip.start, trip.end)} · ${tc('photos', { n: trip.photoIds.length })}`,
 				icon: 'route',
 				run: () => goto(`/viaje/${trip.id}`)
 			});
@@ -82,9 +84,9 @@
 		for (const c of countryMatches) {
 			const count = visitedCount.get(c.iso3);
 			list.push({
-				group: 'Países',
+				group: t('countries'),
 				label: c.name,
-				detail: count ? `${formatNumber(count)} fotos` : 'Sin fotos',
+				detail: count ? tc('photos', { n: count }) : t('noPhotos'),
 				icon: 'globe',
 				run: () => goto(`/pais/${c.iso3}`)
 			});
@@ -94,9 +96,9 @@
 			const cities = library.cityList.filter((c) => normalize(c.city).includes(q)).slice(0, 6);
 			for (const c of cities) {
 				list.push({
-					group: 'Ciudades',
+					group: t('cities'),
 					label: c.city,
-					detail: `${countries.name(c.country)} · ${formatNumber(c.count)} fotos`,
+					detail: `${countries.name(c.country)} · ${tc('photos', { n: c.count })}`,
 					icon: 'pin',
 					run: () => goto(`/lugar/${c.country}/${encodeURIComponent(c.city)}`)
 				});
@@ -146,7 +148,7 @@
 		use:focusTrap
 		tabindex="-1"
 		aria-modal="true"
-		aria-label="Buscar"
+		aria-label={tc('search')}
 		onclick={(e) => e.stopPropagation()}
 	>
 		<div class="row field">
@@ -155,8 +157,8 @@
 				bind:this={input}
 				bind:value={query}
 				onkeydown={onKey}
-				placeholder="Buscar país, ciudad o viaje…"
-				aria-label="Buscar"
+				placeholder={t('placeholder')}
+				aria-label={tc('search')}
 				role="combobox"
 				aria-expanded={results.length > 0}
 				aria-controls="search-results"
@@ -187,25 +189,25 @@
 				{/each}
 			</ul>
 			<div class="row foot mono t3">
-				<span class="row"><span class="kbd">↑</span><span class="kbd">↓</span> moverse</span>
-				<span class="row"><span class="kbd">↵</span> abrir</span>
+				<span class="row"><span class="kbd">↑</span><span class="kbd">↓</span> {t('move')}</span>
+				<span class="row"><span class="kbd">↵</span> {t('open')}</span>
 			</div>
 		{:else}
 			<div class="empty none">
 				<svg class="ill" viewBox="0 0 72 72" aria-hidden="true">
 					<circle cx="32" cy="32" r="18" /><path d="M45 45l14 14" /><path class="a" d="M25 32h14" />
 				</svg>
-				<h3>Ningún lugar coincide con «{query}»</h3>
-				<p>Busca por país, ciudad o nombre de viaje. También puedes pegar unas coordenadas.</p>
+				<h3>{t('noMatch', { query })}</h3>
+				<p>{t('noMatchHint')}</p>
 				<div class="row buttons">
 					<button
 						class="btn btn-secondary btn-sm"
 						onclick={() => {
 							query = '';
 							showAllCountries = true;
-						}}>Ver todos los países</button
+						}}>{t('allCountries')}</button
 					>
-					<button class="btn btn-ghost btn-sm" onclick={() => (query = '')}>Borrar búsqueda</button>
+					<button class="btn btn-ghost btn-sm" onclick={() => (query = '')}>{t('clear')}</button>
 				</div>
 			</div>
 		{/if}

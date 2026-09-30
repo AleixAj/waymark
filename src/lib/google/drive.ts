@@ -1,5 +1,7 @@
 // Small client for the Google Drive REST API (v3). Drive accepts calls straight
 // from the browser with the user's token, so Waymark needs no server.
+import t from '$lib/i18n/messages/sync';
+
 const API = 'https://www.googleapis.com/drive/v3';
 const UPLOAD = 'https://www.googleapis.com/upload/drive/v3';
 const FOLDER_TYPE = 'application/vnd.google-apps.folder';
@@ -12,7 +14,7 @@ export interface DriveFile {
 /** A failed Drive call; 401 means the token expired */
 export class DriveError extends Error {
 	constructor(public status: number) {
-		super(`Drive respondió ${status}`);
+		super(t('driveStatus', { status: String(status) }));
 	}
 }
 

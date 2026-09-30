@@ -1,14 +1,18 @@
 import { gray, mix, type MapColors } from './colors';
+import t from '$lib/i18n/messages/map';
 
 /** Color styles of the globe; "natural" is the one of the design */
 export type Palette = 'natural' | 'gris' | 'noche' | 'atlas';
 
-export const PALETTES: { id: Palette; label: string; hint: string }[] = [
-	{ id: 'natural', label: 'Natural', hint: 'Relieve suave y tus países en ámbar' },
-	{ id: 'gris', label: 'Gris', hint: 'El mundo en grises y tus países a color' },
-	{ id: 'noche', label: 'Noche', hint: 'Tierra oscura y tus países iluminados' },
-	{ id: 'atlas', label: 'Atlas', hint: 'Papel antiguo y tus países en terracota' }
-];
+/** The color styles, with their names in the current language */
+export function palettes(): { id: Palette; label: string; hint: string }[] {
+	return [
+		{ id: 'natural', label: t('natural'), hint: t('naturalHint') },
+		{ id: 'gris', label: t('gris'), hint: t('grisHint') },
+		{ id: 'noche', label: t('noche'), hint: t('nocheHint') },
+		{ id: 'atlas', label: t('atlas'), hint: t('atlasHint') }
+	];
+}
 
 export interface PaletteColors {
 	ocean: string;

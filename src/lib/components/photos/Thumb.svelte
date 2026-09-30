@@ -3,6 +3,7 @@
 	import { thumbUrl } from '$lib/state/thumbs.svelte';
 	import { ui } from '$lib/state/ui.svelte';
 	import { whenVisible } from './visible';
+	import tc from '$lib/i18n/messages/common';
 
 	interface Props {
 		id: string;
@@ -45,7 +46,7 @@
 	{onclick}
 	onmouseenter={() => (ui.hoveredPhoto = id)}
 	onmouseleave={() => (ui.hoveredPhoto = null)}
-	aria-label={label || 'Abrir foto'}
+	aria-label={label || tc('openPhoto')}
 	aria-pressed={checkable ? selected : undefined}
 >
 	{#if url}<img src={url} alt="" draggable="false" />{/if}

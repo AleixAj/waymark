@@ -2,10 +2,12 @@
 	import Icon from './ui/Icon.svelte';
 	import { settings } from '$lib/state/settings.svelte';
 	import { readMapColors } from '$lib/map/colors';
-	import { PALETTES, paletteColors } from '$lib/map/palette';
+	import { palettes, paletteColors } from '$lib/map/palette';
+	import t from '$lib/i18n/messages/map';
 
 	let open = $state(false);
 	let wrap = $state<HTMLDivElement>();
+	const list = $derived(palettes());
 
 	// A tiny globe per style, painted with that style's real colors.
 	// Read again when the theme changes, because the colors come from the theme.
@@ -14,7 +16,7 @@
 		void settings.resolvedTheme;
 		const c = readMapColors();
 		return Object.fromEntries(
-			PALETTES.map(({ id }) => {
+			list.map(({ id }) => {
 				const p = paletteColors(c, id);
 				return [
 					id,
@@ -41,7 +43,7 @@
 		<button
 			class="btn btn-ghost"
 			class:on={open}
-			aria-label="Estilo de colores del globo"
+			aria-label={t('paletteButton')}
 			aria-expanded={open}
 			onclick={() => (open = !open)}
 		>
@@ -50,9 +52,9 @@
 	</div>
 
 	{#if open}
-		<div class="menu panel" role="radiogroup" aria-label="Estilo de colores">
-			<p class="t-label title">Colores del globo</p>
-			{#each PALETTES as palette (palette.id)}
+		<div class="menu panel" role="radiogroup" aria-label={t('paletteGroup')}>
+			<p class="t-label title">{t('paletteTitle')}</p>
+			{#each list as palette (palette.id)}
 				{@const s = swatches[palette.id]}
 				<button
 					class="option"

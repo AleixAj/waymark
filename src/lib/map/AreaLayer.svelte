@@ -6,6 +6,8 @@
 	import { formatNumber } from '$lib/library/format';
 	import { readMapColors } from './colors';
 	import { mapView } from './view.svelte';
+	import { i18n } from '$lib/i18n/i18n.svelte';
+	import t from '$lib/i18n/messages/map';
 
 	const map = mapView.map!;
 	const SOURCE = 'city-areas';
@@ -72,7 +74,7 @@
 			count.className = 'n';
 			count.textContent = formatNumber(area.photoIds.length);
 			el.append(name, count);
-			el.setAttribute('aria-label', `${area.name}, ${area.photoIds.length} fotos`);
+			el.setAttribute('aria-label', t('marker', { place: area.name, n: area.photoIds.length }));
 			el.addEventListener('click', (event) => {
 				event.stopPropagation();
 				mapView.activeArea = mapView.activeArea === area.name ? null : area.name;
@@ -108,6 +110,8 @@
 
 	$effect(() => {
 		const areas = mapView.areas ?? [];
+		// Also on a language change, for the labels read by screen readers
+		void i18n.locale;
 		untrack(() => drawLabels(areas));
 	});
 

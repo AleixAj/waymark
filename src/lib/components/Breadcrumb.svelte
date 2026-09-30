@@ -1,10 +1,11 @@
 <script lang="ts">
 	import Icon from './ui/Icon.svelte';
+	import t from '$lib/i18n/messages/sidebar';
 
 	let { items }: { items: { label: string; href?: string }[] } = $props();
 </script>
 
-<nav class="crumbs panel row" aria-label="Ruta">
+<nav class="crumbs panel row" aria-label={t('path')}>
 	{#each items as item, i (i)}
 		{#if item.href}
 			<a class="btn btn-ghost btn-sm" href={item.href}>{item.label}</a>

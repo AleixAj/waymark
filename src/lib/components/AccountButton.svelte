@@ -7,7 +7,9 @@
 	import { goto } from '$app/navigation';
 	import { library } from '$lib/state/library.svelte';
 	import { demoMode } from '$lib/state/mode';
-	import { formatNumber } from '$lib/library/format';
+	import { i18n } from '$lib/i18n/i18n.svelte';
+	import t from '$lib/i18n/messages/account';
+	import tc from '$lib/i18n/messages/common';
 
 	let open = $state(false);
 	let wrap = $state<HTMLDivElement>();
@@ -33,7 +35,7 @@
 				await goto('/');
 			}
 		} catch {
-			error = 'No se pudo cerrar la sesión';
+			error = t('signOutFailed');
 		} finally {
 			busy = false;
 		}
@@ -44,21 +46,21 @@
 	const status = $derived.by(() => {
 		if (sync.status === 'syncing') {
 			const p = sync.progress;
-			return p && p.total ? `Sincronizando ${p.done} de ${p.total}…` : 'Sincronizando…';
+			return p && p.total ? t('syncingCount', { done: p.done, total: p.total }) : t('syncing');
 		}
-		if (sync.status === 'reconnect') return 'La sesión ha caducado: pulsa Sincronizar';
-		if (sync.status === 'error') return sync.message ?? 'No se pudo sincronizar';
-		if (sync.lastSync) return `Sincronizado ${ago(sync.lastSync)}`;
-		return 'Sin sincronizar todavía';
+		if (sync.status === 'reconnect') return t('expired');
+		if (sync.status === 'error') return sync.message ?? t('syncFailed');
+		if (sync.lastSync) return t('synced', { when: ago(sync.lastSync) });
+		return t('neverSynced');
 	});
 
 	function ago(time: number) {
 		const minutes = Math.round((Date.now() - time) / 60_000);
-		if (minutes < 1) return 'ahora mismo';
-		if (minutes < 60) return `hace ${minutes} min`;
+		if (minutes < 1) return t('justNow');
+		if (minutes < 60) return t('minutesAgo', { n: minutes });
 		const hours = Math.round(minutes / 60);
-		if (hours < 24) return `hace ${hours} h`;
-		return new Date(time).toLocaleDateString('es', { day: 'numeric', month: 'short' });
+		if (hours < 24) return t('hoursAgo', { n: hours });
+		return new Date(time).toLocaleDateString(i18n.tag, { day: 'numeric', month: 'short' });
 	}
 
 	async function attempt(action: () => Promise<void>) {
@@ -67,7 +69,7 @@
 		try {
 			await action();
 		} catch (e) {
-			error = e instanceof Error ? e.message : 'Algo ha fallado';
+			error = e instanceof Error ? e.message : t('failed');
 		} finally {
 			busy = false;
 		}
@@ -91,10 +93,10 @@
 			<button
 				class="btn btn-secondary enter"
 				disabled={busy}
-				aria-label="Entrar con Google"
+				aria-label={t('signIn')}
 				onclick={() => attempt(signIn)}
 			>
-				<GoogleMark /><span class="label">Entrar</span>
+				<GoogleMark /><span class="label">{t('signInShort')}</span>
 			</button>
 			{#if error}<p class="t-small bubble panel" role="alert">{error}</p>{/if}
 		{:else}
@@ -102,7 +104,7 @@
 				class="avatar"
 				class:syncing={sync.status === 'syncing'}
 				class:warn={sync.status === 'reconnect' || sync.status === 'error'}
-				aria-label="Tu cuenta: {account.name}"
+				aria-label={t('yourAccount', { name: account.name })}
 				aria-expanded={open}
 				onclick={() => (open = !open)}
 			>
@@ -130,27 +132,27 @@
 						disabled={busy || sync.status === 'syncing'}
 						onclick={() => attempt(() => sync.run(true))}
 					>
-						<Icon name="refresh" />Sincronizar ahora
+						<Icon name="refresh" />{t('syncNow')}
 					</button>
 					{#if pending > 0}
 						<div class="col confirm" role="alert">
 							<p class="t-small">
-								{formatNumber(pending)}
-								{pending === 1 ? 'foto aún no está' : 'fotos aún no están'} en tu Drive. Si sales ahora,
-								se borrarán de este navegador.
+								{t('pending', { n: pending })}
 							</p>
 							<div class="row buttons">
-								<button class="btn btn-ghost btn-sm" onclick={() => (pending = 0)}>Cancelar</button>
+								<button class="btn btn-ghost btn-sm" onclick={() => (pending = 0)}
+									>{tc('cancel')}</button
+								>
 								<button class="btn btn-danger btn-sm" disabled={busy} onclick={() => leave(true)}
-									>Salir igualmente</button
+									>{t('leaveAnyway')}</button
 								>
 							</div>
 						</div>
 					{:else}
 						<button class="menu-item" role="menuitem" disabled={busy} onclick={() => leave()}>
-							<Icon name="arrowL" />{busy ? 'Guardando en Drive…' : 'Cerrar sesión'}
+							<Icon name="arrowL" />{busy ? t('saving') : t('signOut')}
 						</button>
-						<p class="t-small t3 foot">Tu álbum queda guardado en tu Google Drive.</p>
+						<p class="t-small t3 foot">{t('savedNote')}</p>
 					{/if}
 				</div>
 			{/if}

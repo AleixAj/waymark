@@ -2,9 +2,11 @@
 	import Thumb from './Thumb.svelte';
 	import { growingLimit } from './growing.svelte';
 	import type { PhotoPoint } from '$lib/photos/types';
-	import { dayKey, formatDay, formatNumber, formatRange } from '$lib/library/format';
+	import { dayKey, formatDay, formatRange } from '$lib/library/format';
 	import { groupBy, ranked } from '$lib/library/trips';
 	import { ui } from '$lib/state/ui.svelte';
+	import tc from '$lib/i18n/messages/common';
+	import t from '$lib/i18n/messages/photos';
 
 	interface Props {
 		photos: PhotoPoint[];
@@ -33,7 +35,7 @@
 				const sorted = [...items].sort((a, b) => a.takenAt - b.takenAt);
 				return {
 					key: name || '-',
-					title: name || 'Otros lugares',
+					title: name || t('otherPlaces'),
 					place: formatRange(sorted[0].takenAt, sorted[sorted.length - 1].takenAt),
 					items: sorted
 				};
@@ -58,19 +60,19 @@
 </script>
 
 <div class="row order">
-	<span class="t-small t3">Ordenar</span>
-	<div class="seg" role="radiogroup" aria-label="Ordenar fotos">
+	<span class="t-small t3">{t('sort')}</span>
+	<div class="seg" role="radiogroup" aria-label={t('sortPhotos')}>
 		<button
 			role="radio"
 			aria-checked={ui.photoOrder === 'place'}
 			class:is-on={ui.photoOrder === 'place'}
-			onclick={() => (ui.photoOrder = 'place')}>Por lugar</button
+			onclick={() => (ui.photoOrder = 'place')}>{t('byPlace')}</button
 		>
 		<button
 			role="radio"
 			aria-checked={ui.photoOrder === 'date'}
 			class:is-on={ui.photoOrder === 'date'}
-			onclick={() => (ui.photoOrder = 'date')}>Por fecha</button
+			onclick={() => (ui.photoOrder = 'date')}>{t('byDate')}</button
 		>
 	</div>
 </div>
@@ -85,7 +87,7 @@
 				>{day.title}
 				{#if day.place}<span class="t3 light">· {day.place}</span>{/if}</b
 			>
-			<span class="mono">{formatNumber(day.items.length)} fotos</span>
+			<span class="mono">{tc('photos', { n: day.items.length })}</span>
 		</div>
 		<div class="pgrid" style:grid-template-columns="repeat({columns}, 1fr)">
 			{#each day.items as photo (photo.id)}

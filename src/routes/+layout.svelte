@@ -40,6 +40,8 @@
 	import { auth } from '$lib/google/auth.svelte';
 	import { sync } from '$lib/sync/sync.svelte';
 	import { demoMode } from '$lib/state/mode';
+	import t from '$lib/i18n/messages/layout';
+	import tc from '$lib/i18n/messages/common';
 
 	let { children } = $props();
 
@@ -136,8 +138,8 @@
 
 	/** Your photos go in your own album: not in the demo, and only with Google */
 	function importAllowed() {
-		if (demoMode) ui.importNote = 'Sal de la demo y entra con Google para añadir tus fotos';
-		else if (!canImport()) ui.importNote = 'Entra con Google para añadir tus fotos';
+		if (demoMode) ui.importNote = t('demoImport');
+		else if (!canImport()) ui.importNote = t('signInImport');
 		else return true;
 		return false;
 	}
@@ -214,7 +216,7 @@
 				<span class="t-small">{ui.importNote}</span>
 				<button
 					class="btn btn-ghost btn-icon btn-sm"
-					aria-label="Cerrar"
+					aria-label={tc('close')}
 					onclick={() => (ui.importNote = null)}>×</button
 				>
 			</div>
@@ -224,8 +226,8 @@
 	{#if fileDrag && !demoMode && canImport()}
 		<div class="file-drop">
 			<div class="col">
-				<span class="t-h3">Suelta las fotos para colocarlas en el globo</span>
-				<span class="t-small t2">Leemos la ubicación de cada una en este navegador</span>
+				<span class="t-h3">{t('dropTitle')}</span>
+				<span class="t-small t2">{t('dropLead')}</span>
 			</div>
 		</div>
 	{/if}

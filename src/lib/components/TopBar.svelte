@@ -11,6 +11,8 @@
 	import { demoMode, enterDemo, exitDemo } from '$lib/state/mode';
 	import { canImport } from '$lib/state/importing';
 	import { signIn } from '$lib/sync/sync.svelte';
+	import t from '$lib/i18n/messages/topbar';
+	import tc from '$lib/i18n/messages/common';
 
 	const path = $derived(page.url.pathname);
 	const tab = $derived(
@@ -62,31 +64,29 @@
 <header class="topbar panel">
 	<div class="row">
 		{#if path !== '/'}
-			<button class="btn btn-ghost btn-icon phone-only" aria-label="Volver" onclick={goBack}>
+			<button class="btn btn-ghost btn-icon phone-only" aria-label={tc('back')} onclick={goBack}>
 				<Icon name="arrowL" />
 			</button>
 		{/if}
-		<a class="logo" href="/" aria-label="Waymark, ir al globo"
-			><Logo /><span class="name">Waymark</span></a
-		>
-		<nav class="tabs" aria-label="Secciones">
+		<a class="logo" href="/" aria-label={t('home')}><Logo /><span class="name">Waymark</span></a>
+		<nav class="tabs" aria-label={t('sections')}>
 			<a
 				class="btn btn-ghost btn-sm"
 				class:is-on={tab === 'globo'}
 				aria-current={tab === 'globo' ? 'page' : undefined}
 				href="/"
-				title="Globo"
+				title={tc('globe')}
 			>
-				<Icon name="globe" /><span class="label">Globo</span>
+				<Icon name="globe" /><span class="label">{tc('globe')}</span>
 			</a>
 			<a
 				class="btn btn-ghost btn-sm"
 				class:is-on={tab === 'sin'}
 				aria-current={tab === 'sin' ? 'page' : undefined}
 				href="/sin-ubicacion"
-				title="Sin ubicación"
+				title={tc('unlocated')}
 			>
-				<Icon name="imageOff" /><span class="label">Sin ubicación</span>
+				<Icon name="imageOff" /><span class="label">{tc('unlocated')}</span>
 				<span class="mono">{library.unlocated.length}</span>
 			</a>
 			<a
@@ -94,16 +94,20 @@
 				class:is-on={tab === 'stats'}
 				aria-current={tab === 'stats' ? 'page' : undefined}
 				href="/estadisticas"
-				title="Estadísticas"
+				title={tc('stats')}
 			>
-				<Icon name="chart" /><span class="label">Estadísticas</span>
+				<Icon name="chart" /><span class="label">{tc('stats')}</span>
 			</a>
 		</nav>
 	</div>
 
-	<button class="search" onclick={() => (ui.searchOpen = true)} aria-label="Buscar ({modKey} K)">
+	<button
+		class="search"
+		onclick={() => (ui.searchOpen = true)}
+		aria-label={t('search', { key: modKey })}
+	>
 		<Icon name="search" size={16} />
-		<span class="placeholder">Buscar país, ciudad o viaje…</span>
+		<span class="placeholder">{t('searchPlaceholder')}</span>
 		<span class="kbds"><span class="kbd">{modKey}</span><span class="kbd">K</span></span>
 	</button>
 
@@ -111,7 +115,7 @@
 		<LanguagePicker />
 		<button
 			class="btn btn-ghost btn-icon"
-			aria-label="Cambiar tema"
+			aria-label={t('theme')}
 			onclick={() => settings.toggleTheme()}
 		>
 			<Icon name={settings.resolvedTheme === 'dark' ? 'sun' : 'moon'} />
@@ -119,30 +123,24 @@
 		<button
 			class="btn btn-ghost btn-icon"
 			class:is-on={ui.settingsOpen}
-			aria-label="Ajustes"
+			aria-label={t('settings')}
 			onclick={() => (ui.settingsOpen = true)}
 		>
 			<Icon name="sliders" />
 		</button>
 		{#if demoMode}
-			<button
-				class="demo-pill"
-				onclick={exitDemo}
-				title="Estás viendo fotos de ejemplo; tu biblioteca no se toca"
-				aria-label="Salir de la demo">Demo<Icon name="x" size={14} /></button
+			<button class="demo-pill" onclick={exitDemo} title={t('demoNote')} aria-label={t('exitDemo')}
+				>{tc('demo')}<Icon name="x" size={14} /></button
 			>
 		{:else}
-			<button
-				class="btn btn-ghost demo-btn"
-				onclick={enterDemo}
-				title="Ver la biblioteca de ejemplo"
-				><Icon name="play" /><span class="label">Ver demo</span></button
+			<button class="btn btn-ghost demo-btn" onclick={enterDemo} title={t('seeDemoTitle')}
+				><Icon name="play" /><span class="label">{t('seeDemo')}</span></button
 			>
 		{/if}
 		<!-- The demo is only for looking: your own photos go in your own album -->
 		{#if !demoMode}
-			<button class="btn btn-secondary" onclick={importPhotos} title="Importar fotos"
-				><Icon name="upload" /><span class="label">Importar</span></button
+			<button class="btn btn-secondary" onclick={importPhotos} title={t('importPhotos')}
+				><Icon name="upload" /><span class="label">{t('import')}</span></button
 			>
 		{/if}
 		<AccountButton />
@@ -153,7 +151,7 @@
 		<AccountButton />
 		<button
 			class="btn btn-ghost btn-icon"
-			aria-label="Menú"
+			aria-label={t('menu')}
 			aria-expanded={menuOpen}
 			onclick={() => (menuOpen = !menuOpen)}
 		>
@@ -162,7 +160,7 @@
 		{#if menuOpen}
 			<div class="menu panel" role="menu">
 				<a class="menu-item" role="menuitem" href="/" onclick={() => (menuOpen = false)}>
-					<Icon name="globe" />Globo
+					<Icon name="globe" />{tc('globe')}
 				</a>
 				<a
 					class="menu-item"
@@ -170,7 +168,7 @@
 					href="/sin-ubicacion"
 					onclick={() => (menuOpen = false)}
 				>
-					<Icon name="imageOff" />Sin ubicación
+					<Icon name="imageOff" />{tc('unlocated')}
 					<span class="mono t3 count">{library.unlocated.length}</span>
 				</a>
 				<a
@@ -179,16 +177,16 @@
 					href="/estadisticas"
 					onclick={() => (menuOpen = false)}
 				>
-					<Icon name="chart" />Estadísticas
+					<Icon name="chart" />{tc('stats')}
 				</a>
 				<div class="hr"></div>
 				{#if !demoMode}
 					<button class="menu-item" role="menuitem" onclick={importPhotos}
-						><Icon name="upload" />Importar fotos</button
+						><Icon name="upload" />{t('importPhotos')}</button
 					>
 				{/if}
 				<button class="menu-item" role="menuitem" onclick={demoMode ? exitDemo : enterDemo}
-					><Icon name="play" />{demoMode ? 'Salir de la demo' : 'Ver demo'}</button
+					><Icon name="play" />{demoMode ? t('exitDemo') : t('seeDemo')}</button
 				>
 				<button
 					class="menu-item"
@@ -196,11 +194,11 @@
 					onclick={() => {
 						menuOpen = false;
 						ui.settingsOpen = true;
-					}}><Icon name="sliders" />Ajustes</button
+					}}><Icon name="sliders" />{t('settings')}</button
 				>
 				<button class="menu-item" role="menuitem" onclick={() => settings.toggleTheme()}>
 					<Icon name={settings.resolvedTheme === 'dark' ? 'sun' : 'moon'} />
-					{settings.resolvedTheme === 'dark' ? 'Tema claro' : 'Tema oscuro'}
+					{settings.resolvedTheme === 'dark' ? t('lightTheme') : t('darkTheme')}
 				</button>
 			</div>
 		{/if}

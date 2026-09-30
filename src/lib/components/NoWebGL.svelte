@@ -3,6 +3,7 @@
 	import Icon from './ui/Icon.svelte';
 	import { library } from '$lib/state/library.svelte';
 	import { cityCounts } from '$lib/library/stats';
+	import t from '$lib/i18n/messages/layout';
 
 	// Without WebGL there is no globe. A flat SVG map keeps the app usable:
 	// the panels, lists, viewer and statistics don't need WebGL.
@@ -23,14 +24,11 @@
 			/>
 			<path class="a" d="M16 56L56 16" />
 		</svg>
-		<h3>Tu navegador no puede mostrar el globo 3D</h3>
-		<p>
-			Falta soporte para WebGL o está desactivado. Puedes seguir con el mapa plano: tus fotos,
-			viajes, países y estadísticas siguen disponibles.
-		</p>
+		<h3>{t('noGlobe')}</h3>
+		<p>{t('noGlobeText')}</p>
 		<div class="row buttons">
 			<button class="btn btn-primary btn-sm" onclick={() => (dismissed = true)}>
-				<Icon name="map" />Usar mapa plano
+				<Icon name="map" />{t('flatMap')}
 			</button>
 			<a
 				class="btn btn-ghost btn-sm"
@@ -38,7 +36,7 @@
 				target="_blank"
 				rel="noreferrer"
 			>
-				Cómo activar WebGL
+				{t('enableWebGL')}
 			</a>
 		</div>
 	</div>
