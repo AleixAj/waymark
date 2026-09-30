@@ -6,6 +6,13 @@
 		<meta name="text-scale" content="scale" />
 		<meta name="description" content="Tus fotos de viaje sobre un globo 3D interactivo." />
 		<meta name="theme-color" content="#070b14" />
+		<!-- The page is dark from its very first frame (no white flash while it loads);
+		     the light theme sets its own background once the styles arrive -->
+		<style>
+			html {
+				background: #070b14;
+			}
+		</style>
 		<link rel="icon" type="image/png" href="%sveltekit.assets%/favicon.png" />
 		<link rel="apple-touch-icon" href="%sveltekit.assets%/apple-touch-icon.png" />
 		<link rel="manifest" href="%sveltekit.assets%/manifest.webmanifest" />

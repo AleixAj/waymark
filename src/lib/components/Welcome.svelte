@@ -28,6 +28,36 @@
 	const looking = $derived(auth.signedIn && sync.status === 'syncing');
 	const firstName = $derived(auth.account?.name.split(' ')[0] ?? '');
 
+	// Going in: the camera of the logo takes a photo (press, flash) and the screen
+	// moves forward into it. Skipped with reduced motion.
+	let phase = $state<'idle' | 'flash' | 'leave'>('idle');
+	const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+	function flash() {
+		if (settings.reducedMotion) return;
+		phase = 'flash';
+		setTimeout(() => {
+			if (phase === 'flash') phase = 'idle';
+		}, 700);
+	}
+
+	// Google's window must open right on the click (browsers block it otherwise),
+	// so the flash happens while it opens
+	function signInWithFlash() {
+		flash();
+		enter();
+	}
+
+	async function openDemo() {
+		if (!settings.reducedMotion) {
+			phase = 'flash';
+			await wait(420);
+			phase = 'leave';
+			await wait(480);
+		}
+		enterDemo();
+	}
+
 	async function enter() {
 		error = null;
 		busy = true;
@@ -60,6 +90,8 @@
 </script>
 
 <div class="shade" aria-hidden="true"></div>
+<div class="flash" class:on={phase !== 'idle'} aria-hidden="true"></div>
+<div class="curtain" class:on={phase === 'leave'} aria-hidden="true"></div>
 
 <header class="row top">
 	<div class="logo"><Logo />Waymark</div>
@@ -76,8 +108,11 @@
 	</div>
 </header>
 
-<main class="col welcome">
-	<img class="hero-logo" src={logo} alt="" width="442" height="360" />
+<main class="col welcome" class:leaving={phase === 'leave'}>
+	<div class="camera" class:snap={phase !== 'idle'}>
+		<img class="hero-logo" src={logo} alt="" width="442" height="360" />
+		<span class="burst" aria-hidden="true"></span>
+	</div>
 	<h1 class="wordmark">Waymark</h1>
 
 	{#if gate}
@@ -87,11 +122,11 @@
 				{t('gateLead')}
 			</p>
 			<div class="col ways">
-				<button class="btn btn-lg google" disabled={busy} onclick={enter}
+				<button class="btn btn-lg google" disabled={busy} onclick={signInWithFlash}
 					><span class="g"><GoogleMark /></span>{busy ? t('opening') : t('continue')}</button
 				>
 				<div class="row t-small t3 or" aria-hidden="true">{t('or')}</div>
-				<button class="btn btn-lg demo-way" onclick={enterDemo}
+				<button class="btn btn-lg demo-way" onclick={openDemo}
 					><Icon name="play" />{t('seeDemo')}</button
 				>
 				<p class="t-small t3">{t('demoLead')}</p>
@@ -149,7 +184,7 @@
 				{t('privacyLocal')}
 			{/if}
 		</p>
-		<button class="demo" onclick={enterDemo}><Icon name="play" size={14} />{t('tryDemo')}</button>
+		<button class="demo" onclick={openDemo}><Icon name="play" size={14} />{t('tryDemo')}</button>
 	{/if}
 </main>
 
@@ -502,6 +537,112 @@
 
 	.demo:active {
 		transform: scale(0.97);
+	}
+
+	/* The photo being taken: the camera is pressed, its lens bursts with light and
+	   the whole screen flashes white for a moment */
+	.camera {
+		position: relative;
+		display: grid;
+		place-items: center;
+	}
+
+	.camera.snap {
+		animation: press 0.42s var(--ease-out);
+	}
+
+	@keyframes press {
+		25% {
+			transform: scale(0.9) translateY(3px);
+		}
+
+		55% {
+			transform: scale(1.06);
+		}
+	}
+
+	.burst {
+		position: absolute;
+		left: 50%;
+		top: 58%;
+		width: 18px;
+		height: 18px;
+		margin: -9px 0 0 -9px;
+		border-radius: 50%;
+		background: radial-gradient(circle, #fff 0%, #fff8e8 35%, oklch(0.85 0.12 70 / 0) 70%);
+		opacity: 0;
+		pointer-events: none;
+	}
+
+	.snap .burst {
+		animation: burst 0.6s 0.08s ease-out;
+	}
+
+	@keyframes burst {
+		0% {
+			opacity: 1;
+			transform: scale(0.2);
+		}
+
+		100% {
+			opacity: 0;
+			transform: scale(28);
+		}
+	}
+
+	.flash {
+		position: fixed;
+		inset: 0;
+		z-index: 50;
+		background: radial-gradient(circle at 50% 30%, #fff 0%, #fff6e6 45%, #ffe9c4 100%);
+		opacity: 0;
+		pointer-events: none;
+	}
+
+	.flash.on {
+		animation: flash 0.55s 0.1s ease-out;
+	}
+
+	@keyframes flash {
+		0% {
+			opacity: 0;
+		}
+
+		12% {
+			opacity: 0.92;
+		}
+
+		100% {
+			opacity: 0;
+		}
+	}
+
+	/* Then the screen moves forward into the photo and fades to the next one */
+	.welcome.leaving {
+		animation: forward 0.5s cubic-bezier(0.55, 0, 0.8, 0.3) forwards;
+	}
+
+	@keyframes forward {
+		to {
+			opacity: 0;
+			filter: blur(6px);
+			transform: translate(-50%, -50%) scale(1.25);
+		}
+	}
+
+	.curtain {
+		position: fixed;
+		inset: 0;
+		z-index: 49;
+		background: var(--bg);
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity 0.4s 0.12s ease-in;
+	}
+
+	.curtain.on {
+		opacity: 1;
+		pointer-events: auto;
 	}
 
 	/* Everything arrives in order: logo, name, sign-in card, then the rest */
