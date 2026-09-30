@@ -74,7 +74,7 @@
 
 <main class="col welcome">
 	<h1 class="wordmark">Waymark</h1>
-	<p class="t2 tagline">Tus fotos, donde las hiciste</p>
+	<p class="tagline">Tu vuelta al mundo, foto a foto</p>
 
 	{#if gate}
 		<div class="gate panel col">
@@ -244,9 +244,14 @@
 	}
 
 	.tagline {
-		font-size: 18px;
-		line-height: 26px;
-		margin-top: clamp(14px, 2.4vw, 28px);
+		margin-top: clamp(22px, 3vw, 34px);
+		font-size: clamp(18px, 2.2vw, 24px);
+		line-height: 1.3;
+		font-weight: 450;
+		letter-spacing: -0.01em;
+		color: var(--t1);
+		opacity: 0.88;
+		text-wrap: balance;
 	}
 
 	.drop {
