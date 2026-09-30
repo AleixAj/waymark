@@ -1,4 +1,4 @@
-# HTTP headers for Cloudflare Pages (other static hosts ignore this file)
+# HTTP headers for Cloudflare (Workers and Pages; other static hosts ignore this file)
 
 /*
   X-Content-Type-Options: nosniff

@@ -1,0 +1,10 @@
+// Cloudflare Workers: serves the static build (no server code).
+// Unknown paths get index.html, so links like /pais/JPN open the app.
+{
+	"name": "waymark",
+	"compatibility_date": "2026-09-01",
+	"assets": {
+		"directory": "./build",
+		"not_found_handling": "single-page-application"
+	}
+}
