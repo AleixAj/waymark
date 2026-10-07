@@ -55,14 +55,14 @@
 
 	const map = mapView.map!;
 
-	// How close two places can be before they share a marker, in screen pixels.
-	// Seen from far away places are small dots, so they can sit much closer than the
-	// numbered circles: Madrid and Lisbon stay two dots instead of one for Iberia.
+	// How close two places can be before they share a marker, in screen pixels
 	const RADIUS = 56;
-	const FAR_RADIUS = 24;
+	const FAR_RADIUS = 40;
 
-	// Clustering indexes, rebuilt only when the list of photos changes: one for the
-	// whole world (dots) and one for closer views (numbered circles and photos)
+	// Clustering indexes, rebuilt only when the list of photos changes. Closer views
+	// (numbered circles and photos) use one index for everything. Seen from far away
+	// each country has its own: places of one country may share a dot (the corners
+	// of Iceland), but two countries never do (Spain and Portugal stay two dots).
 	const indexes = $derived.by(() => {
 		const features = points.map((p): Feature<Point, Props_> => ({
 			type: 'Feature',
@@ -76,13 +76,26 @@
 				lng: p.lng
 			}
 		}));
+		const byCountry = new Map<string, Feature<Point, Props_>[]>();
+		for (const f of features) {
+			const key = f.properties.country ?? '';
+			const list = byCountry.get(key);
+			if (list) list.push(f);
+			else byCountry.set(key, [f]);
+		}
 		return {
-			far: new Supercluster<Props_>({ radius: FAR_RADIUS, maxZoom: COUNT_ZOOM }).load(features),
+			far: [...byCountry.values()].map((list) =>
+				new Supercluster<Props_>({ radius: FAR_RADIUS, maxZoom: COUNT_ZOOM }).load(list)
+			),
 			near: new Supercluster<Props_>({ radius: RADIUS, maxZoom: 16 }).load(features)
 		};
 	});
-	// The index of the markers on screen (their cluster ids belong to it)
-	let index = untrack(() => indexes.near);
+	// Each marker on screen with the index it came from (cluster ids belong to it)
+	let owner = new Map<Item, Supercluster<Props_>>();
+
+	function indexOf(item: Item) {
+		return owner.get(item) ?? indexes.near;
+	}
 
 	const markers = new Map<string, Entry>();
 	// Label of each cluster doesn't change while the index is the same,
@@ -116,7 +129,9 @@
 
 	function leaves(item: Item, limit = Infinity): Props_[] {
 		if (!isCluster(item)) return [item.properties];
-		return index.getLeaves(item.properties.cluster_id, limit).map((l) => l.properties);
+		return indexOf(item)
+			.getLeaves(item.properties.cluster_id, limit)
+			.map((l) => l.properties);
 	}
 
 	function labelOf(item: Item, key: string, zoom: number) {
@@ -176,7 +191,6 @@
 			tick++;
 			return;
 		}
-		index = zoom < COUNT_ZOOM ? indexes.far : indexes.near;
 		const center = map.getCenter();
 		lastQuery = { zoom: Math.floor(zoom), center: [center.lng, center.lat], mode };
 
@@ -195,7 +209,16 @@
 						bounds.getEast() + w * MARGIN,
 						Math.min(85, bounds.getNorth() + h * MARGIN)
 					];
-		const items = index.getClusters(bbox, Math.floor(zoom)) as Item[];
+		const level = Math.floor(zoom);
+		const sources = zoom < COUNT_ZOOM ? indexes.far : [indexes.near];
+		owner = new Map();
+		const items: Item[] = [];
+		for (const source of sources) {
+			for (const item of source.getClusters(bbox, level) as Item[]) {
+				owner.set(item, source);
+				items.push(item);
+			}
+		}
 		const seen = new Set<string>();
 
 		for (const item of items) {
@@ -325,7 +348,10 @@
 			const photos = leaves(item);
 			ui.zone = { ids: photos.map((p) => p.id), title: placeLabel(photos) || t('photos') };
 			// Frame all the photos of the circle, at least one zoom step closer so it splits
-			const target = Math.min(index.getClusterExpansionZoom(item.properties.cluster_id), 17);
+			const target = Math.min(
+				indexOf(item).getClusterExpansionZoom(item.properties.cluster_id),
+				17
+			);
 			const spread = photos.some((p) => p.lat !== photos[0].lat || p.lng !== photos[0].lng);
 			if (spread) mapView.fitPoints(photos, Math.max(target, 15));
 			else mapView.flyTo(item.geometry.coordinates as [number, number], target);
