@@ -3,6 +3,7 @@ import { translator } from '../i18n.svelte';
 // Texts of the top bar
 export default translator({
 	es: {
+		language: 'Idioma',
 		home: 'Waymark, ir al globo',
 		sections: 'Secciones',
 		search: 'Buscar ({key} K)',
@@ -20,6 +21,7 @@ export default translator({
 		darkTheme: 'Tema oscuro'
 	},
 	en: {
+		language: 'Language',
 		home: 'Waymark, go to the globe',
 		sections: 'Sections',
 		search: 'Search ({key} K)',
@@ -37,6 +39,7 @@ export default translator({
 		darkTheme: 'Dark theme'
 	},
 	ca: {
+		language: 'Idioma',
 		home: 'Waymark, anar al globus',
 		sections: 'Seccions',
 		search: 'Cercar ({key} K)',

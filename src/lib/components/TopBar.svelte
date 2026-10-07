@@ -9,6 +9,9 @@
 	import { ui } from '$lib/state/ui.svelte';
 	import AccountButton from './AccountButton.svelte';
 	import LanguagePicker from './LanguagePicker.svelte';
+	import LocaleFlag from './ui/LocaleFlag.svelte';
+	import { crossfade } from './ui/reveal';
+	import { i18n, LOCALES } from '$lib/i18n/i18n.svelte';
 	import { demoMode, enterDemo, exitDemo } from '$lib/state/mode';
 	import { canImport } from '$lib/state/importing';
 	import { signIn } from '$lib/sync/sync.svelte';
@@ -205,6 +208,22 @@
 					<Icon name={settings.resolvedTheme === 'dark' ? 'sun' : 'moon'} />
 					{settings.resolvedTheme === 'dark' ? t('lightTheme') : t('darkTheme')}
 				</button>
+				<div class="hr"></div>
+				<!-- On phones the language picker of the bar doesn't fit: it lives here -->
+				<div class="langs" role="group" aria-label={t('language')}>
+					{#each LOCALES as locale (locale.id)}
+						<button
+							class="lang"
+							class:is-on={locale.id === i18n.locale}
+							aria-pressed={locale.id === i18n.locale}
+							aria-label={locale.name}
+							lang={locale.id}
+							onclick={() => crossfade(() => i18n.set(locale.id))}
+						>
+							<LocaleFlag locale={locale.id} />{locale.short}
+						</button>
+					{/each}
+				</div>
 			</div>
 		{/if}
 	</div>
@@ -325,6 +344,38 @@
 
 	.menu a.menu-item {
 		text-decoration: none;
+	}
+
+	.langs {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 4px;
+		padding: 4px;
+	}
+
+	.lang {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 6px;
+		height: 34px;
+		border-radius: 8px;
+		border: 1px solid transparent;
+		font:
+			600 12px/1 'Geist Mono',
+			monospace;
+		color: var(--t2);
+	}
+
+	.lang:hover {
+		background: var(--hover);
+		color: var(--t1);
+	}
+
+	.lang.is-on {
+		background: var(--acc-soft);
+		border-color: color-mix(in oklab, var(--acc) 45%, transparent);
+		color: var(--acc-text);
 	}
 
 	.count {
