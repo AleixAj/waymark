@@ -229,7 +229,8 @@
 		left: 32px;
 		right: 32px;
 		justify-content: space-between;
-		z-index: 2;
+		/* Above the main content: its menus (language, account) open over the logo */
+		z-index: 3;
 	}
 
 	.logo {
@@ -246,12 +247,16 @@
 		gap: 6px;
 	}
 
+	/* The space between the header and the footer, with the content centered in it:
+	   it never runs under the header and the screen never needs scrolling */
 	.welcome {
 		position: absolute;
+		top: 76px;
+		bottom: 52px;
 		left: 50%;
-		top: 50%;
-		transform: translate(-50%, -50%);
+		transform: translateX(-50%);
 		width: min(600px, calc(100% - 32px));
+		justify-content: center;
 		align-items: center;
 		text-align: center;
 		z-index: 2;
@@ -622,7 +627,7 @@
 		to {
 			opacity: 0;
 			filter: blur(6px);
-			transform: translate(-50%, -50%) scale(1.25);
+			transform: translateX(-50%) scale(1.25);
 		}
 	}
 
@@ -690,6 +695,13 @@
 	}
 
 	/* Short windows (small laptops): the three highlights make room for the rest */
+	/* Short phones: the highlights make room for the sign-in card */
+	@media (max-width: 640px) and (max-height: 700px) {
+		.features {
+			display: none;
+		}
+	}
+
 	@media (max-height: 760px) and (min-width: 641px) {
 		.features {
 			display: none;
@@ -697,6 +709,47 @@
 	}
 
 	@media (max-width: 640px) {
+		.top {
+			top: 16px;
+			left: 16px;
+			right: 16px;
+		}
+
+		.bottom {
+			bottom: 16px;
+			left: 16px;
+			right: 16px;
+		}
+
+		.welcome {
+			top: 68px;
+			bottom: 40px;
+		}
+
+		/* Logo and title sized by the screen height too, so short phones still fit */
+		.hero-logo {
+			width: clamp(64px, 12vh, 112px);
+		}
+
+		.wordmark {
+			font-size: clamp(48px, min(16vw, 9vh), 84px);
+			-webkit-text-stroke-width: 5px;
+		}
+
+		.gate {
+			margin-top: clamp(16px, 3.5vh, 32px);
+			padding: 22px 20px 20px;
+		}
+
+		.ways {
+			margin-top: clamp(14px, 2.5vh, 22px);
+		}
+
+		.features {
+			margin-top: clamp(12px, 2.5vh, 22px);
+			gap: 8px 16px;
+		}
+
 		.drop {
 			padding: 28px 20px 24px;
 		}

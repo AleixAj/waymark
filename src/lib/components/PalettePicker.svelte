@@ -118,9 +118,23 @@
 		right: calc(100% + 10px);
 		bottom: 0;
 		width: 290px;
+		/* Never taller than the space under the top bar: long lists scroll inside */
+		max-height: calc(100dvh - var(--sheet, 0px) - 120px);
+		overflow-y: auto;
 		padding: 8px;
 		background: var(--glass-strong);
 		animation: pop 0.15s ease-out;
+	}
+
+	@media (max-width: 767px) {
+		.menu {
+			width: min(290px, calc(100vw - 92px));
+		}
+
+		.swatch {
+			width: 32px;
+			height: 32px;
+		}
 	}
 
 	@keyframes pop {
