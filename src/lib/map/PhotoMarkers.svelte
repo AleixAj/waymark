@@ -55,25 +55,34 @@
 
 	const map = mapView.map!;
 
-	// Clustering index, rebuilt only when the list of photos changes
-	const index = $derived.by(() => {
-		const sc = new Supercluster<Props_>({ radius: 56, maxZoom: 16 });
-		sc.load(
-			points.map((p) => ({
-				type: 'Feature',
-				geometry: { type: 'Point', coordinates: [p.lng, p.lat] },
-				properties: {
-					id: p.id,
-					city: p.city,
-					country: p.country,
-					takenAt: p.takenAt,
-					lat: p.lat,
-					lng: p.lng
-				}
-			}))
-		);
-		return sc;
+	// How close two places can be before they share a marker, in screen pixels.
+	// Seen from far away places are small dots, so they can sit much closer than the
+	// numbered circles: Madrid and Lisbon stay two dots instead of one for Iberia.
+	const RADIUS = 56;
+	const FAR_RADIUS = 24;
+
+	// Clustering indexes, rebuilt only when the list of photos changes: one for the
+	// whole world (dots) and one for closer views (numbered circles and photos)
+	const indexes = $derived.by(() => {
+		const features = points.map((p): Feature<Point, Props_> => ({
+			type: 'Feature',
+			geometry: { type: 'Point', coordinates: [p.lng, p.lat] },
+			properties: {
+				id: p.id,
+				city: p.city,
+				country: p.country,
+				takenAt: p.takenAt,
+				lat: p.lat,
+				lng: p.lng
+			}
+		}));
+		return {
+			far: new Supercluster<Props_>({ radius: FAR_RADIUS, maxZoom: COUNT_ZOOM }).load(features),
+			near: new Supercluster<Props_>({ radius: RADIUS, maxZoom: 16 }).load(features)
+		};
 	});
+	// The index of the markers on screen (their cluster ids belong to it)
+	let index = untrack(() => indexes.near);
 
 	const markers = new Map<string, Entry>();
 	// Label of each cluster doesn't change while the index is the same,
@@ -167,6 +176,7 @@
 			tick++;
 			return;
 		}
+		index = zoom < COUNT_ZOOM ? indexes.far : indexes.near;
 		const center = map.getCenter();
 		lastQuery = { zoom: Math.floor(zoom), center: [center.lng, center.lat], mode };
 
@@ -361,7 +371,7 @@
 
 	// Re-render when the photos or the label setting change (import, timeline filter, page)
 	$effect(() => {
-		void index;
+		void indexes;
 		void labels;
 		void i18n.locale;
 		labelCache = new Map();
