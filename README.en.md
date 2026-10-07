@@ -28,7 +28,7 @@ Your travel photos placed on an interactive 3D globe, with no server and your ow
 </div>
 
 <p align="center">
-  <img src="docs/screenshots/en/globe.webp" alt="The Waymark globe with the demo photos">
+  <img src="docs/screenshots/en/globe.webp" alt="The Waymark globe with the demo photos and the language picker open">
 </p>
 
 ## What it is
@@ -58,7 +58,7 @@ The interface is available in English, Spanish and Catalan.
   </tr>
 </table>
 
-<p align="center"><img src="docs/screenshots/en/mobile.webp" alt="Mobile" width="100%"><br><sub><b>Mobile</b> · panels become draggable bottom sheets</sub></p>
+<p align="center"><img src="docs/screenshots/en/mobile.webp" alt="Mobile" width="100%"><br><sub><b>Mobile</b> · panels become bottom sheets and the ⋯ menu includes the language</sub></p>
 
 ## Highlights
 

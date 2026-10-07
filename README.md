@@ -28,7 +28,7 @@ Tus fotos de viaje colocadas sobre un globo terráqueo en 3D, sin servidor y con
 </div>
 
 <p align="center">
-  <img src="docs/screenshots/es/globe.webp" alt="El globo de Waymark con las fotos de la demo">
+  <img src="docs/screenshots/es/globe.webp" alt="El globo de Waymark con las fotos de la demo y el selector de idioma abierto">
 </p>
 
 ## Qué es
@@ -56,7 +56,7 @@ Es un proyecto de portfolio con enfoque de producto real. **No tiene servidor pr
   </tr>
 </table>
 
-<p align="center"><img src="docs/screenshots/es/mobile.webp" alt="Móvil" width="100%"><br><sub><b>Móvil</b> · los paneles pasan a ser hojas inferiores que se arrastran</sub></p>
+<p align="center"><img src="docs/screenshots/es/mobile.webp" alt="Móvil" width="100%"><br><sub><b>Móvil</b> · los paneles pasan a ser hojas inferiores y el menú ⋯ incluye el idioma</sub></p>
 
 ## Lo más destacado
 
